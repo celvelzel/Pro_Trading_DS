@@ -275,9 +275,9 @@ class SignalGenerator:
         if 'volume_ratio' in data.columns:
             vr = latest.get('volume_ratio', 1.0)
             if vr > 1.5:
-                reasons.append(f"成交量放�?({vr:.1f}x)")
+                reasons.append(f"成交量放大({vr:.1f}x)")
             elif vr < 0.5:
-                reasons.append(f"成交量萎�?({vr:.1f}x)")
+                reasons.append(f"成交量萎缩({vr:.1f}x)")
         
         # Pattern reasons
         if 'macd_golden' in data.columns and latest.get('macd_golden', False):

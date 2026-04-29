@@ -3,7 +3,7 @@ Lobster Quant - Risk Engine (OFF Filter)
 Market condition assessment and risk management.
 """
 
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -75,7 +75,7 @@ class RiskEngine:
         if 'ma200' in data.columns and 'close' in data.columns:
             below_ma200 = data['close'] < data['ma200']
             ma200_falling = data['ma200'].diff() < 0
-            checks['MA200恢复�?] = below_ma200 & ma200_falling
+            checks['MA200恢复'] = below_ma200 & ma200_falling
         
         # 3. Gap check
         if 'open' in data.columns and 'close' in data.columns:
@@ -92,7 +92,7 @@ class RiskEngine:
         
         # 5. Volume check
         if 'volume_ratio' in data.columns:
-            checks['流动性不�?] = data['volume_ratio'] < self.min_volume_ratio
+            checks['流动性不足'] = data['volume_ratio'] < self.min_volume_ratio
         
         return checks
     

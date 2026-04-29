@@ -6,17 +6,17 @@ import numpy as np
 from datetime import datetime
 import time
 
-from config import (STOCK_LIST, BENCHMARK, is_a_stock, is_hk_stock,
+from legacy.config import (STOCK_LIST, BENCHMARK, is_a_stock, is_hk_stock,
                     ENABLE_MARKETS, DEFAULT_UNIVERSE, SCORING_WEIGHTS)
-from data_fetcher import fetch_stock_data, fetch_benchmark
-from indicators import compute_indicators, compute_weekly_monthly_slopes
-from scoring import compute_score
-from backtest import run_backtest, backtest_summary
-from off_filter import compute_off_filter, get_on_off_stats
-from lobster_signal import SignalGenerator, volume_ratio
-from lobster_off_filter import should_trade, get_off_status_table
-from quant_tool_page import render_quant_tool_page
-from theme_manager import init_theme, apply_theme, get_card_style
+from legacy.data_fetcher import fetch_stock_data, fetch_benchmark
+from legacy.indicators import compute_indicators, compute_weekly_monthly_slopes
+from legacy.scoring import compute_score
+from legacy.backtest import run_backtest, backtest_summary
+from legacy.off_filter import compute_off_filter, get_on_off_stats
+from legacy.lobster_signal import SignalGenerator, volume_ratio
+from legacy.lobster_off_filter import should_trade, get_off_status_table
+from legacy.quant_tool_page import render_quant_tool_page
+from legacy.theme_manager import init_theme, apply_theme, get_card_style
 
 st.set_page_config(layout="wide", page_title="Pro_Trading_DS")
 

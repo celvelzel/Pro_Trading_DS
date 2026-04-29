@@ -1,0 +1,43 @@
+2026-04-29 20:34:30 | INFO     | lobster_quant | __init__:31 | Cache initialized at data\cache
+2026-04-29 20:34:30 | INFO     | lobster_quant | _initialize_providers:49 | US stock provider: yfinance
+2026-04-29 20:34:30 | INFO     | lobster_quant | _initialize_providers:57 | HK stock provider: yfinance
+2026-04-29 20:34:31 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached SPY (751 rows)
+2026-04-29 21:38:42 | INFO     | lobster_quant | __init__:31 | Cache initialized at data\cache
+2026-04-29 21:38:42 | INFO     | lobster_quant | _initialize_providers:49 | US stock provider: yfinance
+2026-04-29 21:38:42 | INFO     | lobster_quant | _initialize_providers:57 | HK stock provider: yfinance
+2026-04-29 21:38:43 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached SPY (752 rows)
+2026-04-29 21:39:04 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached AIPO (192 rows)
+2026-04-29 21:39:05 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached COHR (752 rows)
+2026-04-29 21:39:05 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached AMZN (752 rows)
+2026-04-29 21:39:05 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached GOOG (752 rows)
+2026-04-29 21:39:05 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached GLW (752 rows)
+2026-04-29 21:39:05 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached LITE (752 rows)
+2026-04-29 21:39:05 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached MU (752 rows)
+2026-04-29 21:39:05 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached TSLA (752 rows)
+2026-04-29 21:39:05 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached ICLN (752 rows)
+2026-04-29 21:39:05 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached QQQ (752 rows)
+2026-04-29 21:39:06 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached XLU (752 rows)
+2026-04-29 21:39:06 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached VTI (752 rows)
+2026-04-29 21:39:06 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached URA (752 rows)
+2026-04-29 21:39:06 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached XLE (752 rows)
+2026-04-29 21:41:35 | INFO     | lobster_quant | run:79 | Backtest completed for MU: 27 trades
+2026-04-29 21:41:48 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached WDC (752 rows)
+2026-04-29 21:41:48 | INFO     | lobster_quant | run:79 | Backtest completed for WDC: 29 trades
+2026-04-29 21:42:01 | INFO     | lobster_quant | run:79 | Backtest completed for GOOG: 27 trades
+2026-04-29 21:42:16 | WARNING  | lobster_quant | fetch_daily:34 | No data returned for AIOI
+2026-04-29 21:42:30 | INFO     | lobster_quant | fetch_stock:117 | Fetched and cached AAOI (752 rows)
+2026-04-29 21:42:30 | INFO     | lobster_quant | run:79 | Backtest completed for AAOI: 24 trades
+2026-04-29 21:42:59 | WARNING  | lobster_quant | fetch_daily:34 | No data returned for BRKB
+2026-04-29 21:43:03 | WARNING  | lobster_quant | fetch_daily:34 | No data returned for BRK
+2026-04-29 21:43:13 | WARNING  | lobster_quant | fetch_daily:34 | No data returned for BRK.B
+2026-04-29 21:43:34 | INFO     | lobster_quant | run:79 | Backtest completed for LITE: 28 trades
+2026-04-29 21:43:44 | INFO     | lobster_quant | run:79 | Backtest completed for SPY: 28 trades
+2026-04-29 22:02:14 | INFO     | lobster_quant | __init__:31 | Cache initialized at data\cache
+2026-04-29 22:02:14 | INFO     | lobster_quant | _initialize_providers:49 | US stock provider: yfinance
+2026-04-29 22:02:14 | INFO     | lobster_quant | _initialize_providers:57 | HK stock provider: yfinance
+2026-04-29 22:05:08 | INFO     | lobster_quant | __init__:31 | Cache initialized at data\cache
+2026-04-29 22:05:08 | INFO     | lobster_quant | _initialize_providers:49 | US stock provider: yfinance
+2026-04-29 22:05:08 | INFO     | lobster_quant | _initialize_providers:57 | HK stock provider: yfinance
+2026-04-29 22:05:32 | INFO     | lobster_quant | __init__:31 | Cache initialized at data\cache
+2026-04-29 22:05:32 | INFO     | lobster_quant | _initialize_providers:49 | US stock provider: yfinance
+2026-04-29 22:05:32 | INFO     | lobster_quant | _initialize_providers:57 | HK stock provider: yfinance

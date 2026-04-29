@@ -1,0 +1,61 @@
+# Application Settings
+application:
+  app_name: "Lobster Quant"
+  app_version: "2.0.0"
+  debug: false
+  log_level: "INFO"
+
+# Market Configuration
+market:
+  enable_us_stock: true
+  enable_hk_stock: true
+  enable_a_stock: false
+
+# Data Configuration
+data:
+  data_years: 3
+  data_cache_dir: "./data/cache"
+  data_cache_ttl: 3600
+  data_timeout: 10
+  us_data_provider: "yfinance"
+  hk_data_provider: "yfinance"
+  a_data_provider: "akshare"
+
+# Technical Indicator Parameters
+indicators:
+  ma_short_period: 20
+  ma_long_period: 200
+  rsi_period: 14
+  atr_period: 14
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  bb_period: 20
+  bb_std: 2.0
+
+# Scoring Weights (must sum to 1.0)
+scoring_weights:
+  score_weight_trend: 0.40
+  score_weight_momentum: 0.20
+  score_weight_volume: 0.15
+  score_weight_pattern: 0.25
+
+# Backtest Parameters
+backtest:
+  backtest_holding_days: 20
+  backtest_min_score: 20
+  backtest_lookback_days: 500
+  backtest_slippage_pct: 0.001
+  backtest_commission_pct: 0.001
+
+# OFF Filter Parameters
+off_filter:
+  off_vix_threshold: 35.0
+  off_atr_pct_threshold: 0.05
+  off_gap_threshold: 0.08
+  off_min_volume_ratio: 0.05
+  off_ma200_recovery_days: 60
+
+# Benchmark
+benchmark:
+  benchmark_symbol: "SPY"

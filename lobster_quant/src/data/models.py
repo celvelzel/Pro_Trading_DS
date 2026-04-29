@@ -150,7 +150,9 @@ class BacktestResult(BaseModel):
     """Complete backtest result summary."""
     symbol: str
     trades: list[Trade] = Field(default_factory=list)
-    total_trades: int = 0
+    @property
+    def total_trades(self) -> int:
+        return len(self.trades)
     win_rate: float = 0.0
     avg_return: float = 0.0
     profit_factor: float = 0.0

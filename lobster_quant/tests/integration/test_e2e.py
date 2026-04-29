@@ -10,16 +10,16 @@ from datetime import datetime
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from core.data_engine import DataEngine
-from core.indicator_engine import IndicatorEngine, get_indicator_engine
-from core.risk_engine import RiskEngine
-from analysis.signals import SignalGenerator
-from analysis.backtest import BacktestEngine
-from data.providers.mock_provider import MockProvider
-from data.models import StockData, SignalResult
-from compat import LegacyAdapter
+from src.core.data_engine import DataEngine
+from src.core.indicator_engine import IndicatorEngine, get_indicator_engine
+from src.core.risk_engine import RiskEngine
+from src.analysis.signals import SignalGenerator
+from src.analysis.backtest import BacktestEngine
+from src.data.providers.mock_provider import MockProvider
+from src.data.models import StockData, SignalResult
+from src.compat import LegacyAdapter
 
 
 @pytest.fixture
@@ -194,7 +194,7 @@ class TestDataProviderFactory:
     """Test data provider factory."""
     
     def test_mock_provider(self):
-        from data.providers import DataProviderFactory, MockProvider
+        from src.data.providers import DataProviderFactory, MockProvider
         
         provider = DataProviderFactory.create("mock", seed=42)
         assert isinstance(provider, MockProvider)
@@ -204,7 +204,7 @@ class TestDataProviderFactory:
         assert len(df) > 200
     
     def test_factory_available(self):
-        from data.providers import DataProviderFactory
+        from src.data.providers import DataProviderFactory
         
         available = DataProviderFactory.get_available()
         assert "yfinance" in available
@@ -212,7 +212,7 @@ class TestDataProviderFactory:
         assert "mock" in available
     
     def test_factory_unknown(self):
-        from data.providers import DataProviderFactory
+        from src.data.providers import DataProviderFactory
         
         with pytest.raises(ValueError):
             DataProviderFactory.create("unknown_provider")
@@ -222,7 +222,7 @@ class TestCacheIntegration:
     """Test cache system integration."""
     
     def test_cache_roundtrip(self):
-        from data.cache import DataCache
+        from src.data.cache import DataCache
         
         cache = DataCache(cache_dir="./test_cache", default_ttl=300)
         
@@ -237,7 +237,7 @@ class TestCacheIntegration:
         cache.clear()
     
     def test_cache_dataframe(self):
-        from data.cache import DataCache
+        from src.data.cache import DataCache
         
         cache = DataCache(cache_dir="./test_cache", default_ttl=300)
         
@@ -256,7 +256,7 @@ class TestCacheIntegration:
         cache.clear()
     
     def test_cache_expiry(self):
-        from data.cache import DataCache
+        from src.data.cache import DataCache
         
         cache = DataCache(cache_dir="./test_cache", default_ttl=0)  # Immediate expiry
         
@@ -272,7 +272,7 @@ class TestCacheIntegration:
         cache.clear()
     
     def test_cache_stats(self):
-        from data.cache import DataCache
+        from src.data.cache import DataCache
         
         cache = DataCache(cache_dir="./test_cache")
         cache.set("stat_key", "value")

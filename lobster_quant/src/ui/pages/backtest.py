@@ -142,4 +142,8 @@ def display_backtest_results(result, engine) -> None:
                 'Return': f"{t.return_pct*100:.2f}%" if t.return_pct else 'N/A',
                 'Days': t.holding_days
             }
+            for t in result.trades
+        ])
+        st.dataframe(trades_df, use_container_width=True)
+        st.dataframe(trades_df, use_container_width=True)
 

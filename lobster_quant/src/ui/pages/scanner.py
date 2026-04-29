@@ -146,7 +146,7 @@ def display_results(results: list) -> None:
             'Symbol': r['symbol'],
             'Score': f"{r['score']:.0f}",
             'Signal': r['signal'],
-            'Prob â†?: f"{r['probability']:.0f}%",
+            'Prob â†‘': f"{r['probability']:.0f}%",
             'Price': f"${r['price']:.2f}" if r['price'] else 'N/A',
             'RSI': f"{r['rsi']:.1f}" if r['rsi'] else 'N/A'
         }

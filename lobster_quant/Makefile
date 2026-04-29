@@ -75,7 +75,7 @@ fix: ## Auto-fix all issues
 # Running
 # ============================================================
 
-run: ## Run the Streamlit app (old entry)
+run: ## Run the Streamlit app (legacy v1 entry)
 	streamlit run app.py
 
 run-v2: ## Run the new v2 Streamlit app

@@ -61,7 +61,8 @@ class AkShareProvider(DataProvider):
                 period="daily",
                 start_date=start_date,
                 end_date=end_date,
-                adjust="qfq"  # 前复�?            )
+                adjust="qfq"  # 前复权
+            )
             
             if df.empty:
                 logger.warning(f"No data returned for A-share {symbol}")
@@ -70,11 +71,11 @@ class AkShareProvider(DataProvider):
             # Standardize column names
             df = df.rename(columns={
                 '日期': 'date',
-                '开�?: 'open',
+                '开盘': 'open',
                 '收盘': 'close',
-                '最�?: 'high',
-                '最�?: 'low',
-                '成交�?: 'volume'
+                '最高': 'high',
+                '最低': 'low',
+                '成交量': 'volume'
             })
             
             df['date'] = pd.to_datetime(df['date'])
