@@ -20,6 +20,7 @@ from src.ui.pages import (
     render_analyzer,
     render_backtest,
     render_settings,
+    render_quant_tool,
 )
 from src.ui.theme import theme_manager
 from src.utils.logging import setup_logging, get_logger
@@ -53,6 +54,7 @@ def main():
                 "🔍 Scanner",
                 "📈 Analyzer",
                 "🧪 Backtest",
+                "🔧 Quant Tool",
                 "⚙️ Settings",
             ],
             index=0,
@@ -71,6 +73,7 @@ def main():
         "🔍 Scanner": render_scanner,
         "📈 Analyzer": render_analyzer,
         "🧪 Backtest": render_backtest,
+        "🔧 Quant Tool": render_quant_tool,
         "⚙️ Settings": render_settings,
     }
     
