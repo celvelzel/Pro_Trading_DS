@@ -341,13 +341,16 @@ with tab3:
 # Tab 4: 🦞 龙虾扫描（整合自 quant_lobster）
 # ============================================================
 with tab4:
-    st.header("🦞 龙虾量化信号扫描")
-    st.caption("整合自 quant_lobster | 多市场扫描 + 信号评分 + 操作建议")
+    st.header("🦞 多市场信号扫描")
 
-    # ---- 4a. OFF Filter 概览 ----
-    st.subheader("OFF Filter 状态总览")
+    # ---- 4a. 市场状态 ----
+    st.subheader("📋 市场状态")
     with st.spinner("扫描 OFF 状态..."):
-        off_df = get_off_status_table(list(stock_dict.keys()), stock_dict)
+        try:
+            off_df = get_off_status_table(list(stock_dict.keys()), stock_dict)
+        except Exception as e:
+            st.error(f"市场状态扫描失败: {e}")
+            off_df = pd.DataFrame()
     if not off_df.empty:
         col_on, col_off = st.columns(2)
         on_count = (off_df['Status'] == 'ON ✅').sum()
@@ -360,66 +363,69 @@ with tab4:
             st.metric("禁止交易 (OFF)", off_count)
         st.dataframe(off_df.set_index('Code'), width='stretch')
 
-    # ---- 4b. 全市场扫描 ----
-    st.subheader("全市场信号扫描")
+    # ---- 4b. 信号扫描结果 ----
+    st.subheader("📊 信号扫描结果")
     with st.spinner("计算信号评分..."):
         scan_results = []
-        for code, d in stock_dict.items():
-            daily = d['daily']
-            if daily is None or len(daily) < 50:
-                continue
+        try:
+            for code, d in stock_dict.items():
+                daily = d['daily']
+                if daily is None or len(daily) < 50:
+                    continue
 
-            # OFF 检查
-            trade_ok, off_reasons = should_trade(code, daily)
-            if not trade_ok:
-                continue  # OFF 状态下跳过
+                # OFF 检查
+                trade_ok, off_reasons = should_trade(code, daily)
+                if not trade_ok:
+                    continue  # OFF 状态下跳过
 
-            # 计算龙虾信号
-            vr = volume_ratio(daily)
-            prob_up = SignalGenerator.calculate_probability_up(daily)
-            score = SignalGenerator.calculate_score(daily, vr, SCORING_WEIGHTS)
-            signal, desc = SignalGenerator.get_signal(daily, score, prob_up)
+                # 计算龙虾信号
+                vr = volume_ratio(daily)
+                prob_up = SignalGenerator.calculate_probability_up(daily)
+                score = SignalGenerator.calculate_score(daily, vr, SCORING_WEIGHTS)
+                signal, desc = SignalGenerator.get_signal(daily, score, prob_up)
 
-            # 基础信息
-            latest_price = daily['close'].iloc[-1]
+                # 基础信息
+                latest_price = daily['close'].iloc[-1]
 
-            # 支撑/阻力
-            recent_high = daily['high'].rolling(20).max().iloc[-1]
-            recent_low = daily['low'].rolling(20).min().iloc[-1]
+                # 支撑/阻力
+                recent_high = daily['high'].rolling(20).max().iloc[-1]
+                recent_low = daily['low'].rolling(20).min().iloc[-1]
 
-            # 目标价 & 止损
-            vol_20 = daily['close'].pct_change().rolling(20).std().iloc[-1]
-            target_up = latest_price * (1 + vol_20 * 2)
-            stop_loss = latest_price * (1 - vol_20 * 1.5)
+                # 目标价 & 止损
+                vol_20 = daily['close'].pct_change().rolling(20).std().iloc[-1]
+                target_up = latest_price * (1 + vol_20 * 2)
+                stop_loss = latest_price * (1 - vol_20 * 1.5)
 
-            # 三线斜率
-            daily_slope = daily['close'].iloc[-20:].values
-            x = np.arange(20)
-            slope_val = np.polyfit(x, daily_slope, 1)[0] / daily_slope[-1]
+                # 三线斜率
+                daily_slope = daily['close'].iloc[-20:].values
+                x = np.arange(20)
+                slope_val = np.polyfit(x, daily_slope, 1)[0] / daily_slope[-1]
 
-            # 市场类型
-            market = "美股"
-            if is_hk_stock(code):
-                market = "港股"
-            elif is_a_stock(code):
-                market = "A股"
+                # 市场类型
+                market = "美股"
+                if is_hk_stock(code):
+                    market = "港股"
+                elif is_a_stock(code):
+                    market = "A股"
 
-            scan_results.append({
-                'Code': code,
-                'Market': market,
-                'Score': round(score, 0),
-                'Signal': signal,
-                'Price': round(latest_price, 2),
-                'Slope%': round(slope_val * 100, 2),
-                'ProbUp%': round(prob_up, 0),
-                'Target': round(target_up, 2),
-                'Target%': round((target_up / latest_price - 1) * 100, 1),
-                'Stop': round(stop_loss, 2),
-                'Stop%': round((1 - stop_loss / latest_price) * 100, 1),
-                'Support': round(recent_low, 2),
-                'Resist': round(recent_high, 2),
-                'Reason': desc,
-            })
+                scan_results.append({
+                    'Code': code,
+                    'Market': market,
+                    'Score': round(score, 0),
+                    'Signal': signal,
+                    'Price': round(latest_price, 2),
+                    'Slope%': round(slope_val * 100, 2),
+                    'ProbUp%': round(prob_up, 0),
+                    'Target': round(target_up, 2),
+                    'Target%': round((target_up / latest_price - 1) * 100, 1),
+                    'Stop': round(stop_loss, 2),
+                    'Stop%': round((1 - stop_loss / latest_price) * 100, 1),
+                    'Support': round(recent_low, 2),
+                    'Resist': round(recent_high, 2),
+                    'Reason': desc,
+                })
+        except Exception as e:
+            st.error(f"信号扫描过程出错: {e}")
 
     if scan_results:
         df_scan = pd.DataFrame(scan_results)
@@ -442,92 +448,97 @@ with tab4:
         st.write(f"符合条件: {len(filtered_scan)} / {len(df_scan)}")
         st.dataframe(filtered_scan.set_index('Code'), width='stretch')
 
-        # ---- 4c. 单股深度分析 ----
-        st.subheader("🦞 单股深度分析")
-        target_code = st.selectbox("选择股票", df_scan['Code'].tolist(), key='lobster_code')
-        row = df_scan[df_scan['Code'] == target_code].iloc[0]
+        # ---- 4c. 个股详情 ----
+        with st.expander("🔍 个股详情", expanded=False):
+            st.subheader("🔍 个股详情")
+            target_code = st.selectbox("选择股票", df_scan['Code'].tolist(), key='lobster_code')
+            row = df_scan[df_scan['Code'] == target_code].iloc[0]
 
-        col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-        with col_p1.container():
-            st.markdown(get_card_style(), unsafe_allow_html=True)
-            st.metric("评分", f"{row['Score']:.0f}")
-        with col_p2.container():
-            st.markdown(get_card_style(), unsafe_allow_html=True)
-            st.metric("信号", row['Signal'])
-        with col_p3.container():
-            st.markdown(get_card_style(), unsafe_allow_html=True)
-            st.metric("上涨概率", f"{row['ProbUp%']:.0f}%")
-        with col_p4.container():
-            st.markdown(get_card_style(), unsafe_allow_html=True)
-            st.metric("价格", f"${row['Price']:.2f}")
+            col_p1, col_p2, col_p3, col_p4 = st.columns(4)
+            with col_p1.container():
+                st.markdown(get_card_style(), unsafe_allow_html=True)
+                st.metric("评分", f"{row['Score']:.0f}")
+            with col_p2.container():
+                st.markdown(get_card_style(), unsafe_allow_html=True)
+                st.metric("信号", row['Signal'])
+            with col_p3.container():
+                st.markdown(get_card_style(), unsafe_allow_html=True)
+                st.metric("上涨概率", f"{row['ProbUp%']:.0f}%")
+            with col_p4.container():
+                st.markdown(get_card_style(), unsafe_allow_html=True)
+                st.metric("价格", f"${row['Price']:.2f}")
 
-        st.markdown("**操作建议**")
-        c1, c2, c3 = st.columns(3)
-        c1.markdown(f"- **入场价**: ${row['Price']:.2f}")
-        c2.markdown(f"- **目标价**: ${row['Target']:.2f} ({row['Target%']:+.1f}%)")
-        c3.markdown(f"- **止损价**: ${row['Stop']:.2f} (-{row['Stop%']:.1f}%)")
+            st.markdown("**操作建议**")
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(f"- **入场价**: ${row['Price']:.2f}")
+            c2.markdown(f"- **目标价**: ${row['Target']:.2f} ({row['Target%']:+.1f}%)")
+            c3.markdown(f"- **止损价**: ${row['Stop']:.2f} (-{row['Stop%']:.1f}%)")
 
-        c4, c5, c6 = st.columns(3)
-        c4.markdown(f"- **支撑位**: ${row['Support']:.2f}")
-        c5.markdown(f"- **阻力位**: ${row['Resist']:.2f}")
-        c6.markdown(f"- **信号依据**: {row['Reason']}")
+            c4, c5, c6 = st.columns(3)
+            c4.markdown(f"- **支撑位**: ${row['Support']:.2f}")
+            c5.markdown(f"- **阻力位**: ${row['Resist']:.2f}")
+            c6.markdown(f"- **信号依据**: {row['Reason']}")
 
-        # ---- 4d. K线 + 信号标注 ----
-        st.subheader(f"{target_code} K线与信号")
-        if target_code in stock_dict:
-            d = stock_dict[target_code]
-            daily = d['daily']
+        # ---- 4d. K线图 ----
+        with st.expander("📈 K线图", expanded=False):
+            st.subheader(f"📈 {target_code} K线图")
+            with st.spinner("生成K线图..."):
+                try:
+                    if target_code in stock_dict:
+                        d = stock_dict[target_code]
+                        daily = d['daily']
 
-            # 标注信号点
-            daily = daily.copy()
-            daily['signal'] = ''
-            daily['signal_color'] = 'gray'
+                        # 标注信号点
+                        daily = daily.copy()
+                        daily['signal'] = ''
+                        daily['signal_color'] = 'gray'
 
-            # 简单标注最近20日的数据
-            score_list = []
-            for i in range(len(daily)):
-                if i < 20:
-                    score_list.append(np.nan)
-                else:
-                    window_df = daily.iloc[i-20:i+1]
-                    vr = volume_ratio(window_df)
-                    s = SignalGenerator.calculate_score(window_df, vr, SCORING_WEIGHTS)
-                    score_list.append(s)
-            daily['lobster_score'] = score_list
+                        # 简单标注最近20日的数据
+                        score_list = []
+                        for i in range(len(daily)):
+                            if i < 20:
+                                score_list.append(np.nan)
+                            else:
+                                window_df = daily.iloc[i-20:i+1]
+                                vr = volume_ratio(window_df)
+                                s = SignalGenerator.calculate_score(window_df, vr, SCORING_WEIGHTS)
+                                score_list.append(s)
+                        daily['lobster_score'] = score_list
 
-            fig2 = make_subplots(
-                rows=2, cols=1, shared_xaxes=True,
-                vertical_spacing=0.05,
-                row_heights=[0.7, 0.3]
-            )
-            fig2.add_trace(go.Candlestick(
-                x=daily.index, open=daily['open'],
-                high=daily['high'], low=daily['low'],
-                close=daily['close'], name='K'
-            ), row=1, col=1)
-            fig2.add_trace(go.Scatter(
-                x=daily.index, y=daily['ma20'],
-                line=dict(color='orange', width=1), name='MA20'
-            ), row=1, col=1)
+                        fig2 = make_subplots(
+                            rows=2, cols=1, shared_xaxes=True,
+                            vertical_spacing=0.05,
+                            row_heights=[0.7, 0.3]
+                        )
+                        fig2.add_trace(go.Candlestick(
+                            x=daily.index, open=daily['open'],
+                            high=daily['high'], low=daily['low'],
+                            close=daily['close'], name='K'
+                        ), row=1, col=1)
+                        fig2.add_trace(go.Scatter(
+                            x=daily.index, y=daily['ma20'],
+                            line=dict(color='orange', width=1), name='MA20'
+                        ), row=1, col=1)
 
-            # 评分着色
-            colors_score = ['green' if s >= 60 else 'orange' if s >= 40 else 'red'
-                             for s in daily['lobster_score']]
-            fig2.add_trace(go.Bar(
-                x=daily.index, y=daily['lobster_score'],
-                marker_color=colors_score, name='Score',
-                yaxis='y2'
-            ), row=2, col=1)
+                        # 评分着色
+                        colors_score = ['green' if s >= 60 else 'orange' if s >= 40 else 'red'
+                                         for s in daily['lobster_score']]
+                        fig2.add_trace(go.Bar(
+                            x=daily.index, y=daily['lobster_score'],
+                            marker_color=colors_score, name='Score',
+                            yaxis='y2'
+                        ), row=2, col=1)
 
-            fig2.update_layout(height=600, xaxis_rangeslider_visible=False)
-            st.plotly_chart(fig2, width='stretch')
+                        fig2.update_layout(height=600, xaxis_rangeslider_visible=False)
+                        st.plotly_chart(fig2, width='stretch')
+                except Exception as e:
+                    st.error(f"K线图生成失败: {e}")
     else:
-        st.warning("没有找到符合条件的股票（可能全部处于OFF状态）")
+        st.info("📭 当前无交易信号，所有股票处于 OFF 状态")
 
 # ============================================================
 # Tab 5: 📈 Quant Tool（整合自 quant_tool）
 # ============================================================
 with tab5:
-    st.header("📈 Quant Tool - 单股深度分析")
-    st.caption("整合自 quant_tool | 期权分析 + OFF Filter + 日内建议")
+    st.header("📈 个股深度分析")
     render_quant_tool_page()

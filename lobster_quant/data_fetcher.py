@@ -15,18 +15,22 @@ def fetch_stock_data(code):
 
 def _fetch_us_stock(symbol):
     """美股数据"""
-    ticker = yf.Ticker(symbol)
-    df = ticker.history(period=f"{DATA_YEARS}y")
-    if df.empty:
-        return None
-    df = df[['Open','High','Low','Close','Volume']]
-    df.columns = ['open','high','low','close','volume']
-    df.index = df.index.tz_localize(None)  # 去掉时区
+    try:
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(period=f"{DATA_YEARS}y")
+        if df.empty:
+            return None
+        df = df[['Open','High','Low','Close','Volume']]
+        df.columns = ['open','high','low','close','volume']
+        df.index = df.index.tz_localize(None)  # 去掉时区
 
-    # 周线和月线重采样
-    weekly = df.resample('W').agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'})
-    monthly = df.resample('ME').agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'})
-    return {'daily': df, 'weekly': weekly, 'monthly': monthly}
+        # 周线和月线重采样
+        weekly = df.resample('W').agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'})
+        monthly = df.resample('ME').agg({'open':'first','high':'max','low':'min','close':'last','volume':'sum'})
+        return {'daily': df, 'weekly': weekly, 'monthly': monthly}
+    except Exception as e:
+        print(f"美股数据获取失败 {symbol}: {e}")
+        return None
 
 def _fetch_a_stock(code):
     """A股数据（使用akshare）"""
