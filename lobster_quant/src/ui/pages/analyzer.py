@@ -8,12 +8,12 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ...core.data_engine import get_data_engine
-from ...core.indicator_engine import get_indicator_engine
-from ...core.risk_engine import RiskEngine
-from ...analysis.signals import SignalGenerator
-from ...analysis.backtest import BacktestEngine
-from ...utils.logging import get_logger
+from src.core.data_engine import get_data_engine
+from src.core.indicator_engine import get_indicator_engine
+from src.core.risk_engine import RiskEngine
+from src.analysis.signals import SignalGenerator
+from src.analysis.backtest import BacktestEngine
+from src.utils.logging import get_logger
 from ..components.cards import signal_card, status_card
 
 logger = get_logger()
@@ -210,3 +210,4 @@ def create_price_chart(df: pd.DataFrame, symbol: str) -> go.Figure:
     )
     
     return fig
+

@@ -8,10 +8,10 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 
-from ...data.models import Trade, BacktestResult
-from ...config.settings import get_settings
-from ...utils.logging import get_logger
-from ...utils.exceptions import BacktestError
+from src.data.models import Trade, BacktestResult
+from src.config.settings import get_settings
+from src.utils.logging import get_logger
+from src.utils.exceptions import BacktestError
 
 logger = get_logger()
 
@@ -219,3 +219,4 @@ class BacktestEngine:
             "best_trade": f"{result.best_trade*100:.2f}%",
             "worst_trade": f"{result.worst_trade*100:.2f}%",
         }
+

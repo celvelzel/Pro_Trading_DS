@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 from .base import DataProvider
-from ...utils.logging import get_logger
+from src.utils.logging import get_logger
 
 logger = get_logger()
 
@@ -93,3 +93,4 @@ class MockProvider(DataProvider):
 
 # Register provider
 DataProviderFactory.register("mock", MockProvider)
+

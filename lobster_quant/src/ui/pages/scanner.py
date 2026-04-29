@@ -7,11 +7,11 @@ import streamlit as st
 import pandas as pd
 import asyncio
 
-from ...core.data_engine import get_data_engine
-from ...core.indicator_engine import get_indicator_engine
-from ...analysis.signals import SignalGenerator
-from ...config.settings import get_settings
-from ...utils.logging import get_logger
+from src.core.data_engine import get_data_engine
+from src.core.indicator_engine import get_indicator_engine
+from src.analysis.signals import SignalGenerator
+from src.config.settings import get_settings
+from src.utils.logging import get_logger
 from ..components.cards import signal_card
 
 logger = get_logger()
@@ -146,7 +146,7 @@ def display_results(results: list) -> None:
             'Symbol': r['symbol'],
             'Score': f"{r['score']:.0f}",
             'Signal': r['signal'],
-            'Prob â†‘': f"{r['probability']:.0f}%",
+            'Prob â†?: f"{r['probability']:.0f}%",
             'Price': f"${r['price']:.2f}" if r['price'] else 'N/A',
             'RSI': f"{r['rsi']:.1f}" if r['rsi'] else 'N/A'
         }
@@ -164,3 +164,4 @@ def display_results(results: list) -> None:
             probability=result['probability'],
             reasons=result['reasons']
         )
+

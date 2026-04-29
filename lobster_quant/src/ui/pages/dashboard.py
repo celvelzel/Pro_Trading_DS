@@ -6,12 +6,12 @@ OFF Filter status and market overview.
 import streamlit as st
 import pandas as pd
 
-from ...core.data_engine import get_data_engine
-from ...core.risk_engine import RiskEngine
-from ...core.indicator_engine import get_indicator_engine
-from ...analysis.signals import SignalGenerator
-from ...config.settings import get_settings
-from ...utils.logging import get_logger
+from src.core.data_engine import get_data_engine
+from src.core.risk_engine import RiskEngine
+from src.core.indicator_engine import get_indicator_engine
+from src.analysis.signals import SignalGenerator
+from src.config.settings import get_settings
+from src.utils.logging import get_logger
 from ..components.cards import status_card, metric_card
 from ..theme import theme_manager
 
@@ -93,3 +93,4 @@ def render_dashboard():
     except Exception as e:
         logger.error(f"Dashboard error: {e}")
         st.error(f"Error loading dashboard: {e}")
+

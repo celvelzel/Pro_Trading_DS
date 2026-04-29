@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 import pandas as pd
 import numpy as np
 
-from ...utils.logging import get_logger
-from ...utils.exceptions import IndicatorError
+from src.utils.logging import get_logger
+from src.utils.exceptions import IndicatorError
 
 logger = get_logger()
 
@@ -223,3 +223,4 @@ def normalize_series(series: pd.Series, method: str = "zscore") -> pd.Series:
         return series.rank(pct=True)
     else:
         raise ValueError(f"Unknown normalization method: {method}")
+

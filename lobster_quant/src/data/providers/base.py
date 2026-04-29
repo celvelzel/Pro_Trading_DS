@@ -8,8 +8,8 @@ from typing import Optional, Any
 from datetime import datetime
 import pandas as pd
 
-from ...data.models import StockData, OptionsData
-from ...utils.exceptions import DataProviderError
+from src.data.models import StockData, OptionsData
+from src.utils.exceptions import DataProviderError
 
 
 class DataProvider(ABC):
@@ -168,3 +168,4 @@ class DataProviderFactory:
     def clear_cache(cls) -> None:
         """Clear provider instance cache."""
         cls._instances.clear()
+

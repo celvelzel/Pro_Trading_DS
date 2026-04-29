@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 
 from .base import Indicator, IndicatorResult, IndicatorRegistry
-from ...utils.logging import get_logger
+from src.utils.logging import get_logger
 
 logger = get_logger()
 
@@ -116,3 +116,4 @@ class MomentumScoreIndicator(Indicator):
 IndicatorRegistry.register(RSIIndicator)
 IndicatorRegistry.register(ROCIndicator)
 IndicatorRegistry.register(MomentumScoreIndicator)
+

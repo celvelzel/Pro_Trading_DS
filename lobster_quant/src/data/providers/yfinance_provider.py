@@ -9,9 +9,9 @@ import pandas as pd
 import yfinance as yf
 
 from .base import DataProvider
-from ...data.models import OptionsData
-from ...utils.exceptions import DataFetchError
-from ...utils.logging import get_logger
+from src.data.models import OptionsData
+from src.utils.exceptions import DataFetchError
+from src.utils.logging import get_logger
 
 logger = get_logger()
 
@@ -148,3 +148,4 @@ class YFinanceProvider(DataProvider):
 
 # Register provider
 DataProviderFactory.register("yfinance", YFinanceProvider)
+

@@ -7,8 +7,8 @@ from typing import Optional
 import pandas as pd
 
 from .base import DataProvider
-from ...utils.exceptions import DataFetchError
-from ...utils.logging import get_logger
+from src.utils.exceptions import DataFetchError
+from src.utils.logging import get_logger
 
 logger = get_logger()
 
@@ -39,7 +39,7 @@ class AkShareProvider(DataProvider):
         Examples:
             '600519' -> '600519' (sh)
             '000001' -> '000001' (sz)
-            '300308' -> '300308' (sz, 创业板)
+            '300308' -> '300308' (sz, 创业�?
         """
         # Remove any suffixes
         symbol = symbol.upper().replace('.SZ', '').replace('.SH', '')
@@ -61,8 +61,7 @@ class AkShareProvider(DataProvider):
                 period="daily",
                 start_date=start_date,
                 end_date=end_date,
-                adjust="qfq"  # 前复权
-            )
+                adjust="qfq"  # 前复�?            )
             
             if df.empty:
                 logger.warning(f"No data returned for A-share {symbol}")
@@ -71,11 +70,11 @@ class AkShareProvider(DataProvider):
             # Standardize column names
             df = df.rename(columns={
                 '日期': 'date',
-                '开盘': 'open',
+                '开�?: 'open',
                 '收盘': 'close',
-                '最高': 'high',
-                '最低': 'low',
-                '成交量': 'volume'
+                '最�?: 'high',
+                '最�?: 'low',
+                '成交�?: 'volume'
             })
             
             df['date'] = pd.to_datetime(df['date'])
@@ -139,3 +138,4 @@ class AkShareProvider(DataProvider):
 
 # Register provider
 DataProviderFactory.register("akshare", AkShareProvider)
+

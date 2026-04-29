@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 
 from .base import Indicator, IndicatorResult, IndicatorRegistry
-from ...utils.logging import get_logger
+from src.utils.logging import get_logger
 
 logger = get_logger()
 
@@ -112,3 +112,4 @@ class OBVIndicator(Indicator):
 IndicatorRegistry.register(VolumeRatioIndicator)
 IndicatorRegistry.register(VolumeTrendIndicator)
 IndicatorRegistry.register(OBVIndicator)
+

@@ -80,7 +80,7 @@ class SignalResult(BaseModel):
     symbol: str
     signal_type: Literal["强烈推荐", "推荐", "持有", "观望", "sell", "neutral"] = "观望"
     score: float = Field(..., ge=0, le=100)
-    probability_up: float = Field(..., ge=0, le=100, default=50.0)
+    probability_up: float = Field(default=50.0, ge=0, le=100)
     reasons: list[str] = Field(default_factory=list)
     timestamp: datetime = Field(default_factory=datetime.now)
     

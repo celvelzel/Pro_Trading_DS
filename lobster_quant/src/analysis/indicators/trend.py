@@ -7,8 +7,8 @@ import pandas as pd
 import numpy as np
 
 from .base import Indicator, IndicatorResult, IndicatorRegistry, rolling_slope
-from ...config.settings import get_settings
-from ...utils.logging import get_logger
+from src.config.settings import get_settings
+from src.utils.logging import get_logger
 
 logger = get_logger()
 
@@ -132,3 +132,4 @@ IndicatorRegistry.register(EMAIndicator)
 IndicatorRegistry.register(SlopeIndicator)
 IndicatorRegistry.register(MACDIndicator)
 IndicatorRegistry.register(MABullishIndicator)
+

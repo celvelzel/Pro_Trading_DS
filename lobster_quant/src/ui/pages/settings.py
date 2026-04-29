@@ -5,8 +5,8 @@ Configuration management interface.
 
 import streamlit as st
 
-from ...config.settings import get_settings, reload_settings
-from ...utils.logging import get_logger
+from src.config.settings import get_settings, reload_settings
+from src.utils.logging import get_logger
 
 logger = get_logger()
 
@@ -72,3 +72,4 @@ def render_settings():
     if st.button("Save Settings", type="primary"):
         st.success("Settings saved! (Note: Some settings require restart)")
         logger.info("Settings updated via UI")
+
