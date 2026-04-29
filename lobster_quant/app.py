@@ -16,8 +16,24 @@ from off_filter import compute_off_filter, get_on_off_stats
 from lobster_signal import SignalGenerator, volume_ratio
 from lobster_off_filter import should_trade, get_off_status_table
 from quant_tool_page import render_quant_tool_page
+from theme_manager import init_theme, apply_theme
 
 st.set_page_config(layout="wide", page_title="Pro_Trading_DS")
+
+init_theme()
+
+with st.sidebar:
+    theme_toggle = st.toggle("Dark Mode", value=(st.session_state.theme == 'dark'))
+    if theme_toggle:
+        if st.session_state.theme != 'dark':
+            st.session_state.theme = 'dark'
+            apply_theme('dark')
+            st.rerun()
+    else:
+        if st.session_state.theme != 'light':
+            st.session_state.theme = 'light'
+            apply_theme('light')
+            st.rerun()
 
 st.title("Pro_Trading_DS")
 st.caption("Quantitative Trading Research Tool")
@@ -181,19 +197,19 @@ with tab2:
 
     filtered = df_snapshot[df_snapshot['Score'] >= min_score]
     if show_ma:
-        filtered = filtered[filtered['Tags'].str.contains('MA Bullish', na=False)]
+        filtered = filtered[filtered['Tags'].str.contains('MA Bullish', na=False)]  # type: ignore
     if show_golden:
-        filtered = filtered[filtered['Tags'].str.contains('MACD Gold', na=False)]
+        filtered = filtered[filtered['Tags'].str.contains('MACD Gold', na=False)]  # type: ignore
     if show_vol:
-        filtered = filtered[filtered['Tags'].str.contains('High Vol', na=False)]
+        filtered = filtered[filtered['Tags'].str.contains('High Vol', na=False)]  # type: ignore
 
-    rsi_col = filtered['RSI'].replace('N/A', np.nan)
+    rsi_col = filtered['RSI'].replace('N/A', np.nan)  # type: ignore
     rsi_vals = pd.to_numeric(rsi_col, errors='coerce')
-    rsi_mask = pd.Series(True, index=filtered.index)
+    rsi_mask = pd.Series(True, index=filtered.index)  # type: ignore
     if min_rsi > 0:
-        rsi_mask &= rsi_vals >= min_rsi
+        rsi_mask &= rsi_vals >= min_rsi  # type: ignore
     if max_rsi < 100:
-        rsi_mask &= rsi_vals <= max_rsi
+        rsi_mask &= rsi_vals <= max_rsi  # type: ignore
     filtered = filtered[rsi_mask]
 
     if len(df_snapshot) == 0:
@@ -202,7 +218,7 @@ with tab2:
         st.warning("No stocks match criteria. Adjust filters.")
     else:
         st.write(f"Showing {len(filtered)} / {len(df_snapshot)} stocks")
-        st.dataframe(filtered.set_index('Code'), width='stretch')
+        st.dataframe(filtered.set_index('Code'), width='stretch')  # type: ignore
 
         selected = st.selectbox("Select stock", filtered['Code'].tolist())
         if selected:
