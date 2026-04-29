@@ -8,7 +8,7 @@ from typing import Optional
 import pandas as pd
 import yfinance as yf
 
-from .base import DataProvider
+from .base import DataProvider, DataProviderFactory
 from src.data.models import OptionsData
 from src.utils.exceptions import DataFetchError
 from src.utils.logging import get_logger
@@ -146,6 +146,7 @@ class YFinanceProvider(DataProvider):
             return False
 
 
-# Register provider
-DataProviderFactory.register("yfinance", YFinanceProvider)
+# Register provider (lazy, called from __init__.py)
+def _register():
+    DataProviderFactory.register("yfinance", YFinanceProvider)
 

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
-from .base import DataProvider
+from .base import DataProvider, DataProviderFactory
 from src.utils.logging import get_logger
 
 logger = get_logger()
@@ -91,6 +91,7 @@ class MockProvider(DataProvider):
         return True
 
 
-# Register provider
-DataProviderFactory.register("mock", MockProvider)
+# Register provider (lazy)
+def _register():
+    DataProviderFactory.register("mock", MockProvider)
 
