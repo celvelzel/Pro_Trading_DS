@@ -16,10 +16,14 @@ from quant_tool_indicators import (
     find_support_resistance,
     calc_put_call_ratio,
 )
+from theme_manager import get_quant_tool_css, get_chart_colors
 
 
 def render_quant_tool_page():
     """渲染 Quant Tool 页面"""
+    # Custom CSS styling
+    st.markdown(get_quant_tool_css(), unsafe_allow_html=True)
+    
     st.markdown("---")
     
     # Top search bar / symbol input
@@ -95,13 +99,13 @@ def render_quant_tool_page():
         with col_on:
             st.markdown("**ON Probability**")
             st.progress(on_probability)
-            st.markdown(f'<p style="color: #4CAF50; font-weight: bold;">{on_probability:.0%}</p>', 
+            st.markdown(f'<p class="green-text">{on_probability:.0%}</p>', 
                        unsafe_allow_html=True)
         
         with col_off:
             st.markdown("**OFF Probability**")
             st.progress(off_probability)
-            st.markdown(f'<p style="color: #ff9800; font-weight: bold;">{off_probability:.0%}</p>', 
+            st.markdown(f'<p class="orange-text">{off_probability:.0%}</p>', 
                        unsafe_allow_html=True)
         
         st.markdown("---")
@@ -220,6 +224,11 @@ def render_quant_tool_page():
                     call_oi_filtered = [call_oi_by_strike.get(s, 0) for s in strikes_filtered]
                     put_oi_filtered = [put_oi_by_strike.get(s, 0) for s in strikes_filtered]
                     
+                    theme = st.session_state.get('theme', 'light')
+                    plotly_template = "plotly_dark" if theme == 'dark' else "plotly_white"
+                    font_color = '#ffffff' if theme == 'dark' else '#31333f'
+                    chart_colors = get_chart_colors()
+                    
                     # Volume Chart
                     fig_volume = go.Figure()
                     
@@ -227,7 +236,7 @@ def render_quant_tool_page():
                         x=strikes_filtered,
                         y=call_vol_filtered,
                         name='Call Volume',
-                        marker_color='#4CAF50',
+                        marker_color=chart_colors['call_vol'],
                         offsetgroup=0
                     ))
                     
@@ -235,7 +244,7 @@ def render_quant_tool_page():
                         x=strikes_filtered,
                         y=put_vol_filtered,
                         name='Put Volume',
-                        marker_color='#ff5252',
+                        marker_color=chart_colors['put_vol'],
                         offsetgroup=1
                     ))
                     
@@ -244,10 +253,10 @@ def render_quant_tool_page():
                         xaxis_title="Strike Price",
                         yaxis_title="Volume",
                         barmode='group',
-                        template="plotly_dark",
+                        template=plotly_template,
                         paper_bgcolor='rgba(0,0,0,0)',
                         plot_bgcolor='rgba(0,0,0,0)',
-                        font=dict(color='#ffffff'),
+                        font=dict(color=font_color),
                         height=400,
                         xaxis=dict(
                             tickmode='linear',
@@ -265,7 +274,7 @@ def render_quant_tool_page():
                         x=strikes_filtered,
                         y=call_oi_filtered,
                         name='Call OI',
-                        marker_color='#66bb6a',
+                        marker_color=chart_colors['call_oi'],
                         offsetgroup=0
                     ))
                     
@@ -273,7 +282,7 @@ def render_quant_tool_page():
                         x=strikes_filtered,
                         y=put_oi_filtered,
                         name='Put OI',
-                        marker_color='#ef5350',
+                        marker_color=chart_colors['put_oi'],
                         offsetgroup=1
                     ))
                     
@@ -282,10 +291,10 @@ def render_quant_tool_page():
                         xaxis_title="Strike Price",
                         yaxis_title="Open Interest",
                         barmode='group',
-                        template="plotly_dark",
+                        template=plotly_template,
                         paper_bgcolor='rgba(0,0,0,0)',
                         plot_bgcolor='rgba(0,0,0,0)',
-                        font=dict(color='#ffffff'),
+                        font=dict(color=font_color),
                         height=400,
                         xaxis=dict(
                             tickmode='linear',

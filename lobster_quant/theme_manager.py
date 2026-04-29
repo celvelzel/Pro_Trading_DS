@@ -60,3 +60,85 @@ def get_card_style():
         }
         </style>
         """
+
+def get_chart_colors():
+    theme = st.session_state.get('theme', 'light')
+    if theme == 'dark':
+        return {
+            'call_vol': '#4CAF50',
+            'put_vol': '#ff5252',
+            'call_oi': '#66bb6a',
+            'put_oi': '#ef5350'
+        }
+    else:
+        return {
+            'call_vol': '#008000',
+            'put_vol': '#d32f2f',
+            'call_oi': '#388e3c',
+            'put_oi': '#c62828'
+        }
+
+def get_quant_tool_css():
+    theme = st.session_state.get('theme', 'light')
+    if theme == 'dark':
+        return """
+        <style>
+        /* Green accent for positive/profit */
+        .green-text { color: #4CAF50; font-weight: bold; }
+        /* Orange accent for warnings/risk */
+        .orange-text { color: #ff9800; font-weight: bold; }
+        
+        /* Input and buttons styling */
+        .stTextInput > div > div > input {
+            background-color: #282e38;
+            color: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #4a5568;
+        }
+        .stTextInput > div > div > input:focus { border-color: #00ff00; }
+        
+        .stButton > button {
+            border-radius: 8px;
+        }
+        
+        /* Metrics styling to look like cards */
+        [data-testid="stMetric"] {
+            background-color: #1e222a;
+            border: 1px solid #4a5568;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        </style>
+        """
+    else:
+        return """
+        <style>
+        /* Green accent for positive/profit */
+        .green-text { color: #008000; font-weight: bold; }
+        /* Orange accent for warnings/risk */
+        .orange-text { color: #ff8c00; font-weight: bold; }
+        
+        /* Input and buttons styling */
+        .stTextInput > div > div > input {
+            background-color: #ffffff;
+            color: #31333f;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .stTextInput > div > div > input:focus { border-color: #008000; }
+        
+        .stButton > button {
+            border-radius: 8px;
+        }
+        
+        /* Metrics styling to look like cards */
+        [data-testid="stMetric"] {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        </style>
+        """

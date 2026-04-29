@@ -16,7 +16,7 @@ from off_filter import compute_off_filter, get_on_off_stats
 from lobster_signal import SignalGenerator, volume_ratio
 from lobster_off_filter import should_trade, get_off_status_table
 from quant_tool_page import render_quant_tool_page
-from theme_manager import init_theme, apply_theme
+from theme_manager import init_theme, apply_theme, get_card_style
 
 st.set_page_config(layout="wide", page_title="Pro_Trading_DS")
 
@@ -133,8 +133,12 @@ with tab1:
     off_pct = 100 - on_pct
 
     col1, col2 = st.columns(2)
-    col1.metric("ON (Allowed)", f"{on_pct:.1f}%")
-    col2.metric("OFF (Avoid)", f"{off_pct:.1f}%")
+    with col1.container():
+        st.markdown(get_card_style(), unsafe_allow_html=True)
+        st.metric("ON (Allowed)", f"{on_pct:.1f}%")
+    with col2.container():
+        st.markdown(get_card_style(), unsafe_allow_html=True)
+        st.metric("OFF (Avoid)", f"{off_pct:.1f}%")
 
     if all_reasons:
         st.subheader("OFF Reasons")
@@ -246,9 +250,15 @@ with tab3:
         last = daily.iloc[-1]
         score_val = score.iloc[-1] if len(score) > 0 and not pd.isna(score.iloc[-1]) else 0
         col1, col2, col3 = st.columns(3)
-        col1.metric("Score", f"{score_val:.1f}")
-        col2.metric("RSI", f"{last.get('rsi', 0):.1f}")
-        col3.metric("Vol Ratio", f"{last.get('volume_ratio', 0):.2f}")
+        with col1.container():
+            st.markdown(get_card_style(), unsafe_allow_html=True)
+            st.metric("Score", f"{score_val:.1f}")
+        with col2.container():
+            st.markdown(get_card_style(), unsafe_allow_html=True)
+            st.metric("RSI", f"{last.get('rsi', 0):.1f}")
+        with col3.container():
+            st.markdown(get_card_style(), unsafe_allow_html=True)
+            st.metric("Vol Ratio", f"{last.get('volume_ratio', 0):.2f}")
 
         # K-line chart
         st.subheader("K-Line & Tech Indicators")
@@ -292,10 +302,18 @@ with tab3:
         summary = backtest_summary(trades)
         if summary['trades'] > 0:
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Trades", summary['trades'])
-            c2.metric("Win Rate", f"{summary['win_rate']*100:.1f}%")
-            c3.metric("Avg Return", f"{summary['avg_return']*100:.2f}%")
-            c4.metric("Profit Factor", f"{summary['profit_factor']:.2f}")
+            with c1.container():
+                st.markdown(get_card_style(), unsafe_allow_html=True)
+                st.metric("Trades", summary['trades'])
+            with c2.container():
+                st.markdown(get_card_style(), unsafe_allow_html=True)
+                st.metric("Win Rate", f"{summary['win_rate']*100:.1f}%")
+            with c3.container():
+                st.markdown(get_card_style(), unsafe_allow_html=True)
+                st.metric("Avg Return", f"{summary['avg_return']*100:.2f}%")
+            with c4.container():
+                st.markdown(get_card_style(), unsafe_allow_html=True)
+                st.metric("Profit Factor", f"{summary['profit_factor']:.2f}")
             if trades:
                 cum_returns = [1]
                 for t in trades:
@@ -334,8 +352,12 @@ with tab4:
         col_on, col_off = st.columns(2)
         on_count = (off_df['Status'] == 'ON ✅').sum()
         off_count = len(off_df) - on_count
-        col_on.metric("可交易 (ON)", on_count)
-        col_off.metric("禁止交易 (OFF)", off_count)
+        with col_on.container():
+            st.markdown(get_card_style(), unsafe_allow_html=True)
+            st.metric("可交易 (ON)", on_count)
+        with col_off.container():
+            st.markdown(get_card_style(), unsafe_allow_html=True)
+            st.metric("禁止交易 (OFF)", off_count)
         st.dataframe(off_df.set_index('Code'), width='stretch')
 
     # ---- 4b. 全市场扫描 ----
@@ -426,10 +448,18 @@ with tab4:
         row = df_scan[df_scan['Code'] == target_code].iloc[0]
 
         col_p1, col_p2, col_p3, col_p4 = st.columns(4)
-        col_p1.metric("评分", f"{row['Score']:.0f}")
-        col_p2.metric("信号", row['Signal'])
-        col_p3.metric("上涨概率", f"{row['ProbUp%']:.0f}%")
-        col_p4.metric("价格", f"${row['Price']:.2f}")
+        with col_p1.container():
+            st.markdown(get_card_style(), unsafe_allow_html=True)
+            st.metric("评分", f"{row['Score']:.0f}")
+        with col_p2.container():
+            st.markdown(get_card_style(), unsafe_allow_html=True)
+            st.metric("信号", row['Signal'])
+        with col_p3.container():
+            st.markdown(get_card_style(), unsafe_allow_html=True)
+            st.metric("上涨概率", f"{row['ProbUp%']:.0f}%")
+        with col_p4.container():
+            st.markdown(get_card_style(), unsafe_allow_html=True)
+            st.metric("价格", f"${row['Price']:.2f}")
 
         st.markdown("**操作建议**")
         c1, c2, c3 = st.columns(3)
