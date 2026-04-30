@@ -87,8 +87,8 @@ def candlestick_chart(df: pd.DataFrame, symbol: str = "", title: str = "") -> go
         ), row=3, col=1)
 
         # RSI overbought/oversold lines
-        fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1, annotation_text="70")
-        fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1, annotation_text="30")
+        fig.add_hline(y=70, line_dash="dash", line_color="red", row="3", col="1", annotation_text="70")
+        fig.add_hline(y=30, line_dash="dash", line_color="green", row="3", col="1", annotation_text="30")
 
     fig.update_layout(
         height=800,
@@ -195,8 +195,8 @@ def indicator_chart(df: pd.DataFrame, indicators: Optional[list[str]] = None, sy
                 line=dict(color='purple', width=1),
                 hovertemplate='RSI: %{y:.2f}<extra></extra>'
             ), row=idx, col=1)
-            fig.add_hline(y=70, line_dash="dash", line_color="red", row=idx, col=1)
-            fig.add_hline(y=30, line_dash="dash", line_color="green", row=idx, col=1)
+            fig.add_hline(y=70, line_dash="dash", line_color="red", row=str(idx), col="1")
+            fig.add_hline(y=30, line_dash="dash", line_color="green", row=str(idx), col="1")
             fig.update_yaxes(range=[0, 100], row=idx, col=1)
 
         elif ind_upper == 'MACD':

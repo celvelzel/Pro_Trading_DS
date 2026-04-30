@@ -6,7 +6,7 @@ from .settings import Settings
 from ..utils.exceptions import ConfigValidationError, ConfigError
 from ..utils.logging import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 def validate_settings(settings: Settings) -> list[str]:
@@ -73,18 +73,10 @@ def validate_weight_sum(weights: dict[str, float]) -> bool:
         weights: Dictionary of scoring weights
 
     Returns:
-        True if weights sum to approximately 1.0
-
-    Raises:
-        ConfigValidationError: If weights do not sum to ~1.0
+        True if weights sum to approximately 1.0, False otherwise
     """
     total = sum(weights.values())
-    if abs(total - 1.0) > 0.01:
-        raise ConfigValidationError(
-            f"Scoring weights must sum to 1.0, got {total:.2f}",
-            details={"weights": weights, "sum": total}
-        )
-    return True
+    return abs(total - 1.0) <= 0.01
 
 
 def validate_market_config(markets: list[str]) -> list[str]:

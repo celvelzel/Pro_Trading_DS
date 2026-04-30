@@ -39,7 +39,7 @@
 |-----|------|------|
 | ❌ 字符串损坏 | `risk_engine.py:78` | `checks['MA200恢复�?]` → `checks['MA200恢复']` |
 | ❌ 字符串损坏 | `scanner.py:149` | `'Prob �?'` → `'Prob Up'` |
-| ❌ 语法未闭合 | `backtest.py` | DataFrame 列表未闭合 → 补全缺失代码 |
+| ✅ 语法未闭合 | `backtest.py` | DataFrame 列表未闭合 → 已补全 |
 
 ---
 
@@ -50,61 +50,48 @@
 #### 1.1 `src/core/signal_engine.py` — 信号引擎
 - **描述**: 从 `src/analysis/signals/lobster_signal.py` 的 SignalGenerator 中提取核心逻辑
 - **职责**: 调用 IndicatorEngine → ScoringEngine → SignalGenerator 的编排层
-- **参考**: `src/core/indicator_engine.py` 的 get_indicator_engine() 单例模式
-- **代码模式**:
-```python
-class SignalEngine:
-    def __init__(self):
-        self.indicator_engine = get_indicator_engine()
-        self.scoring_engine = get_scoring_engine()
-    
-    def generate_signal(self, stock_data: StockData) -> SignalResult:
-        df = self.indicator_engine.compute_all(stock_data.daily)
-        score = self.scoring_engine.compute_score(df)
-        signal = self._classify_signal(score)
-        return signal
-    
-    def _classify_signal(self, score: float) -> SignalResult: ...
-```
+- **状态**: ✅ 已完成
 
 #### 1.2 `src/ui/components/charts.py` — 图表组件
 - **描述**: 可复用的 Plotly 图表组件
 - **导出函数**: `candlestick_chart()`, `volume_chart()`, `indicator_chart()`, `equity_curve_chart()`
-- **参考**: `src/ui/pages/analyzer.py` 中的图表代码 (约 100-213 行)
-- **模式**: 接受 DataFrame + 参数 → 返回 go.Figure
+- **状态**: ✅ 已完成
 
 #### 1.3 `src/ui/components/filters.py` — 过滤器组件
 - **描述**: Streamlit 过滤器 UI 组件
 - **导出函数**: `market_filter()`, `score_range_filter()`, `symbol_multiselect()`
-- **参考**: `src/ui/pages/scanner.py` 中的过滤器逻辑
+- **状态**: ✅ 已完成
 
 #### 1.4 `src/analysis/backtest/metrics.py` — 回测指标
 - **描述**: 独立的回测指标计算函数
 - **导出函数**: `calculate_sharpe_ratio()`, `calculate_sortino_ratio()`, `calculate_max_drawdown()`, `calculate_profit_factor()`, `calculate_win_rate()`
-- **参考**: `src/analysis/backtest/engine.py` 中的指标计算逻辑
+- **状态**: ✅ 已完成
 
 ### 🟡 优先级 2: Config Layer
 
 #### 2.1 `src/config/defaults.yaml` — 默认配置
 - **描述**: 默认配置的 YAML 文件
 - **内容**: 复制 `src/config/settings.py` 中的默认值到 YAML 格式
+- **状态**: ✅ 已完成
 
 #### 2.2 `src/config/validation.py` — 配置校验
 - **描述**: 配置校验工具
 - **导出函数**: `validate_settings(settings)`, `validate_weight_sum(weights)`, `validate_market_config(markets)`
-- **参考**: `src/config/settings.py` 中已有的 validators
+- **状态**: ✅ 已完成
 
 ### 🟡 优先级 3: Utils 补充
 
 #### 3.1 `src/utils/validators.py` — 通用校验工具
 - **描述**: 数据校验工具
 - **导出函数**: `validate_symbol()`, `validate_date_range()`, `validate_dataframe_columns()`, `validate_timeframe()`
+- **状态**: ✅ 已完成
 
 ### 🟢 优先级 4: 信号系统补充
 
 #### 4.1 `src/analysis/signals/composite_signal.py` — 复合信号
 - **描述**: 综合多个信号源的复合信号生成器
 - **职责**: 聚合 SignalGenerator + ScoringEngine + RiskEngine 的结果输出统一信号
+- **状态**: ✅ 已完成
 
 ---
 
@@ -196,7 +183,7 @@ lobster_quant/
 │   │   ├── risk_engine.py
 │   │   ├── scoring_engine.py
 │   │   ├── events.py
-│   │   └── signal_engine.py        ← ❌ 需创建
+│   │   └── signal_engine.py        ← ✅ 已完成
 │   ├── data/
 │   │   ├── models.py
 │   │   ├── cache.py
@@ -210,20 +197,20 @@ lobster_quant/
 │   │   │   ├── base.py, trend.py, momentum.py, volume.py, volatility.py
 │   │   ├── signals/
 │   │   │   ├── lobster_signal.py
-│   │   │   ├── composite_signal.py  ← ❌ 需创建
+│   │   │   ├── composite_signal.py  ← ✅ 已完成
 │   │   └── backtest/
 │   │       ├── engine.py
-│   │       └── metrics.py           ← ❌ 需创建
+│   │   └── metrics.py           ← ✅ 已完成
 │   ├── config/
 │   │   ├── settings.py
-│   │   ├── defaults.yaml            ← ❌ 需创建
-│   │   └── validation.py            ← ❌ 需创建
+│   │   ├── defaults.yaml            ← ✅ 已完成
+│   │   └── validation.py            ← ✅ 已完成
 │   ├── ui/
 │   │   ├── theme.py
 │   │   ├── components/
 │   │   │   ├── cards.py
-│   │   │   ├── charts.py            ← ❌ 需创建
-│   │   │   └── filters.py           ← ❌ 需创建
+│   │   │   ├── charts.py            ← ✅ 已完成
+│   │   │   └── filters.py           ← ✅ 已完成
 │   │   └── pages/
 │   │       ├── dashboard.py, scanner.py, analyzer.py
 │   │       ├── backtest.py, settings.py, quant_tool.py
