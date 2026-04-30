@@ -6,15 +6,11 @@ import pytest
 import pandas as pd
 import numpy as np
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from analysis.indicators import IndicatorRegistry
-from analysis.indicators.trend import SMAIndicator, MACDIndicator, MABullishIndicator
-from analysis.indicators.momentum import RSIIndicator, MomentumScoreIndicator
-from analysis.indicators.volatility import ATRIndicator, BollingerBandsIndicator
-from analysis.indicators.volume import VolumeRatioIndicator
+from src.analysis.indicators import IndicatorRegistry
+from src.analysis.indicators.trend import SMAIndicator, MACDIndicator, MABullishIndicator
+from src.analysis.indicators.momentum import RSIIndicator, MomentumScoreIndicator
+from src.analysis.indicators.volatility import ATRIndicator, BollingerBandsIndicator
+from src.analysis.indicators.volume import VolumeRatioIndicator
 
 
 @pytest.fixture

@@ -53,6 +53,20 @@ class DataCache:
         """
         # Check memory cache first
         if key in self._memory_cache:
+            # Check TTL for memory cache too
+            meta_path = self._get_meta_path(key)
+            if meta_path.exists():
+                try:
+                    with open(meta_path, 'r') as f:
+                        meta = json.load(f)
+                    cached_time = datetime.fromisoformat(meta['cached_at'])
+                    ttl = meta.get('ttl', self.default_ttl)
+                    if datetime.now() - cached_time > timedelta(seconds=ttl):
+                        # Expired — remove from memory and disk
+                        self._memory_cache.pop(key, None)
+                        return None
+                except Exception:
+                    pass
             logger.debug(f"Memory cache hit: {key}")
             return self._memory_cache[key]
         
@@ -110,7 +124,7 @@ class DataCache:
             # Store metadata
             meta = {
                 'cached_at': datetime.now().isoformat(),
-                'ttl': ttl or self.default_ttl,
+                'ttl': ttl if ttl is not None else self.default_ttl,
                 'key': key,
                 'type': type(data).__name__
             }

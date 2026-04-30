@@ -6,11 +6,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from analysis.signals import SignalGenerator
+from src.analysis.signals import SignalGenerator
 
 
 @pytest.fixture

@@ -7,11 +7,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from data.models import (
+from src.data.models import (
     OHLCV,
     StockData,
     SignalResult,

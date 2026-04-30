@@ -145,5 +145,4 @@ def display_backtest_results(result, engine) -> None:
             for t in result.trades
         ])
         st.dataframe(trades_df, use_container_width=True)
-        st.dataframe(trades_df, use_container_width=True)
 

@@ -23,8 +23,9 @@ class MockProvider(DataProvider):
     def __init__(self, 
                  trend: float = 0.0001,
                  volatility: float = 0.02,
-                 seed: int = 42):
-        super().__init__(name="mock")
+                 seed: int = 42,
+                 timeout: int = 10):
+        super().__init__(name="mock", timeout=timeout)
         self.trend = trend
         self.volatility = volatility
         self.rng = np.random.RandomState(seed)
