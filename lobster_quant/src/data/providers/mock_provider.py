@@ -63,30 +63,6 @@ class MockProvider(DataProvider):
         logger.debug(f"Generated {len(df)} mock daily rows for {symbol}")
         return df[['open', 'high', 'low', 'close', 'volume']]
     
-    def fetch_weekly(self, symbol: str, years: int = 3) -> pd.DataFrame:
-        """Generate synthetic weekly data."""
-        daily = self.fetch_daily(symbol, years)
-        weekly = daily.resample('W').agg({
-            'open': 'first',
-            'high': 'max',
-            'low': 'min',
-            'close': 'last',
-            'volume': 'sum'
-        })
-        return weekly
-    
-    def fetch_monthly(self, symbol: str, years: int = 3) -> pd.DataFrame:
-        """Generate synthetic monthly data."""
-        daily = self.fetch_daily(symbol, years)
-        monthly = daily.resample('ME').agg({
-            'open': 'first',
-            'high': 'max',
-            'low': 'min',
-            'close': 'last',
-            'volume': 'sum'
-        })
-        return monthly
-    
     def health_check(self) -> bool:
         """Mock provider is always healthy."""
         return True

@@ -61,7 +61,9 @@ class BacktestEngine:
             return BacktestResult(symbol=symbol)
         
         # Calculate entry signals
-        df['ma20'] = df['close'].rolling(window=20).mean()
+        # Defensive: compute ma20 if not provided by IndicatorEngine
+        if 'ma20' not in df.columns:
+            df['ma20'] = df['close'].rolling(window=20).mean()
         df['ma20_slope'] = df['ma20'].diff()
         
         df['entry_signal'] = (

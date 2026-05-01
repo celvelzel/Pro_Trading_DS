@@ -1,1 +1,0 @@
-"""Lobster Quant - Legacy modules (v1 architecture). Kept for backward compatibility."""

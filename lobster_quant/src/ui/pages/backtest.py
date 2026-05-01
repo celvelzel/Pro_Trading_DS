@@ -12,6 +12,7 @@ from src.analysis.signals import SignalGenerator
 from src.analysis.backtest import BacktestEngine
 from src.config.settings import get_settings
 from src.utils.logging import get_logger
+from ..components.charts import equity_curve_chart
 
 logger = get_logger()
 
@@ -124,11 +125,8 @@ def display_backtest_results(result, engine) -> None:
     # Equity curve
     st.subheader("Equity Curve")
     if result.equity_curve:
-        equity_df = pd.DataFrame({
-            'Trade': range(len(result.equity_curve)),
-            'Equity': result.equity_curve
-        })
-        st.line_chart(equity_df.set_index('Trade'))
+        fig = equity_curve_chart(result.equity_curve)
+        st.plotly_chart(fig, use_container_width=True)
     
     # Trade list
     st.subheader("Trade History")

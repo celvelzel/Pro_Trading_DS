@@ -4,7 +4,7 @@ Abstract base for all data sources with unified interface.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Any
+from typing import Optional, Any, cast
 from datetime import datetime
 import pandas as pd
 
@@ -44,15 +44,33 @@ class DataProvider(ABC):
         """
         pass
     
-    @abstractmethod
     def fetch_weekly(self, symbol: str, years: int = 3) -> Optional[pd.DataFrame]:
-        """Fetch weekly OHLCV data."""
-        pass
+        """Fetch weekly OHLCV data. Default: resample from daily."""
+        daily = self.fetch_daily(symbol, years)
+        if daily is None or daily.empty:
+            return None
+        result = cast(pd.DataFrame, daily.resample('W').agg({
+            'open': 'first',
+            'high': 'max',
+            'low': 'min',
+            'close': 'last',
+            'volume': 'sum'
+        }))
+        return result
     
-    @abstractmethod
     def fetch_monthly(self, symbol: str, years: int = 3) -> Optional[pd.DataFrame]:
-        """Fetch monthly OHLCV data."""
-        pass
+        """Fetch monthly OHLCV data. Default: resample from daily."""
+        daily = self.fetch_daily(symbol, years)
+        if daily is None or daily.empty:
+            return None
+        result = cast(pd.DataFrame, daily.resample('ME').agg({
+            'open': 'first',
+            'high': 'max',
+            'low': 'min',
+            'close': 'last',
+            'volume': 'sum'
+        }))
+        return result
     
     def fetch_stock_data(self, symbol: str, years: int = 3) -> Optional[StockData]:
         """Fetch complete stock data with all timeframes.

@@ -16,120 +16,11 @@ from .quant_tool_indicators import (
     calc_put_call_ratio,
 )
 from ..theme import theme_manager
+from src.core.data_engine import get_data_engine
+from src.core.risk_engine import get_risk_engine
 from src.utils.logging import get_logger
 
 logger = get_logger()
-
-
-# ── Private data helpers (ported from quant_tool_data.py) ──────
-
-def _fetch_daily_data(symbol: str, period: str = "1y") -> dict:
-    """Fetch daily OHLCV data.
-
-    Args:
-        symbol: Stock ticker symbol (e.g., "AAPL").
-        period: Time period to fetch.
-
-    Returns:
-        Dict with date/open/high/low/close/volume keys,
-        or {"error": message} on failure.
-    """
-    import warnings
-    import yfinance as yf
-
-    if not symbol or not symbol.strip():
-        return {"error": "Symbol cannot be empty"}
-
-    symbol = symbol.strip().upper()
-
-    try:
-        ticker = yf.Ticker(symbol)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            hist = ticker.history(period=period, timeout=10)
-
-        if hist.empty:
-            return {"error": f"No data available for symbol {symbol}"}
-
-        required_cols = ["Open", "High", "Low", "Close", "Volume"]
-        for col in required_cols:
-            if col not in hist.columns:
-                return {"error": f"Missing column {col} in data for {symbol}"}
-
-        if bool(hist["Close"].isna().all()):
-            return {"error": f"No valid price data for symbol {symbol}"}
-
-        return {
-            "date": [pd.Timestamp(d).strftime("%Y-%m-%d") for d in hist.index],
-            "open": hist["Open"].tolist(),
-            "high": hist["High"].tolist(),
-            "low": hist["Low"].tolist(),
-            "close": hist["Close"].tolist(),
-            "volume": hist["Volume"].astype(int).tolist(),
-        }
-
-    except Exception as e:
-        return {"error": f"Failed to fetch data for {symbol}: {e}"}
-
-
-def _fetch_option_chain(symbol: str) -> dict | None:
-    """Fetch options chain for the nearest expiration date.
-
-    Returns:
-        Dict with expiration/calls/puts, None if no options,
-        or {"error": message} on failure.
-    """
-    import warnings
-    import yfinance as yf
-
-    if not symbol or not symbol.strip():
-        return {"error": "Symbol cannot be empty"}
-
-    symbol = symbol.strip().upper()
-
-    try:
-        ticker = yf.Ticker(symbol)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            options_dates = ticker.options
-
-        if not options_dates:
-            return None
-
-        nearest = options_dates[0]
-        chain = ticker.option_chain(nearest)
-
-        calls_list = _clean_records(chain.calls.to_dict("records"))
-        puts_list = _clean_records(chain.puts.to_dict("records"))
-
-        return {
-            "expiration": nearest,
-            "calls": calls_list,
-            "puts": puts_list,
-        }
-
-    except Exception as e:
-        return {"error": f"Failed to fetch options for {symbol}: {e}"}
-
-
-def _clean_records(records: list[dict]) -> list[dict]:
-    """Clean records for JSON-safe serialization."""
-    import numpy as np
-    result = []
-    for r in records:
-        cleaned = {}
-        for k, v in r.items():
-            if hasattr(v, "isoformat"):
-                v = v.isoformat()
-            elif not isinstance(v, (int, float, str, bool)) and v is not None:
-                try:
-                    if np.isnan(v):
-                        v = None
-                except TypeError:
-                    pass
-            cleaned[k] = v
-        result.append(cleaned)
-    return result
 
 
 # ── Page renderer ──────────────────────────────────────────────
@@ -161,32 +52,22 @@ def render_quant_tool() -> None:
         if symbol and fetch_button:
             symbol = symbol.strip().upper()
 
-            with st.spinner(f"正在获取 {symbol} 数据..."):
-                daily_data = _fetch_daily_data(symbol)
+            engine = get_data_engine()
+            risk_engine = get_risk_engine()
 
-            if isinstance(daily_data, dict) and "error" in daily_data:
-                st.error(daily_data["error"])
+            with st.spinner(f"正在获取 {symbol} 数据..."):
+                stock_data = engine.fetch_stock(symbol)
+
+            if stock_data is None:
+                st.error(f"无法获取 {symbol} 的数据")
                 return
 
-            df = pd.DataFrame({
-                "Date": pd.to_datetime(daily_data["date"]),
-                "Open": daily_data["open"],
-                "High": daily_data["high"],
-                "Low": daily_data["low"],
-                "Close": daily_data["close"],
-                "Volume": daily_data["volume"],
-            })
-            df.set_index("Date", inplace=True)
+            df = stock_data.daily
+            current_price = df["close"].iloc[-1]
 
-            current_price = df["Close"].iloc[-1]
-
-            atr_pct_series = calc_atr_percent(df.rename(columns={
-                "Open": "open", "High": "high", "Low": "low", "Close": "close",
-            }))
-            ma200_dist_series = calc_ma200_dist(df.rename(columns={"Close": "close"}))
-            gap_pct_series = calc_gap_percent(df.rename(columns={
-                "Open": "open", "Close": "close",
-            }))
+            atr_pct_series = calc_atr_percent(df)
+            ma200_dist_series = calc_ma200_dist(df)
+            gap_pct_series = calc_gap_percent(df)
 
             atr_percent = (
                 atr_pct_series.iloc[-1] if not atr_pct_series.empty else None
@@ -199,25 +80,15 @@ def render_quant_tool() -> None:
             )
 
             market_status = (
-                "Bull" if df["Close"].iloc[-1] >= df["Open"].iloc[-1] else "Bear"
+                "Bull" if df["close"].iloc[-1] >= df["open"].iloc[-1] else "Bear"
             )
 
             # == OFF Filter Analysis Card ==============================
             with st.spinner("计算 OFF 评估..."):
                 st.markdown("### 🎯 OFF 评估")
 
-                off_probability = 0.10
-
-                if atr_percent is not None and atr_percent > 3:
-                    off_probability += 0.20
-
-                if ma200_dist is not None and ma200_dist < 0:
-                    off_probability += 0.30
-
-                if gap_percent is not None and gap_percent > 1:
-                    off_probability += 0.10
-
-                off_probability = min(off_probability, 0.95)
+                off_status = risk_engine.get_latest_status(df)
+                off_probability = 0.95 if off_status.is_off else 0.10
                 on_probability = 1 - off_probability
 
                 col_on, col_off = st.columns(2)
@@ -282,19 +153,17 @@ def render_quant_tool() -> None:
 
             # == Options Analysis =====================================
             with st.spinner("加载期权数据..."):
-                options_data = _fetch_option_chain(symbol)
+                provider = engine.providers.get("us_stock")
+                options_obj = provider.fetch_options(symbol) if provider else None
 
-            if options_data is None:
+            if options_obj is None:
                 st.warning("该标的无可用期权数据")
                 st.info("该股票没有可用的期权数据，跳过期权分析 dashboard")
-            elif isinstance(options_data, dict) and "error" in options_data:
-                st.warning(f"期权数据获取失败: {options_data['error']}")
-                st.info("无法加载期权数据，跳过期权分析 dashboard")
             else:
                 st.markdown("### 📊 期权分析")
 
-                calls = options_data.get("calls", [])
-                puts = options_data.get("puts", [])
+                calls = options_obj.calls
+                puts = options_obj.puts
 
                 if not calls or not puts:
                     st.warning("该标的无可用期权数据")

@@ -89,36 +89,6 @@ class AkShareProvider(DataProvider):
             logger.error(f"Failed to fetch A-share data for {symbol}: {e}")
             raise DataFetchError(symbol, self.name, str(e))
     
-    def fetch_weekly(self, symbol: str, years: int = 3) -> Optional[pd.DataFrame]:
-        """Fetch weekly OHLCV data by resampling daily data."""
-        daily = self.fetch_daily(symbol, years)
-        if daily is None:
-            return None
-        
-        weekly = daily.resample('W').agg({
-            'open': 'first',
-            'high': 'max',
-            'low': 'min',
-            'close': 'last',
-            'volume': 'sum'
-        })
-        return weekly
-    
-    def fetch_monthly(self, symbol: str, years: int = 3) -> Optional[pd.DataFrame]:
-        """Fetch monthly OHLCV data by resampling daily data."""
-        daily = self.fetch_daily(symbol, years)
-        if daily is None:
-            return None
-        
-        monthly = daily.resample('ME').agg({
-            'open': 'first',
-            'high': 'max',
-            'low': 'min',
-            'close': 'last',
-            'volume': 'sum'
-        })
-        return monthly
-    
     def health_check(self) -> bool:
         """Check if AkShare API is accessible."""
         try:

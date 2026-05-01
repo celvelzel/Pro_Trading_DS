@@ -100,7 +100,9 @@ class RiskEngine:
         """Assess benchmark (e.g., SPY) risk."""
         try:
             df = benchmark_data.copy()
-            df['ma20'] = df['close'].rolling(window=20).mean()
+            # Defensive: compute ma20 if not provided by IndicatorEngine
+            if 'ma20' not in df.columns:
+                df['ma20'] = df['close'].rolling(window=20).mean()
             bench_slope = df['ma20'].diff()
             return bench_slope < 0
         except Exception as e:
@@ -192,4 +194,16 @@ class RiskEngine:
         """
         status = self.get_latest_status(data, benchmark_data)
         return status.is_on, status.reasons
+
+
+# Global risk engine instance
+_risk_engine: Optional[RiskEngine] = None
+
+
+def get_risk_engine() -> RiskEngine:
+    """Get global risk engine instance (singleton)."""
+    global _risk_engine
+    if _risk_engine is None:
+        _risk_engine = RiskEngine()
+    return _risk_engine
 
