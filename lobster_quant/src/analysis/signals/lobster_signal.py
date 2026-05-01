@@ -72,26 +72,30 @@ class SignalGenerator:
         
         # Daily slope
         if 'slope_daily' in data.columns:
-            slope = latest.get('slope_daily', 0)
+            slope = pd.to_numeric(latest.get('slope_daily', 0), errors='coerce')
+            if pd.isna(slope):
+                slope = 0
             # Normalize slope: typical range -0.03 to +0.03
             slope_score = min(100, max(0, (slope + 0.03) / 0.06 * 100))
             score = slope_score
         
         # Weekly slope confirmation
         if 'slope_weekly' in data.columns:
-            w_slope = latest.get('slope_weekly', 0)
-            if w_slope > 0 and score > 50:
-                score = min(100, score + 10)
-            elif w_slope < 0 and score < 50:
-                score = max(0, score - 10)
+            w_slope = pd.to_numeric(latest.get('slope_weekly', 0), errors='coerce')
+            if pd.notna(w_slope):
+                if w_slope > 0 and score > 50:
+                    score = min(100, score + 10)
+                elif w_slope < 0 and score < 50:
+                    score = max(0, score - 10)
         
         # Monthly slope confirmation
         if 'slope_monthly' in data.columns:
-            m_slope = latest.get('slope_monthly', 0)
-            if m_slope > 0 and score > 50:
-                score = min(100, score + 10)
-            elif m_slope < 0 and score < 50:
-                score = max(0, score - 10)
+            m_slope = pd.to_numeric(latest.get('slope_monthly', 0), errors='coerce')
+            if pd.notna(m_slope):
+                if m_slope > 0 and score > 50:
+                    score = min(100, score + 10)
+                elif m_slope < 0 and score < 50:
+                    score = max(0, score - 10)
         
         return score
     
@@ -101,7 +105,7 @@ class SignalGenerator:
         
         # RSI
         if 'rsi' in data.columns:
-            rsi = latest.get('rsi', 50)
+            rsi = pd.to_numeric(latest.get('rsi', 50), errors='coerce')
             if pd.isna(rsi):
                 rsi = 50
             
@@ -117,15 +121,18 @@ class SignalGenerator:
         
         # 20-day return
         if len(data) >= 21:
-            ret_20d = (data['close'].iloc[-1] / data['close'].iloc[-21] - 1) * 100
-            if ret_20d > 10:
-                score = min(100, score + 15)
-            elif ret_20d > 0:
-                score = min(100, score + ret_20d * 0.5)
-            elif ret_20d > -10:
-                score = max(0, score + ret_20d * 0.5)
-            else:
-                score = max(0, score - 15)
+            close_last = pd.to_numeric(data['close'].iloc[-1], errors='coerce')
+            close_prev = pd.to_numeric(data['close'].iloc[-21], errors='coerce')
+            if pd.notna(close_last) and pd.notna(close_prev) and close_prev != 0:
+                ret_20d = (close_last / close_prev - 1) * 100
+                if ret_20d > 10:
+                    score = min(100, score + 15)
+                elif ret_20d > 0:
+                    score = min(100, score + ret_20d * 0.5)
+                elif ret_20d > -10:
+                    score = max(0, score + ret_20d * 0.5)
+                else:
+                    score = max(0, score - 15)
         
         return score
     
@@ -134,7 +141,7 @@ class SignalGenerator:
         score = 50.0
         
         if 'volume_ratio' in data.columns:
-            vr = latest.get('volume_ratio', 1.0)
+            vr = pd.to_numeric(latest.get('volume_ratio', 1.0), errors='coerce')
             if pd.isna(vr):
                 vr = 1.0
             
@@ -169,7 +176,7 @@ class SignalGenerator:
         
         # Price above BB mid
         if 'bb_position' in data.columns:
-            bb_pos = latest.get('bb_position', 0.5)
+            bb_pos = pd.to_numeric(latest.get('bb_position', 0.5), errors='coerce')
             if pd.isna(bb_pos):
                 bb_pos = 0.5
             if bb_pos > 0.5:
@@ -179,7 +186,9 @@ class SignalGenerator:
         
         # Price above MA20
         if 'ma20' in data.columns:
-            if latest.get('close', 0) > latest.get('ma20', 0):
+            close_val = pd.to_numeric(latest.get('close', 0), errors='coerce')
+            ma20_val = pd.to_numeric(latest.get('ma20', 0), errors='coerce')
+            if pd.notna(close_val) and pd.notna(ma20_val) and close_val > ma20_val:
                 score += 25
         
         return min(100, score)
@@ -250,34 +259,38 @@ class SignalGenerator:
         
         # Trend reasons
         if 'slope_daily' in data.columns:
-            slope = latest.get('slope_daily', 0)
-            if slope > 0.01:
-                reasons.append(f"日线趋势向上 (斜率: {slope:.4f})")
-            elif slope < -0.01:
-                reasons.append(f"日线趋势向下 (斜率: {slope:.4f})")
+            slope = pd.to_numeric(latest.get('slope_daily', 0), errors='coerce')
+            if pd.notna(slope):
+                if slope > 0.01:
+                    reasons.append(f"日线趋势向上 (斜率: {slope:.4f})")
+                elif slope < -0.01:
+                    reasons.append(f"日线趋势向下 (斜率: {slope:.4f})")
         
         if 'slope_weekly' in data.columns:
-            w_slope = latest.get('slope_weekly', 0)
-            if w_slope > 0:
-                reasons.append("周线趋势向上")
-            elif w_slope < 0:
-                reasons.append("周线趋势向下")
+            w_slope = pd.to_numeric(latest.get('slope_weekly', 0), errors='coerce')
+            if pd.notna(w_slope):
+                if w_slope > 0:
+                    reasons.append("周线趋势向上")
+                elif w_slope < 0:
+                    reasons.append("周线趋势向下")
         
         # Momentum reasons
         if 'rsi' in data.columns:
-            rsi = latest.get('rsi', 50)
-            if rsi < 30:
-                reasons.append(f"RSI超卖 ({rsi:.1f})")
-            elif rsi > 70:
-                reasons.append(f"RSI超买 ({rsi:.1f})")
+            rsi = pd.to_numeric(latest.get('rsi', 50), errors='coerce')
+            if pd.notna(rsi):
+                if rsi < 30:
+                    reasons.append(f"RSI超卖 ({rsi:.1f})")
+                elif rsi > 70:
+                    reasons.append(f"RSI超买 ({rsi:.1f})")
         
         # Volume reasons
         if 'volume_ratio' in data.columns:
-            vr = latest.get('volume_ratio', 1.0)
-            if vr > 1.5:
-                reasons.append(f"成交量放大({vr:.1f}x)")
-            elif vr < 0.5:
-                reasons.append(f"成交量萎缩({vr:.1f}x)")
+            vr = pd.to_numeric(latest.get('volume_ratio', 1.0), errors='coerce')
+            if pd.notna(vr):
+                if vr > 1.5:
+                    reasons.append(f"成交量放大({vr:.1f}x)")
+                elif vr < 0.5:
+                    reasons.append(f"成交量萎缩({vr:.1f}x)")
         
         # Pattern reasons
         if 'macd_golden' in data.columns and latest.get('macd_golden', False):

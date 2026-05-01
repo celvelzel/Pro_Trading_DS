@@ -63,13 +63,17 @@ class BacktestEngine:
         # Calculate entry signals
         # Defensive: compute ma20 if not provided by IndicatorEngine
         if 'ma20' not in df.columns:
-            df['ma20'] = df['close'].rolling(window=20).mean()
-        df['ma20_slope'] = df['ma20'].diff()
+            df['ma20'] = pd.to_numeric(df['close'], errors='coerce').rolling(window=20).mean()
+        close = pd.to_numeric(df['close'], errors='coerce')
+        ma20 = pd.to_numeric(df['ma20'], errors='coerce')
+        ma20_slope = pd.to_numeric(df['ma20_slope'], errors='coerce') if 'ma20_slope' in df.columns else ma20.diff()
+        df['ma20_slope'] = ma20_slope
         
+        score = pd.to_numeric(df['score'], errors='coerce')
         df['entry_signal'] = (
-            (df['close'] > df['ma20']) &
-            (df['ma20_slope'] > 0) &
-            (df['score'] >= self.min_score)
+            (close > ma20) &
+            (ma20_slope > 0) &
+            (score >= self.min_score)
         )
         
         # Generate trades
