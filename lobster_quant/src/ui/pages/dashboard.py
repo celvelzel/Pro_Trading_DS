@@ -13,6 +13,7 @@ from src.analysis.signals import SignalGenerator
 from src.config.settings import get_settings
 from src.utils.logging import get_logger
 from ..components.cards import status_card, metric_card
+from ..components.help import render_page_help
 from ..theme import theme_manager
 
 logger = get_logger()
@@ -21,7 +22,9 @@ logger = get_logger()
 def render_dashboard():
     """Render the main dashboard page."""
     st.title("📊 Lobster Quant Dashboard")
-    
+
+    render_page_help("dashboard")
+
     settings = get_settings()
     engine = get_data_engine()
     

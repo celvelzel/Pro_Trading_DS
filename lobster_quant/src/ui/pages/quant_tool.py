@@ -15,6 +15,7 @@ from .quant_tool_indicators import (
     find_support_resistance,
     calc_put_call_ratio,
 )
+from ..components.help import render_page_help, get_param_help
 from ..theme import theme_manager
 from src.core.data_engine import get_data_engine
 from src.core.risk_engine import get_risk_engine
@@ -33,6 +34,8 @@ def render_quant_tool() -> None:
 
         st.markdown("---")
 
+        render_page_help("quant_tool")
+
         # Top search bar / symbol input
         col1, col2 = st.columns([3, 1])
 
@@ -41,6 +44,7 @@ def render_quant_tool() -> None:
                 "输入股票代码",
                 placeholder="例如：AAPL, MSFT, TSLA",
                 key="quant_tool_symbol",
+                help=get_param_help("quant_tool", "symbol"),
             )
 
         with col2:
@@ -308,7 +312,7 @@ def render_quant_tool() -> None:
                                 ),
                             )
 
-                            st.plotly_chart(fig_volume, use_container_width=True)
+                            st.plotly_chart(fig_volume, width='stretch')
 
                             # Open Interest Chart
                             fig_oi = go.Figure()
@@ -350,7 +354,7 @@ def render_quant_tool() -> None:
                                 ),
                             )
 
-                            st.plotly_chart(fig_oi, use_container_width=True)
+                            st.plotly_chart(fig_oi, width='stretch')
         else:
             st.markdown("""
             ### 👋 输入股票代码开始分析

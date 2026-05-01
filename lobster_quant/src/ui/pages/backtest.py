@@ -13,6 +13,7 @@ from src.analysis.backtest import BacktestEngine
 from src.config.settings import get_settings
 from src.utils.logging import get_logger
 from ..components.charts import equity_curve_chart
+from ..components.help import render_page_help, get_param_help
 
 logger = get_logger()
 
@@ -20,18 +21,29 @@ logger = get_logger()
 def render_backtest():
     """Render the backtest page."""
     st.title("🧪 Strategy Backtest")
-    
+
+    render_page_help("backtest")
+
     settings = get_settings()
     engine = get_data_engine()
-    
+
     # Parameters
     col1, col2, col3 = st.columns(3)
     with col1:
-        symbol = st.text_input("Symbol", value="SPY").upper().strip()
+        symbol = st.text_input(
+            "Symbol", value="SPY",
+            help=get_param_help("backtest", "symbol"),
+        ).upper().strip()
     with col2:
-        holding_days = st.slider("Holding Days", 5, 60, settings.backtest_holding_days)
+        holding_days = st.slider(
+            "Holding Days", 5, 60, settings.backtest_holding_days,
+            help=get_param_help("backtest", "holding_days"),
+        )
     with col3:
-        min_score = st.slider("Min Score", 0, 100, settings.backtest_min_score)
+        min_score = st.slider(
+            "Min Score", 0, 100, settings.backtest_min_score,
+            help=get_param_help("backtest", "min_score"),
+        )
     
     if st.button("Run Backtest", type="primary"):
         with st.spinner(f"Backtesting {symbol}..."):
@@ -126,7 +138,7 @@ def display_backtest_results(result, engine) -> None:
     st.subheader("Equity Curve")
     if result.equity_curve:
         fig = equity_curve_chart(result.equity_curve)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     # Trade list
     st.subheader("Trade History")
@@ -142,5 +154,5 @@ def display_backtest_results(result, engine) -> None:
             }
             for t in result.trades
         ])
-        st.dataframe(trades_df, use_container_width=True)
+        st.dataframe(trades_df, width='stretch')
 

@@ -14,6 +14,7 @@ from src.analysis.backtest import BacktestEngine
 from src.utils.logging import get_logger
 from ..components.cards import signal_card, status_card
 from ..components.charts import candlestick_chart, equity_curve_chart
+from ..components.help import render_page_help, get_param_help
 
 logger = get_logger()
 
@@ -21,11 +22,16 @@ logger = get_logger()
 def render_analyzer():
     """Render the stock analyzer page."""
     st.title("📈 Stock Analyzer")
-    
+
+    render_page_help("analyzer")
+
     engine = get_data_engine()
-    
+
     # Symbol input
-    symbol = st.text_input("Enter Stock Symbol", value="AAPL").upper().strip()
+    symbol = st.text_input(
+        "Enter Stock Symbol", value="AAPL",
+        help=get_param_help("analyzer", "symbol"),
+    ).upper().strip()
     
     if not symbol:
         st.info("Enter a stock symbol to analyze")
@@ -71,7 +77,7 @@ def analyze_stock(symbol: str, engine) -> None:
         # Price chart
         st.subheader("Price Chart")
         fig = candlestick_chart(df, symbol=symbol)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         # Key metrics
         col1, col2, col3, col4 = st.columns(4)
@@ -129,7 +135,7 @@ def analyze_stock(symbol: str, engine) -> None:
             # Equity curve
             if result.equity_curve:
                 fig = equity_curve_chart(result.equity_curve)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
         else:
             st.info("No trades generated with current parameters")
         

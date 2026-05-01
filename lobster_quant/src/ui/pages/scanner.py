@@ -13,6 +13,7 @@ from src.analysis.signals import SignalGenerator
 from src.config.settings import get_settings
 from src.utils.logging import get_logger
 from ..components.cards import signal_card
+from ..components.help import render_page_help, get_param_help
 
 logger = get_logger()
 
@@ -36,7 +37,9 @@ A_STOCK_LIST = [
 def render_scanner():
     """Render the stock scanner page."""
     st.title("🔍 Stock Scanner")
-    
+
+    render_page_help("scanner")
+
     settings = get_settings()
     engine = get_data_engine()
     
@@ -54,11 +57,15 @@ def render_scanner():
         selected_market = st.selectbox(
             "Select Market",
             options=available_markets,
-            index=0
+            index=0,
+            help=get_param_help("scanner", "market"),
         )
     
     with col2:
-        min_score = st.slider("Min Score", 0, 100, settings.backtest_min_score)
+        min_score = st.slider(
+            "Min Score", 0, 100, settings.backtest_min_score,
+            help=get_param_help("scanner", "min_score"),
+        )
     
     # Get stock list
     if selected_market == "US Stocks":
@@ -153,7 +160,7 @@ def display_results(results: list) -> None:
         for r in results
     ])
     
-    st.dataframe(df_display, use_container_width=True)
+    st.dataframe(df_display, width='stretch')
     
     # Detailed cards for top 5
     st.subheader("Top Picks")
