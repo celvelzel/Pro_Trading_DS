@@ -93,9 +93,10 @@ class ScoringEngine:
 
         for col in ["slope_daily", "slope_weekly", "slope_monthly"]:
             if col in df.columns:
-                recent = df[col].dropna().iloc[-500:]
+                numeric_col = pd.to_numeric(df[col], errors='coerce')
+                recent = numeric_col.dropna().iloc[-500:]
                 if len(recent) > 0:
-                    pct = df[col].rank(pct=True)
+                    pct = numeric_col.rank(pct=True)
                     scores[f"{col}_score"] = pct.fillna(0.5) * 40
                 else:
                     scores[f"{col}_score"] = pd.Series(20, index=df.index)
@@ -127,11 +128,13 @@ class ScoringEngine:
                 return 20.0 - (rsi - 50) * 0.5
             return max(0.0, 20.0 - (rsi - 70))
 
-        rsi_score = df["rsi"].apply(_rsi_to_score)
+        rsi = pd.to_numeric(df["rsi"], errors='coerce')
+        rsi_score = rsi.apply(_rsi_to_score)
 
         # 20-day return percentile
+        close = pd.to_numeric(df["close"], errors='coerce')
         df_copy = df.copy()
-        df_copy["ret_20d"] = df["close"].pct_change(20)
+        df_copy["ret_20d"] = close.pct_change(20)
         ret_recent = df_copy["ret_20d"].dropna().iloc[-500:]
         if len(ret_recent) > 0:
             ret_pct = ret_recent.rank(pct=True)
@@ -156,6 +159,7 @@ class ScoringEngine:
         vr = df.get("volume_ratio")
         if vr is None or not isinstance(vr, pd.Series):
             vr = pd.Series(0.0, index=df.index)
+        vr = pd.to_numeric(vr, errors='coerce')
         return vr.apply(_vol_to_score)  # type: ignore[return-value]
 
     def _calc_pattern_score(self, df: pd.DataFrame) -> pd.Series:
@@ -178,7 +182,8 @@ class ScoringEngine:
 
         # Bollinger position (above midline)
         if "bb_position" in df.columns:
-            score += (df["bb_position"] > 0.5).fillna(False).astype(int) * 5
+            bb_pos = pd.to_numeric(df["bb_position"], errors='coerce')
+            score += (bb_pos > 0.5).fillna(False).astype(int) * 5
 
         return score
 

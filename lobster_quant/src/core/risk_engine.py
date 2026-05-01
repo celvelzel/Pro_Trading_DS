@@ -69,18 +69,23 @@ class RiskEngine:
         
         # 1. ATR% check
         if 'atr_pct' in data.columns:
-            checks['ATR过高'] = data['atr_pct'] > self.atr_threshold
+            atr_pct = pd.to_numeric(data['atr_pct'], errors='coerce')
+            checks['ATR过高'] = atr_pct > self.atr_threshold
         
         # 2. MA200 recovery check
         if 'ma200' in data.columns and 'close' in data.columns:
-            below_ma200 = data['close'] < data['ma200']
-            ma200_falling = data['ma200'].diff() < 0
+            close = pd.to_numeric(data['close'], errors='coerce')
+            ma200 = pd.to_numeric(data['ma200'], errors='coerce')
+            below_ma200 = close < ma200
+            ma200_falling = ma200.diff() < 0
             checks['MA200恢复'] = below_ma200 & ma200_falling
         
         # 3. Gap check
         if 'open' in data.columns and 'close' in data.columns:
-            prev_close = data['close'].shift(1)
-            gap = (data['open'] - prev_close) / prev_close
+            close = pd.to_numeric(data['close'], errors='coerce')
+            open_price = pd.to_numeric(data['open'], errors='coerce')
+            prev_close = close.shift(1)
+            gap = (open_price - prev_close) / prev_close
             gap_std = gap.rolling(window=60).std()
             checks['Gap过大'] = gap.abs() > 2.0 * gap_std
         
@@ -92,7 +97,8 @@ class RiskEngine:
         
         # 5. Volume check
         if 'volume_ratio' in data.columns:
-            checks['流动性不足'] = data['volume_ratio'] < self.min_volume_ratio
+            volume_ratio = pd.to_numeric(data['volume_ratio'], errors='coerce')
+            checks['流动性不足'] = volume_ratio < self.min_volume_ratio
         
         return checks
     
@@ -100,10 +106,12 @@ class RiskEngine:
         """Assess benchmark (e.g., SPY) risk."""
         try:
             df = benchmark_data.copy()
+            close = pd.to_numeric(df['close'], errors='coerce')
             # Defensive: compute ma20 if not provided by IndicatorEngine
             if 'ma20' not in df.columns:
-                df['ma20'] = df['close'].rolling(window=20).mean()
-            bench_slope = df['ma20'].diff()
+                df['ma20'] = close.rolling(window=20).mean()
+            ma20 = pd.to_numeric(df['ma20'], errors='coerce')
+            bench_slope = ma20.diff()
             return bench_slope < 0
         except Exception as e:
             logger.warning(f"Benchmark risk assessment failed: {e}")

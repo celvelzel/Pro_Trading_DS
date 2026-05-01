@@ -84,6 +84,12 @@ class IndicatorEngine:
         self._add_volume_ratio(df)
         self._add_volume_trend(df)
         
+        # Ensure all indicator columns are numeric (defense-in-depth)
+        # This prevents TypeError when comparing with int/float in downstream consumers
+        for col in df.columns:
+            if col not in ['open', 'high', 'low', 'close', 'volume']:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        
         return df
     
     def compute_for_stock(self, stock_data: StockData) -> Dict[str, pd.DataFrame]:
