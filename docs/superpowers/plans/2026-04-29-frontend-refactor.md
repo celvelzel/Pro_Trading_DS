@@ -16,7 +16,7 @@
 - Create: `theme_manager.py`
 - Modify: `app.py`
 
-- [ ] **Step 1: Implement `theme_manager.py`**
+- [x] **Step 1: Implement `theme_manager.py`**
 
 ```python
 import streamlit as st
@@ -73,7 +73,7 @@ def get_card_style():
         """
 ```
 
-- [ ] **Step 2: Update `app.py` to use Theme Manager**
+- [x] **Step 2: Update `app.py` to use Theme Manager**
 Add `init_theme()` call at the top and the toggle in the sidebar.
 
 ```python
@@ -95,7 +95,7 @@ with st.sidebar:
             st.rerun()
 ```
 
-- [ ] **Step 3: Verify toggle state**
+- [x] **Step 3: Verify toggle state**
 Expected: Toggling changes app background (except Quant Tool page which is still hardcoded).
 
 ### Task 2: Refactor Quant Tool Page for Dynamic Themes
@@ -104,13 +104,13 @@ Expected: Toggling changes app background (except Quant Tool page which is still
 - Modify: `quant_tool_page.py`
 - Modify: `theme_manager.py` (add specific CSS helpers)
 
-- [ ] **Step 1: Move custom CSS to `theme_manager.py`**
+- [x] **Step 1: Move custom CSS to `theme_manager.py`**
 Extract the styles from `quant_tool_page.py` into a dynamic helper in `theme_manager.py`.
 
-- [ ] **Step 2: Update `quant_tool_page.py`**
+- [x] **Step 2: Update `quant_tool_page.py`**
 Replace the hardcoded style block with a call to `theme_manager.get_quant_tool_css()`.
 
-- [ ] **Step 3: Verify Plotly charts in Quant Tool**
+- [x] **Step 3: Verify Plotly charts in Quant Tool**
 Ensure Plotly templates switch between `plotly_dark` and `plotly_white` based on `st.session_state.theme`.
 
 ### Task 3: Unify Aesthetic across all Tabs
@@ -119,9 +119,9 @@ Ensure Plotly templates switch between `plotly_dark` and `plotly_white` based on
 - Modify: `app.py`
 - Modify: `lobster_signal.py` (check if any UI strings need cleanup)
 
-- [ ] **Step 1: Apply Card styling to metrics**
+- [x] **Step 1: Apply Card styling to metrics**
 Wrap `st.metric` calls in `st.container()` to get the card look defined in Task 1.
 
-- [ ] **Step 2: Final Verification**
+- [x] **Step 2: Final Verification**
 Run `pytest` to ensure no logic was broken.
 Manually verify light/dark consistency across all 5 tabs.

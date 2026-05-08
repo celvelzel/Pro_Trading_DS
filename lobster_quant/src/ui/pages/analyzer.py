@@ -12,7 +12,7 @@ from src.core.risk_engine import RiskEngine
 from src.analysis.signals import SignalGenerator
 from src.analysis.backtest import BacktestEngine
 from src.utils.logging import get_logger
-from ..components.cards import signal_card, status_card
+from ..components.cards import signal_card, status_card, metric_card
 from ..components.charts import candlestick_chart, equity_curve_chart
 from ..components.help import render_page_help, get_param_help
 
@@ -84,19 +84,19 @@ def analyze_stock(symbol: str, engine) -> None:
         latest = df.iloc[-1]
         
         with col1:
-            st.metric("Price", f"${latest['close']:.2f}")
+            metric_card(label="Price", value=f"${latest['close']:.2f}")
         with col2:
             rsi = latest.get('rsi')
             if rsi:
-                st.metric("RSI", f"{rsi:.1f}")
+                metric_card(label="RSI", value=f"{rsi:.1f}")
         with col3:
             atr_pct = latest.get('atr_pct')
             if atr_pct:
-                st.metric("ATR%", f"{atr_pct*100:.2f}%")
+                metric_card(label="ATR%", value=f"{atr_pct*100:.2f}%")
         with col4:
             vol_ratio = latest.get('volume_ratio')
             if vol_ratio:
-                st.metric("Vol Ratio", f"{vol_ratio:.2f}x")
+                metric_card(label="Vol Ratio", value=f"{vol_ratio:.2f}x")
         
         # OFF Filter
         st.subheader("OFF Filter Status")
@@ -126,11 +126,11 @@ def analyze_stock(symbol: str, engine) -> None:
             
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Trades", summary['total_trades'])
+                metric_card(label="Trades", value=str(summary['total_trades']))
             with col2:
-                st.metric("Win Rate", summary['win_rate'])
+                metric_card(label="Win Rate", value=summary['win_rate'])
             with col3:
-                st.metric("Avg Return", summary['avg_return'])
+                metric_card(label="Avg Return", value=summary['avg_return'])
             
             # Equity curve
             if result.equity_curve:

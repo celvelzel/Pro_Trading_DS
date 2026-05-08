@@ -13,6 +13,7 @@ from src.analysis.backtest import BacktestEngine
 from src.config.settings import get_settings
 from src.utils.logging import get_logger
 from ..components.charts import equity_curve_chart
+from ..components.cards import metric_card
 from ..components.help import render_page_help, get_param_help
 
 logger = get_logger()
@@ -118,21 +119,21 @@ def display_backtest_results(result, engine) -> None:
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Trades", summary['total_trades'])
+        metric_card(label="Total Trades", value=str(summary['total_trades']))
     with col2:
-        st.metric("Win Rate", summary['win_rate'])
+        metric_card(label="Win Rate", value=summary['win_rate'])
     with col3:
-        st.metric("Avg Return", summary['avg_return'])
+        metric_card(label="Avg Return", value=summary['avg_return'])
     with col4:
-        st.metric("Profit Factor", summary['profit_factor'])
+        metric_card(label="Profit Factor", value=summary['profit_factor'])
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Max Drawdown", summary['max_drawdown'])
+        metric_card(label="Max Drawdown", value=summary['max_drawdown'])
     with col2:
-        st.metric("Cumulative Return", summary['cumulative_return'])
+        metric_card(label="Cumulative Return", value=summary['cumulative_return'])
     with col3:
-        st.metric("Sharpe Ratio", summary['sharpe_ratio'])
+        metric_card(label="Sharpe Ratio", value=summary['sharpe_ratio'])
     
     # Equity curve
     st.subheader("Equity Curve")

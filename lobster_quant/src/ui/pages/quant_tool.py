@@ -16,6 +16,7 @@ from .quant_tool_indicators import (
     calc_put_call_ratio,
 )
 from ..components.help import render_page_help, get_param_help
+from ..components.cards import metric_card
 from ..theme import theme_manager
 from src.core.data_engine import get_data_engine
 from src.core.risk_engine import get_risk_engine
@@ -29,9 +30,6 @@ logger = get_logger()
 def render_quant_tool() -> None:
     """Render the quant tool page with OFF assessment and options analysis."""
     try:
-        # Custom CSS styling
-        st.markdown(theme_manager.get_css(), unsafe_allow_html=True)
-
         st.markdown("---")
 
         render_page_help("quant_tool")
@@ -100,18 +98,12 @@ def render_quant_tool() -> None:
                 with col_on:
                     st.markdown("**ON Probability**")
                     st.progress(on_probability)
-                    st.markdown(
-                        f'<p class="green-text">{on_probability:.0%}</p>',
-                        unsafe_allow_html=True,
-                    )
+                    st.metric("ON", f"{on_probability:.0%}", delta_color="normal")
 
                 with col_off:
                     st.markdown("**OFF Probability**")
                     st.progress(off_probability)
-                    st.markdown(
-                        f'<p class="orange-text">{off_probability:.0%}</p>',
-                        unsafe_allow_html=True,
-                    )
+                    st.metric("OFF", f"{off_probability:.0%}", delta_color="inverse")
 
                 st.markdown("---")
 
@@ -120,9 +112,9 @@ def render_quant_tool() -> None:
                 reason_col1, reason_col2, reason_col3 = st.columns(3)
 
                 with reason_col1:
-                    st.metric(
-                        "ATR%",
-                        f"{atr_percent:.2f}%" if atr_percent is not None else "N/A",
+                    metric_card(
+                        label="ATR%",
+                        value=f"{atr_percent:.2f}%" if atr_percent is not None else "N/A",
                         delta=(
                             "Above threshold"
                             if atr_percent and atr_percent > 3
@@ -134,9 +126,9 @@ def render_quant_tool() -> None:
                     )
 
                 with reason_col2:
-                    st.metric(
-                        "MA200 Distance",
-                        f"{ma200_dist:.2f}%" if ma200_dist is not None else "N/A",
+                    metric_card(
+                        label="MA200 Distance",
+                        value=f"{ma200_dist:.2f}%" if ma200_dist is not None else "N/A",
                         delta=(
                             "Below MA200"
                             if ma200_dist and ma200_dist < 0
@@ -148,9 +140,9 @@ def render_quant_tool() -> None:
                     )
 
                 with reason_col3:
-                    st.metric(
-                        "SPY Environment",
-                        market_status,
+                    metric_card(
+                        label="SPY Environment",
+                        value=market_status,
                         delta="Bullish" if market_status == "Bull" else "Bearish",
                         delta_color="normal" if market_status == "Bull" else "inverse",
                     )
@@ -182,7 +174,7 @@ def render_quant_tool() -> None:
                     metric_col1, metric_col2, metric_col3 = st.columns(3)
 
                     with metric_col1:
-                        st.metric(
+                        metric_card(
                             label="Max Pain",
                             value=f"${max_pain:.2f}" if max_pain else "N/A",
                             delta="Pain concentration point",
@@ -190,7 +182,7 @@ def render_quant_tool() -> None:
                         )
 
                     with metric_col2:
-                        st.metric(
+                        metric_card(
                             label="Support",
                             value=f"${support:.2f}" if support else "N/A",
                             delta="Put support level",
@@ -198,7 +190,7 @@ def render_quant_tool() -> None:
                         )
 
                     with metric_col3:
-                        st.metric(
+                        metric_card(
                             label="Resistance",
                             value=(
                                 f"${resistance:.2f}" if resistance else "N/A"
@@ -263,13 +255,8 @@ def render_quant_tool() -> None:
                                 put_oi.get(s, 0) for s in strikes_filtered
                             ]
 
-                            theme = st.session_state.get("theme", "light")
-                            plotly_template = (
-                                "plotly_dark" if theme == "dark" else "plotly_white"
-                            )
-                            font_color = (
-                                "#ffffff" if theme == "dark" else "#31333f"
-                            )
+                            plotly_template = theme_manager.get_plotly_template()
+                            font_color = theme_manager.get_font_color()
                             chart_colors = theme_manager.get_chart_colors()
 
                             # Volume Chart

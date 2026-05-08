@@ -39,8 +39,10 @@ def main():
         st.title("🦞 Lobster Quant")
         st.caption("v2.0.0 - Modular Architecture")
         
-        # Theme toggle
-        if st.button("🌓 Toggle Theme"):
+        # Theme selector
+        current = theme_manager.current_theme
+        theme_label = "🌙 Dark Mode" if current == "dark" else "☀️ Light Mode"
+        if st.button(theme_label):
             theme_manager.toggle_theme()
             st.rerun()
         

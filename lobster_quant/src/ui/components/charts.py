@@ -7,6 +7,7 @@ from typing import Optional
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
+import streamlit as st
 from ..theme import theme_manager
 
 
@@ -94,7 +95,9 @@ def candlestick_chart(df: pd.DataFrame, symbol: str = "", title: str = "") -> go
         height=800,
         showlegend=True,
         xaxis_rangeslider_visible=False,
-        hovermode="x unified"
+        hovermode="x unified",
+        template=theme_manager.get_plotly_template(),
+        font=dict(color=theme_manager.get_font_color()),
     )
 
     return fig
@@ -132,7 +135,9 @@ def volume_chart(df: pd.DataFrame, symbol: str = "") -> go.Figure:
         showlegend=True,
         xaxis_rangeslider_visible=False,
         yaxis_title="Volume",
-        hovermode="x unified"
+        hovermode="x unified",
+        template=theme_manager.get_plotly_template(),
+        font=dict(color=theme_manager.get_font_color()),
     )
 
     return fig
@@ -268,7 +273,9 @@ def indicator_chart(df: pd.DataFrame, indicators: Optional[list[str]] = None, sy
         height=800,
         showlegend=True,
         xaxis_rangeslider_visible=False,
-        hovermode="x unified"
+        hovermode="x unified",
+        template=theme_manager.get_plotly_template(),
+        font=dict(color=theme_manager.get_font_color()),
     )
 
     return fig
@@ -306,7 +313,9 @@ def equity_curve_chart(equity_curve: list[float], title: str = "Equity Curve") -
         xaxis_rangeslider_visible=False,
         xaxis_title="Period",
         yaxis_title="Equity Value ($)",
-        hovermode="x unified"
+        hovermode="x unified",
+        template=theme_manager.get_plotly_template(),
+        font=dict(color=theme_manager.get_font_color()),
     )
 
     return fig
