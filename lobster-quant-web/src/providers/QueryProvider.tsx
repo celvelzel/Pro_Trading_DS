@@ -9,14 +9,16 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Data is considered fresh for 5 minutes
-            staleTime: 5 * 60 * 1000,
+            // Default staleTime: 2 minutes (individual hooks override with domain-specific values)
+            staleTime: 2 * 60 * 1000,
             // Keep unused data in cache for 10 minutes
             gcTime: 10 * 60 * 1000,
-            // Retry failed requests 3 times
+            // Retry failed requests 3 times with exponential backoff
             retry: 3,
-            // Don't refetch on window focus by default
+            // Don't refetch on window focus by default (prevents surprise data refreshes during trading)
             refetchOnWindowFocus: false,
+            // Don't refetch on reconnect by default (financial data may be stale anyway)
+            refetchOnReconnect: false,
           },
         },
       })

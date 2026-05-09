@@ -102,6 +102,7 @@ export interface StockResult {
   changePercent: number
   score: number
   signalType: SignalType
+  probability: number
   reasons: string[]
 }
 
@@ -122,6 +123,8 @@ export interface BacktestParams {
   minScore: number
   startDate?: string
   endDate?: string
+  slippagePct?: number
+  commissionPct?: number
 }
 
 export interface Trade {
@@ -170,11 +173,53 @@ export interface ScoringWeights {
   pattern: number
 }
 
+export interface BacktestSettings {
+  holdingDays: number
+  minScore: number
+  lookbackDays: number
+  slippagePct: number
+  commissionPct: number
+}
+
+export interface OFFFilterSettings {
+  vixThreshold: number
+  atrPctThreshold: number
+  gapThreshold: number
+  minVolumeRatio: number
+  ma200RecoveryDays: number
+}
+
+export interface IndicatorSettings {
+  maShortPeriod: number
+  maLongPeriod: number
+  rsiPeriod: number
+  atrPeriod: number
+  macdFast: number
+  macdSlow: number
+  macdSignal: number
+  bbPeriod: number
+  bbStd: number
+}
+
 export interface AppSettings {
   markets: MarketSettings
   data: DataSettings
   scoring: ScoringWeights
-  theme: 'light' | 'dark'
+  backtest: BacktestSettings
+  offFilter: OFFFilterSettings
+  indicators: IndicatorSettings
+  benchmarkSymbol: string
+}
+
+/** Partial settings update — only provided fields are applied. */
+export type SettingsUpdateRequest = {
+  [K in keyof AppSettings]?: AppSettings[K]
+}
+
+export interface SettingsResponse {
+  settings: AppSettings
+  success: boolean
+  message?: string
 }
 
 // ============================================================================
