@@ -4,66 +4,43 @@ Endpoints for stock data, indicators, signals, options, and risk assessment.
 """
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import List, Optional
 import sys
 import os
 
 # Add the parent directory to the path to import existing modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
+from api.models.stocks import (
+    Candle,
+    StockData,
+    Indicators,
+    MACDData,
+    Signal,
+    SignalType,
+    OptionsAnalysis,
+    RiskAssessment,
+)
+
+
+def _map_signal_type(lobster_type: str) -> SignalType:
+    """Map lobster_quant signal types to API signal types.
+
+    lobster_quant uses: 强烈推荐, 推荐, 持有, 观望, sell, neutral
+    API uses: bullish, bearish, neutral
+    """
+    mapping: dict[str, SignalType] = {
+        "强烈推荐": "bullish",
+        "推荐": "bullish",
+        "持有": "neutral",
+        "观望": "neutral",
+        "sell": "bearish",
+        "neutral": "neutral",
+        "bullish": "bullish",
+        "bearish": "bearish",
+    }
+    return mapping.get(lobster_type, "neutral")
+
 router = APIRouter()
-
-
-# Pydantic models for request/response
-class Candle(BaseModel):
-    time: int
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float
-
-
-class StockData(BaseModel):
-    symbol: str
-    name: str
-    price: float
-    change: float
-    changePercent: float
-    volume: int
-    candles: List[Candle]
-
-
-class Indicators(BaseModel):
-    rsi: float
-    macd: dict
-    ma20: float
-    ma200: float
-    atr: float
-    atrPercent: float
-
-
-class Signal(BaseModel):
-    type: str  # 'bullish', 'bearish', 'neutral'
-    score: int
-    probability: int
-    reasons: List[str]
-
-
-class OptionsAnalysis(BaseModel):
-    maxPain: float
-    putCallRatio: float
-    support: List[float]
-    resistance: List[float]
-
-
-class RiskAssessment(BaseModel):
-    status: str  # 'on', 'off'
-    statusText: str
-    reasons: List[str]
-    onPercent: float
-    offPercent: float
 
 
 @router.get("/{symbol}", response_model=StockData)
@@ -105,7 +82,7 @@ async def get_stock_data(symbol: str, period: str = "1y"):
         
         return StockData(
             symbol=symbol,
-            name=stock_data.name if hasattr(stock_data, 'name') else symbol,
+            name=symbol,  # lobster_quant StockData doesn't have name field
             price=float(latest['close']),
             change=float(latest['close'] - prev['close']),
             changePercent=float((latest['close'] - prev['close']) / prev['close'] * 100),
@@ -143,11 +120,11 @@ async def get_indicators(symbol: str):
         
         return Indicators(
             rsi=float(latest.get('rsi', 0)),
-            macd={
-                'value': float(latest.get('macd', 0)),
-                'signal': float(latest.get('macd_signal', 0)),
-                'histogram': float(latest.get('macd_hist', 0)),
-            },
+            macd=MACDData(
+                value=float(latest.get('macd', 0)),
+                signal=float(latest.get('macd_signal', 0)),
+                histogram=float(latest.get('macd_hist', 0)),
+            ),
             ma20=float(latest.get('ma20', 0)),
             ma200=float(latest.get('ma200', 0)),
             atr=float(latest.get('atr', 0)),
@@ -186,7 +163,7 @@ async def get_signals(symbol: str):
         signal = signal_gen.generate_signal(df)
         
         return Signal(
-            type=signal.signal_type,
+            type=_map_signal_type(signal.signal_type),
             score=int(signal.score),
             probability=int(signal.probability_up),
             reasons=signal.reasons if signal.reasons else [],

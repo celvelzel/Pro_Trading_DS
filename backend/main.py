@@ -12,6 +12,12 @@ import os
 # Add the parent directory to the path to import existing modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Explicitly fix for sub-module imports inside lobster_quant
+# This helps when files inside lobster_quant use "from src... import"
+lobster_quant_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lobster_quant")
+if os.path.exists(lobster_quant_path):
+    sys.path.insert(0, lobster_quant_path)
+
 app = FastAPI(
     title="Lobster Quant API",
     description="REST API for quantitative trading analysis",
@@ -44,11 +50,12 @@ async def health_check():
 
 
 # Import and include routers
-from api.routes import stocks, scanner, backtest
+from api.routes import stocks, scanner, backtest, settings
 
 app.include_router(stocks.router, prefix="/api/stocks", tags=["stocks"])
 app.include_router(scanner.router, prefix="/api/scanner", tags=["scanner"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
+app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 
 
 if __name__ == "__main__":

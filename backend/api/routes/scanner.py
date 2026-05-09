@@ -4,37 +4,35 @@ Endpoints for stock scanning and screening.
 """
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from typing import List
 import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
+from api.models.scanner import ScanRequest, StockResult, ScanResponse
+from api.models.stocks import SignalType
+
+
+def _map_signal_type(lobster_type: str) -> SignalType:
+    """Map lobster_quant signal types to API signal types.
+
+    lobster_quant uses: 强烈推荐, 推荐, 持有, 观望, sell, neutral
+    API uses: bullish, bearish, neutral
+    """
+    mapping: dict[str, SignalType] = {
+        "强烈推荐": "bullish",
+        "推荐": "bullish",
+        "持有": "neutral",
+        "观望": "neutral",
+        "sell": "bearish",
+        "neutral": "neutral",
+        "bullish": "bullish",
+        "bearish": "bearish",
+    }
+    return mapping.get(lobster_type, "neutral")
+
 router = APIRouter()
-
-
-class ScanRequest(BaseModel):
-    market: str  # 'US', 'HK', 'A'
-    minScore: int = 60
-
-
-class StockResult(BaseModel):
-    symbol: str
-    name: str
-    price: float
-    change: float
-    changePercent: float
-    score: int
-    signalType: str
-    reasons: List[str]
-
-
-class ScanResponse(BaseModel):
-    results: List[StockResult]
-    total: int
-    market: str
-    minScore: int
 
 
 # Stock lists
@@ -103,12 +101,13 @@ async def scan_stocks(request: ScanRequest):
                     
                     results.append(StockResult(
                         symbol=symbol,
-                        name=stock_data.name if hasattr(stock_data, 'name') else symbol,
+                        name=symbol,  # lobster_quant StockData doesn't have name field
                         price=float(latest['close']),
                         change=float(latest['close'] - prev['close']),
                         changePercent=float((latest['close'] - prev['close']) / prev['close'] * 100),
                         score=int(signal.score),
-                        signalType=signal.signal_type,
+                        signalType=_map_signal_type(signal.signal_type),
+                        probability=int(signal.probability_up) if hasattr(signal, 'probability_up') else 50,
                         reasons=signal.reasons if signal.reasons else [],
                     ))
             except Exception as e:
