@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
@@ -11,7 +12,7 @@ interface MetricCardProps {
   className?: string
 }
 
-export function MetricCard({
+export const MetricCard = memo(function MetricCard({
   label,
   value,
   delta,
@@ -57,4 +58,4 @@ export function MetricCard({
       </CardContent>
     </Card>
   )
-}
+})

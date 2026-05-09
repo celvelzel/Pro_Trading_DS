@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { CheckCircle, XCircle } from 'lucide-react'
@@ -11,7 +12,7 @@ interface StatusCardProps {
   className?: string
 }
 
-export function StatusCard({
+export const StatusCard = memo(function StatusCard({
   title,
   status,
   isGood,
@@ -48,4 +49,4 @@ export function StatusCard({
       </CardContent>
     </Card>
   )
-}
+})

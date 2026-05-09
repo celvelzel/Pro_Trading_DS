@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { SignalType } from '@/lib/types'
@@ -5,7 +6,7 @@ import type { SignalType } from '@/lib/types'
 interface SignalCardProps {
   signalType: SignalType
   score: number
-  probability: number
+  probability?: number
   reasons: string[]
   loading?: boolean
   className?: string
@@ -35,10 +36,10 @@ const signalConfig = {
   },
 }
 
-export function SignalCard({
+export const SignalCard = memo(function SignalCard({
   signalType,
   score,
-  probability,
+  probability = 0,
   reasons,
   loading = false,
   className,
@@ -108,4 +109,4 @@ export function SignalCard({
       </CardContent>
     </Card>
   )
-}
+})
