@@ -1,15 +1,18 @@
 'use client'
 
-import { useStockData, useStockRisk } from '@/hooks/useStock'
+import { useStockData, useStockRisk, usePrefetchStock } from '@/hooks/useStock'
 import { MetricCard } from '@/components/cards/MetricCard'
 import { StatusCard } from '@/components/cards/StatusCard'
 import { CandlestickChart } from '@/components/charts/CandlestickChart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PrefetchLink } from '@/components/ui/prefetch-link'
+import { STOCK_LISTS } from '@/lib/constants'
 
 export default function DashboardPage() {
   // Fetch benchmark data (SPY)
   const { data: benchmark, isLoading: benchmarkLoading } = useStockData('SPY')
   const { data: risk, isLoading: riskLoading } = useStockRisk('SPY')
+  const prefetchStock = usePrefetchStock()
 
   return (
     <div className="p-6 space-y-6">
@@ -81,51 +84,32 @@ export default function DashboardPage() {
             />
           ) : (
             <div className="h-[400px] flex items-center justify-center text-text-secondary">
-              {benchmarkLoading ? 'Loading chart data...' : 'No data available'}
+              {benchmarkLoading ? 'Loading chart data...' : 'No chart data available'}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          label="Volume"
-          value={
-            benchmark?.volume
-              ? `${(benchmark.volume / 1000000).toFixed(1)}M`
-              : '...'
-          }
-          loading={benchmarkLoading}
-        />
-        <MetricCard
-          label="Day Range"
-          value={
-            benchmark?.candles?.length
-              ? `$${Math.min(...benchmark.candles.slice(-1).map((c) => c.low)).toFixed(2)} - $${Math.max(...benchmark.candles.slice(-1).map((c) => c.high)).toFixed(2)}`
-              : '...'
-          }
-          loading={benchmarkLoading}
-        />
-        <MetricCard
-          label="52W High"
-          value={
-            benchmark?.candles?.length
-              ? `$${Math.max(...benchmark.candles.map((c) => c.high)).toFixed(2)}`
-              : '...'
-          }
-          loading={benchmarkLoading}
-        />
-        <MetricCard
-          label="52W Low"
-          value={
-            benchmark?.candles?.length
-              ? `$${Math.min(...benchmark.candles.map((c) => c.low)).toFixed(2)}`
-              : '...'
-          }
-          loading={benchmarkLoading}
-        />
-      </div>
+      {/* Quick Access - Popular Stocks */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Access</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {STOCK_LISTS.US.slice(0, 10).map((symbol) => (
+              <PrefetchLink
+                key={symbol}
+                symbol={symbol}
+                href={`/analysis/${symbol}`}
+                className="flex items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors"
+              >
+                <span className="font-medium text-text-primary">{symbol}</span>
+              </PrefetchLink>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

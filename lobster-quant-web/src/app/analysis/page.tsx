@@ -5,7 +5,17 @@ import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PrefetchLink } from '@/components/ui/prefetch-link'
 import { Search, BarChart3 } from 'lucide-react'
+
+const QUICK_ACCESS_STOCKS = [
+  { symbol: 'AAPL', name: 'Apple Inc.' },
+  { symbol: 'MSFT', name: 'Microsoft Corp.' },
+  { symbol: 'TSLA', name: 'Tesla Inc.' },
+  { symbol: 'GOOG', name: 'Alphabet Inc.' },
+  { symbol: 'AMZN', name: 'Amazon.com Inc.' },
+  { symbol: 'QQQ', name: 'Invesco QQQ Trust' },
+]
 
 export default function AnalysisPage() {
   const [symbol, setSymbol] = useState('')
@@ -52,58 +62,30 @@ export default function AnalysisPage() {
         </CardContent>
       </Card>
 
-      {/* Quick Access */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card
-          className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => router.push('/analysis/AAPL')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium text-text-primary">AAPL</p>
-                <p className="text-sm text-text-secondary">Apple Inc.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => router.push('/analysis/MSFT')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium text-text-primary">MSFT</p>
-                <p className="text-sm text-text-secondary">Microsoft Corp.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => router.push('/analysis/TSLA')}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium text-text-primary">TSLA</p>
-                <p className="text-sm text-text-secondary">Tesla Inc.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Quick Access - uses PrefetchLink for instant navigation */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {QUICK_ACCESS_STOCKS.map((stock) => (
+          <PrefetchLink
+            key={stock.symbol}
+            symbol={stock.symbol}
+            href={`/analysis/${stock.symbol}`}
+            className="block"
+          >
+            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-text-primary">{stock.symbol}</p>
+                    <p className="text-sm text-text-secondary">{stock.name}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </PrefetchLink>
+        ))}
       </div>
     </div>
   )

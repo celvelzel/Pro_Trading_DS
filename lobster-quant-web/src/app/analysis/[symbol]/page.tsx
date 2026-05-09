@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation'
 import {
   useStockData,
+  useStockCandles,
   useStockIndicators,
   useStockSignals,
   useStockOptions,
@@ -21,7 +22,11 @@ export default function AnalysisDetailPage() {
   const symbol = params.symbol as string
 
   // Fetch all data for the stock
+  // useStockData: full data for header display (price, name, change, volume)
   const { data: stock, isLoading: stockLoading } = useStockData(symbol)
+  // useStockCandles: uses `select` to extract only candles for the chart.
+  // This prevents chart re-renders when price/metadata changes but candles don't.
+  const { data: candles } = useStockCandles(symbol)
   const { data: indicators, isLoading: indicatorsLoading } = useStockIndicators(symbol)
   const { data: signals, isLoading: signalsLoading } = useStockSignals(symbol)
   const { data: options, isLoading: optionsLoading } = useStockOptions(symbol)
@@ -88,7 +93,7 @@ export default function AnalysisDetailPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Volume"
           value={`${(stock.volume / 1000000).toFixed(1)}M`}
@@ -161,11 +166,11 @@ export default function AnalysisDetailPage() {
               <CardTitle>Price Chart</CardTitle>
             </CardHeader>
             <CardContent>
-              {stock.candles && stock.candles.length > 0 ? (
+              {candles && candles.length > 0 ? (
                 <CandlestickChart
-                  data={stock.candles}
+                  data={candles}
                   symbol={symbol}
-                  height={400}
+                  height={500}
                   showVolume={true}
                 />
               ) : (
