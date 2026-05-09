@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { useScanStocks } from '@/hooks/useStock'
+import { useState, useRef, useCallback, useMemo } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { useScanStocks, usePrefetchStock } from '@/hooks/useStock'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -12,19 +13,26 @@ import {
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MetricCard } from '@/components/cards/MetricCard'
 import { SignalCard } from '@/components/cards/SignalCard'
 import { Search } from 'lucide-react'
-import type { Market } from '@/lib/types'
+import Link from 'next/link'
+import type { Market, StockResult } from '@/lib/types'
+
+/** Threshold above which virtualization kicks in */
+const VIRTUALIZE_THRESHOLD = 50
 
 export default function ScannerPage() {
   const [market, setMarket] = useState<Market>('US')
   const [minScore, setMinScore] = useState(60)
   const scanMutation = useScanStocks()
+  const prefetchStock = usePrefetchStock()
 
   const handleScan = () => {
     scanMutation.mutate({ market, minScore })
   }
+
+  const results = scanMutation.data?.results ?? []
+  const shouldVirtualize = results.length > VIRTUALIZE_THRESHOLD
 
   return (
     <div className="p-6 space-y-6">
@@ -74,172 +82,197 @@ export default function ScannerPage() {
                 max={100}
                 min={0}
                 step={5}
-                className="mt-2"
               />
             </div>
 
             {/* Scan Button */}
             <div className="flex items-end">
-              <Button
-                onClick={handleScan}
-                disabled={scanMutation.isPending}
-                className="w-full md:w-auto"
-              >
-                {scanMutation.isPending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Scanning...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4 mr-2" />
-                    Scan Stocks
-                  </>
-                )}
+              <Button onClick={handleScan} disabled={scanMutation.isPending}>
+                <Search className="w-4 h-4 mr-2" />
+                {scanMutation.isPending ? 'Scanning...' : 'Scan'}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Error Message */}
+      {/* Error State */}
       {scanMutation.isError && (
         <Card className="border-error">
           <CardContent className="p-4">
             <p className="text-error">
-              Error: {scanMutation.error?.message || 'Failed to scan stocks'}
+              Scan failed: {scanMutation.error?.message || 'Unknown error'}
             </p>
           </CardContent>
         </Card>
       )}
 
       {/* Results */}
-      {scanMutation.data && (
-        <div className="space-y-4">
-          {/* Results Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MetricCard
-              label="Stocks Found"
-              value={scanMutation.data.total.toString()}
-            />
-            <MetricCard
-              label="Market"
-              value={scanMutation.data.market}
-            />
-            <MetricCard
-              label="Min Score"
-              value={scanMutation.data.minScore.toString()}
-            />
+      {results.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-text-primary">
+              Results ({results.length} stocks)
+            </h2>
+            {shouldVirtualize && (
+              <p className="text-sm text-text-tertiary">
+                Virtualized for performance
+              </p>
+            )}
           </div>
 
-          {/* Results Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Scan Results</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {scanMutation.data.results.length === 0 ? (
-                <p className="text-text-secondary text-center py-8">
-                  No stocks found matching your criteria
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">
-                          Symbol
-                        </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">
-                          Name
-                        </th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-text-secondary">
-                          Price
-                        </th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-text-secondary">
-                          Change
-                        </th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-text-secondary">
-                          Score
-                        </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">
-                          Signal
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {scanMutation.data.results.map((stock) => (
-                        <tr
-                          key={stock.symbol}
-                          className="border-b border-gray-100 hover:bg-bg-hover"
-                        >
-                          <td className="py-3 px-4">
-                            <a
-                              href={`/analysis/${stock.symbol}`}
-                              className="font-medium text-primary hover:underline"
-                            >
-                              {stock.symbol}
-                            </a>
-                          </td>
-                          <td className="py-3 px-4 text-text-secondary">
-                            {stock.name}
-                          </td>
-                          <td className="py-3 px-4 text-right font-medium">
-                            ${stock.price.toFixed(2)}
-                          </td>
-                          <td
-                            className={`py-3 px-4 text-right font-medium ${
-                              stock.change >= 0 ? 'text-success' : 'text-error'
-                            }`}
-                          >
-                            {stock.change >= 0 ? '+' : ''}
-                            {stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
-                          </td>
-                          <td className="py-3 px-4 text-right font-medium">
-                            {stock.score}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span
-                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                stock.signalType === 'bullish'
-                                  ? 'bg-success/10 text-success'
-                                  : stock.signalType === 'bearish'
-                                    ? 'bg-error/10 text-error'
-                                    : 'bg-warning/10 text-warning'
-                              }`}
-                            >
-                              {stock.signalType === 'bullish'
-                                ? '🟢 Bullish'
-                                : stock.signalType === 'bearish'
-                                  ? '🔴 Bearish'
-                                  : '🟡 Neutral'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Detailed Results */}
-          {scanMutation.data.results.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {scanMutation.data.results.slice(0, 6).map((stock) => (
-                <SignalCard
-                  key={stock.symbol}
-                  signalType={stock.signalType}
-                  score={stock.score}
-                  probability={0}
-                  reasons={stock.reasons}
-                />
-              ))}
-            </div>
+          {shouldVirtualize ? (
+            <VirtualizedResultsGrid results={results} prefetchStock={prefetchStock} />
+          ) : (
+            <ResultsGrid results={results} prefetchStock={prefetchStock} />
           )}
         </div>
       )}
+
+      {/* Empty State */}
+      {scanMutation.isSuccess && results.length === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-text-secondary text-lg">
+              No stocks found matching your criteria. Try lowering the minimum score.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
+  )
+}
+
+// ============================================================================
+// Results Grid (non-virtualized, for < 50 items)
+// ============================================================================
+
+function ResultsGrid({
+  results,
+  prefetchStock,
+}: {
+  results: StockResult[]
+  prefetchStock: (symbol: string) => void
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {results.map((stock) => (
+        <StockResultCard
+          key={stock.symbol}
+          stock={stock}
+          onHover={() => prefetchStock(stock.symbol)}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ============================================================================
+// Virtualized Results Grid (for 50+ items)
+// ============================================================================
+
+function VirtualizedResultsGrid({
+  results,
+  prefetchStock,
+}: {
+  results: StockResult[]
+  prefetchStock: (symbol: string) => void
+}) {
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const rowVirtualizer = useVirtualizer({
+    count: results.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 180, // Estimated card height in px
+    overscan: 5, // Render 5 extra rows above/below viewport
+  })
+
+  return (
+    <div
+      ref={parentRef}
+      className="overflow-auto"
+      style={{ height: '70vh' }}
+    >
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const stock = results[virtualRow.index]
+          return (
+            <div
+              key={stock.symbol}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+              className="pb-4"
+            >
+              <StockResultCard
+                stock={stock}
+                onHover={() => prefetchStock(stock.symbol)}
+              />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Stock Result Card (shared between virtualized and non-virtualized)
+// ============================================================================
+
+function StockResultCard({
+  stock,
+  onHover,
+}: {
+  stock: StockResult
+  onHover: () => void
+}) {
+  return (
+    <Link
+      href={`/analysis/${stock.symbol}`}
+      onMouseEnter={onHover}
+      onFocus={onHover}
+      className="block"
+    >
+      <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="font-semibold text-text-primary">{stock.symbol}</p>
+              <p className="text-sm text-text-secondary">{stock.name}</p>
+            </div>
+            <div className="text-right">
+              <p className="font-semibold text-text-primary">
+                ${stock.price.toFixed(2)}
+              </p>
+              <p
+                className={`text-sm ${
+                  stock.change >= 0 ? 'text-success' : 'text-error'
+                }`}
+              >
+                {stock.change >= 0 ? '+' : ''}
+                {stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
+              </p>
+            </div>
+          </div>
+          <SignalCard
+            signalType={stock.signalType}
+            score={stock.score}
+            probability={stock.probability}
+            reasons={stock.reasons}
+          />
+        </CardContent>
+      </Card>
+    </Link>
   )
 }
