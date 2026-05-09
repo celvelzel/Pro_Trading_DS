@@ -75,14 +75,11 @@ fix: ## Auto-fix all issues
 # Running
 # ============================================================
 
-run: ## Run the Streamlit app (legacy v1 entry)
-	streamlit run app.py
+run: ## Run the backend API server
+	cd ../backend && uvicorn main:app --reload
 
-run-v2: ## Run the new v2 Streamlit app
-	streamlit run app_v2.py
-
-run-debug: ## Run in debug mode
-	DEBUG=true streamlit run app_v2.py
+run-web: ## Run the Next.js frontend (dev mode)
+	cd ../lobster-quant-web && npm run dev
 
 # ============================================================
 # Cleanup

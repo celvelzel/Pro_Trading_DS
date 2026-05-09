@@ -24,7 +24,6 @@ classifiers = [
     "Topic :: Office/Business :: Financial :: Investment",
 ]
 dependencies = [
-    "streamlit>=1.28",
     "pandas>=2.0",
     "numpy>=1.24",
     "yfinance>=0.2.18",
@@ -109,7 +108,6 @@ module = [
     "akshare.*",
     "yfinance.*",
     "plotly.*",
-    "streamlit.*",
 ]
 ignore_missing_imports = true
 
