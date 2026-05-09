@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, memo } from 'react'
 import { createChart, IChartApi, ISeriesApi, CandlestickSeries, HistogramSeries, LineSeries } from 'lightweight-charts'
 import type { Candle } from '@/lib/types'
 
@@ -12,7 +12,19 @@ interface CandlestickChartProps {
   className?: string
 }
 
-export function CandlestickChart({
+/**
+ * CandlestickChart - Memoized chart component for OHLCV data.
+ *
+ * WHY MEMOIZED: This component is expensive — it creates a Lightweight Charts
+ * instance, sets up series, and renders potentially hundreds of candlesticks.
+ * Without memo, every parent re-render (e.g., from unrelated state changes)
+ * would destroy and recreate the entire chart DOM + canvas.
+ *
+ * The memo comparison checks `data` reference, `symbol`, `height`, and
+ * `showVolume`. Since React Query returns stable references for cached data,
+ * this prevents unnecessary chart rebuilds.
+ */
+export const CandlestickChart = memo(function CandlestickChart({
   data,
   symbol,
   height = 400,
@@ -105,8 +117,8 @@ export function CandlestickChart({
 
     // Handle resize
     const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
           width: chartContainerRef.current.clientWidth,
         })
       }
@@ -114,7 +126,6 @@ export function CandlestickChart({
 
     window.addEventListener('resize', handleResize)
 
-    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize)
       chart.remove()
@@ -129,4 +140,4 @@ export function CandlestickChart({
       style={{ width: '100%', height: `${height}px` }}
     />
   )
-}
+})
