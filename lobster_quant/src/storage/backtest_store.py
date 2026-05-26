@@ -67,8 +67,9 @@ class BacktestStore:
                 result = BacktestResult(**data)
                 
                 # Filter by strategy if specified
-                if strategy_id and hasattr(result, 'strategy_id'):
-                    if result.strategy_id != strategy_id:
+                if strategy_id:
+                    result_strategy_id = getattr(result, 'strategy_id', None)
+                    if result_strategy_id and result_strategy_id != strategy_id:
                         continue
                 
                 results.append(result)
