@@ -3,6 +3,7 @@ Lobster Quant - Portfolio Backtest
 Multi-stock portfolio backtest engine with result aggregation.
 """
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -16,6 +17,9 @@ from src.data.models import BacktestMetrics, BacktestResult, Strategy, Trade
 from src.utils.logging import get_logger
 
 logger = get_logger()
+
+# Maximum parallel workers for portfolio backtest
+MAX_WORKERS = 4
 
 
 @dataclass
@@ -33,10 +37,11 @@ class PortfolioBacktest:
     equity curves, and computes portfolio-level metrics.
     """
 
-    def __init__(self):
+    def __init__(self, max_workers: int = MAX_WORKERS):
         self.backtest_engine = BacktestEngine()
         self.data_engine = get_data_engine()
         self.indicator_engine = get_indicator_engine()
+        self.max_workers = max_workers
 
     # ------------------------------------------------------------------
     # Public API

@@ -3,6 +3,7 @@ Lobster Quant - Trade Simulator
 Simulates daily trading based on strategy signals.
 """
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import List, Dict, Any
 
@@ -19,6 +20,9 @@ from .signal_engine import get_signal_engine
 from ..utils.logging import get_logger
 
 logger = get_logger()
+
+# Maximum parallel workers for stock scanning
+MAX_SCAN_WORKERS = 4
 
 
 class TradeSimulator:
