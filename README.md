@@ -429,7 +429,7 @@ comparison = manager.compare_strategies(
 多股票组合回测引擎。
 
 ```python
-from lobster_quant.src.core.portfolio_backtest import PortfolioBacktest
+from lobster_quant.src.analysis.backtest.portfolio import PortfolioBacktest
 
 portfolio = PortfolioBacktest()
 result = portfolio.run(

@@ -11,6 +11,12 @@ import numpy as np
 import pandas as pd
 
 from src.analysis.backtest.engine import BacktestEngine
+from src.analysis.backtest.metrics import (
+    calculate_sharpe_ratio,
+    calculate_max_drawdown,
+    calculate_win_rate,
+    calculate_profit_loss_ratio,
+)
 from src.core.data_engine import get_data_engine
 from src.core.indicator_engine import get_indicator_engine
 from src.data.models import BacktestMetrics, BacktestResult, Strategy, Trade
@@ -184,38 +190,30 @@ class PortfolioBacktest:
                 avgLoss=0,
             )
 
-        # Trade-level statistics
+        # Trade-level statistics using unified metrics functions
         closed_trades = [t for t in trades if t.return_pct is not None]
         trade_returns: List[float] = [t.return_pct for t in closed_trades]  # type: ignore[misc]
         winning = [r for r in trade_returns if r > 0]
         losing = [r for r in trade_returns if r <= 0]
 
         total = len(closed_trades) if closed_trades else len(trades)
-        win_rate = len(winning) / total * 100 if total else 0
+        win_rate = calculate_win_rate(trades)
         avg_win = sum(winning) / len(winning) if winning else 0.0
         avg_loss = sum(losing) / len(losing) if losing else 0.0
-        profit_loss_ratio = abs(avg_win / avg_loss) if avg_loss != 0 else 0
+        profit_loss_ratio = calculate_profit_loss_ratio(trades)
         avg_holding = (
             sum(t.holding_days for t in trades) / len(trades) if trades else 0
         )
 
-        # Equity-curve-level metrics
+        # Equity-curve-level metrics using unified metrics functions
         if equity_curve and len(equity_curve) > 1:
-            values = equity_curve
-            total_return = (values[-1] - values[0]) / values[0] * 100 if values[0] else 0
+            equity_series = pd.Series(equity_curve)
+            daily_returns = equity_series.pct_change().dropna()
 
-            daily_returns = pd.Series(values).pct_change().dropna()
+            total_return = (equity_curve[-1] - equity_curve[0]) / equity_curve[0] * 100 if equity_curve[0] else 0
             volatility = daily_returns.std() * np.sqrt(252) * 100 if len(daily_returns) > 1 else 0
-
-            peak = pd.Series(values).expanding().max()
-            drawdown = (pd.Series(values) - peak) / peak
-            max_drawdown = abs(drawdown.min()) * 100
-
-            sharpe = (
-                (daily_returns.mean() * 252) / (daily_returns.std() * np.sqrt(252))
-                if daily_returns.std() > 0
-                else 0
-            )
+            max_drawdown = calculate_max_drawdown(equity_series) * 100
+            sharpe = calculate_sharpe_ratio(daily_returns)
 
             days = len(equity_curve)
             annualized = ((1 + total_return / 100) ** (252 / days) - 1) * 100 if days > 0 else 0

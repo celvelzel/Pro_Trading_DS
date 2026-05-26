@@ -26,7 +26,7 @@ STRATEGY_MANAGER_PATCH = "lobster_quant.src.core.strategy_manager.StrategyManage
 DATA_ENGINE_PATCH = "lobster_quant.src.core.data_engine.get_data_engine"
 INDICATOR_ENGINE_PATCH = "lobster_quant.src.core.indicator_engine.get_indicator_engine"
 BACKTEST_ENGINE_PATCH = "lobster_quant.src.analysis.backtest.engine.BacktestEngine"
-PORTFOLIO_BACKTEST_PATCH = "lobster_quant.src.core.portfolio_backtest.PortfolioBacktest"
+PORTFOLIO_BACKTEST_PATCH = "lobster_quant.src.analysis.backtest.portfolio.PortfolioBacktest"
 BACKTEST_STORE_PATCH = "lobster_quant.src.storage.backtest_store.BacktestStore"
 
 

@@ -8,7 +8,7 @@ import numpy as np
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 
-from src.core.portfolio_backtest import PortfolioBacktest, EquityPoint
+from src.analysis.backtest.portfolio import PortfolioBacktest, EquityPoint
 from src.data.models import (
     BacktestMetrics,
     BacktestResult,
@@ -161,9 +161,9 @@ def sample_ohlcv_df():
 class TestPortfolioBacktestInit:
     """Tests for PortfolioBacktest construction."""
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_init_creates_engines(self, mock_bt, mock_data, mock_ind):
         pb = PortfolioBacktest()
         mock_bt.assert_called_once()
@@ -182,9 +182,9 @@ class TestPortfolioBacktestInit:
 class TestPortfolioBacktestRun:
     """Tests for the run() method."""
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_run_empty_symbols(self, mock_bt_cls, mock_data_cls, mock_ind_cls, sample_strategy):
         """Running with no symbols returns an empty BacktestResult."""
         pb = PortfolioBacktest()
@@ -194,9 +194,9 @@ class TestPortfolioBacktestRun:
         assert result.symbol == ""
         assert result.trades == []
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_run_single_stock(
         self,
         mock_bt_cls,
@@ -235,9 +235,9 @@ class TestPortfolioBacktestRun:
         assert "AAA" in result.symbol
         assert len(result.trades) == 2
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_run_multiple_stocks(
         self,
         mock_bt_cls,
@@ -277,9 +277,9 @@ class TestPortfolioBacktestRun:
         # 2 trades from A + 1 trade from B = 3
         assert len(result.trades) == 3
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_run_skips_failed_stock(
         self,
         mock_bt_cls,
@@ -312,9 +312,9 @@ class TestPortfolioBacktestRun:
         assert "BBB" in result.symbol
         assert len(result.trades) == 1
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_run_applies_date_filter(
         self,
         mock_bt_cls,
@@ -362,25 +362,25 @@ class TestPortfolioBacktestRun:
 class TestAggregateEquityCurves:
     """Tests for equity curve aggregation."""
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_empty_curves(self, mock_bt, mock_data, mock_ind):
         pb = PortfolioBacktest()
         assert pb._aggregate_equity_curves([]) == []
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_single_curve(self, mock_bt, mock_data, mock_ind):
         pb = PortfolioBacktest()
         curve = [1.0, 1.05, 1.10]
         result = pb._aggregate_equity_curves([curve])
         assert result == [1.0, 1.05, 1.10]
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_two_curves_average(self, mock_bt, mock_data, mock_ind):
         pb = PortfolioBacktest()
         c1 = [1.0, 1.10, 1.20]
@@ -391,9 +391,9 @@ class TestAggregateEquityCurves:
         assert result[1] == pytest.approx(1.0)
         assert result[2] == pytest.approx(1.075)
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_different_length_curves(self, mock_bt, mock_data, mock_ind):
         """Curves of different lengths are padded by averaging available values."""
         pb = PortfolioBacktest()
@@ -420,9 +420,9 @@ class TestAggregateEquityCurves:
 class TestCalculatePortfolioMetrics:
     """Tests for portfolio-level metrics calculation."""
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_no_trades(self, mock_bt, mock_data, mock_ind):
         pb = PortfolioBacktest()
         metrics = pb._calculate_portfolio_metrics([], [])
@@ -432,9 +432,9 @@ class TestCalculatePortfolioMetrics:
         assert metrics.winRate == 0
         assert metrics.totalReturn == 0
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_with_trades_and_curve(self, mock_bt, mock_data, mock_ind):
         pb = PortfolioBacktest()
         trades = [
@@ -478,9 +478,9 @@ class TestCalculatePortfolioMetrics:
         assert metrics.totalReturn > 0
         assert metrics.maxDrawdown > 0
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_all_winning_trades(self, mock_bt, mock_data, mock_ind):
         pb = PortfolioBacktest()
         trades = [
@@ -504,9 +504,9 @@ class TestCalculatePortfolioMetrics:
         assert metrics.avgWin == pytest.approx(0.10, abs=0.01)
         assert metrics.avgLoss == 0
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_trades_without_equity_curve(self, mock_bt, mock_data, mock_ind):
         """Metrics degrade gracefully when equity curve is empty."""
         pb = PortfolioBacktest()
@@ -538,9 +538,9 @@ class TestCalculatePortfolioMetrics:
 class TestAggregateResults:
     """Tests for the _aggregate_results helper."""
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_empty_results(self, mock_bt, mock_data, mock_ind, sample_strategy):
         pb = PortfolioBacktest()
         result = pb._aggregate_results([], sample_strategy, ["A", "B"])
@@ -548,9 +548,9 @@ class TestAggregateResults:
         assert result.symbol == "A, B"
         assert result.trades == []
 
-    @patch("src.core.portfolio_backtest.get_indicator_engine")
-    @patch("src.core.portfolio_backtest.get_data_engine")
-    @patch("src.core.portfolio_backtest.BacktestEngine")
+    @patch("src.analysis.backtest.portfolio.get_indicator_engine")
+    @patch("src.analysis.backtest.portfolio.get_data_engine")
+    @patch("src.analysis.backtest.portfolio.BacktestEngine")
     def test_aggregates_dates(self, mock_bt, mock_data, mock_ind, sample_strategy):
         pb = PortfolioBacktest()
         r1 = BacktestResult(

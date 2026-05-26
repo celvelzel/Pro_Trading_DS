@@ -1,12 +1,19 @@
 # Python
 __pycache__/
+__pypackages__/
 *.py[cod]
+*.pyo
+*.pyd
 *$py.class
 *.so
 *.egg-info/
+*.egg
 dist/
 build/
-*.egg
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
 
 # Virtual environments
 .venv/
@@ -36,3 +43,44 @@ logs/
 # Misc
 commit_msg.txt
 *.log
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.tox/
+.nox/
+
+# Node.js (if present at root)
+node_modules/
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+.pdm-python
+.pdm-build/
+
+# ruff
+.ruff_cache/
+
+# Type stubs
+*.pyi

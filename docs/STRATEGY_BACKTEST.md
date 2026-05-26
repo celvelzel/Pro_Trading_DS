@@ -177,15 +177,20 @@ The system includes 3 preset strategies:
 - Performance metrics
 - Portfolio value tracking
 
-## File Structure
+## File Structure (Updated 2026-05-26)
 
 ```
 lobster_quant/src/
+├── analysis/
+│   └── backtest/                # 回测模块 (统一)
+│       ├── __init__.py         # 导出所有回测相关类和函数
+│       ├── engine.py           # BacktestEngine (单股票回测)
+│       ├── portfolio.py        # PortfolioBacktest (组合回测)
+│       └── metrics.py          # 指标计算函数 (统一)
 ├── data/
 │   └── models.py                    # Strategy, BacktestMetrics, etc.
 ├── core/
 │   ├── strategy_manager.py          # Strategy CRUD
-│   ├── portfolio_backtest.py        # Multi-stock backtest
 │   ├── trade_simulator.py           # Daily simulation
 │   └── scheduler.py                 # Scheduling
 ├── storage/
@@ -211,6 +216,26 @@ lobster-quant-web/src/
 │   ├── strategy/                    # Strategy components
 │   ├── backtest/                    # Backtest components
 │   └── simulation/                  # Simulation components
+└── app/
+    ├── strategy/page.tsx            # Strategy management page
+    ├── backtest/page.tsx            # Backtest page
+    └── simulation/page.tsx          # Simulation dashboard
+```
+
+### Import Path Migration
+
+**旧路径 (已废弃)**:
+```python
+from src.core.portfolio_backtest import PortfolioBacktest
+from lobster_quant.src.core.portfolio_backtest import PortfolioBacktest
+```
+
+**新路径 (推荐)**:
+```python
+from src.analysis.backtest.portfolio import PortfolioBacktest
+from src.analysis.backtest import PortfolioBacktest
+from lobster_quant.src.analysis.backtest.portfolio import PortfolioBacktest
+```imulation components
 └── app/
     ├── strategy/page.tsx            # Strategy management
     ├── backtest/page.tsx            # Enhanced backtest

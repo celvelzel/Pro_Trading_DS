@@ -204,7 +204,7 @@ async def run_portfolio_backtest(
     """
     try:
         from lobster_quant.src.core.strategy_manager import StrategyManager
-        from lobster_quant.src.core.portfolio_backtest import PortfolioBacktest
+        from lobster_quant.src.analysis.backtest.portfolio import PortfolioBacktest
 
         # Get strategy
         manager = StrategyManager()
