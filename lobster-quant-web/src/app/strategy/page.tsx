@@ -1,0 +1,135 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useStrategyStore, Strategy } from '@/stores/strategyStore';
+import { StrategyCard, StrategyForm } from '@/components/strategy';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+
+export default function StrategyPage() {
+  const { 
+    strategies, 
+    loading, 
+    error, 
+    fetchStrategies, 
+    createStrategy, 
+    updateStrategy, 
+    deleteStrategy,
+    clearError 
+  } = useStrategyStore();
+  
+  const [showForm, setShowForm] = useState(false);
+  const [editingStrategy, setEditingStrategy] = useState<Strategy | undefined>();
+
+  useEffect(() => {
+    fetchStrategies();
+  }, [fetchStrategies]);
+
+  const handleCreate = async (name: string, description: string, params: any) => {
+    await createStrategy(name, description, params);
+    setShowForm(false);
+  };
+
+  const handleUpdate = async (name: string, description: string, params: any) => {
+    if (editingStrategy) {
+      await updateStrategy(editingStrategy.id, { name, description, params });
+      setEditingStrategy(undefined);
+      setShowForm(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this strategy?')) {
+      await deleteStrategy(id);
+    }
+  };
+
+  const handleEdit = (strategy: Strategy) => {
+    setEditingStrategy(strategy);
+    setShowForm(true);
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingStrategy(undefined);
+  };
+
+  const presetStrategies = strategies.filter(s => s.isPreset);
+  const customStrategies = strategies.filter(s => !s.isPreset);
+
+  return (
+    <div className="container mx-auto py-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">Strategy Management</h1>
+          <p className="text-muted-foreground mt-2">
+            Create and manage your trading strategies
+          </p>
+        </div>
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Strategy
+        </Button>
+      </div>
+
+      {error && (
+        <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6">
+          {error}
+          <Button variant="ghost" size="sm" onClick={clearError} className="ml-2">
+            Dismiss
+          </Button>
+        </div>
+      )}
+
+      {showForm && (
+        <div className="mb-8">
+          <StrategyForm
+            strategy={editingStrategy}
+            onSubmit={editingStrategy ? handleUpdate : handleCreate}
+            onCancel={handleCancel}
+          />
+        </div>
+      )}
+
+      {loading && strategies.length === 0 ? (
+        <div className="text-center py-12">Loading strategies...</div>
+      ) : (
+        <>
+          {/* Preset Strategies */}
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold mb-4">Preset Strategies</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {presetStrategies.map(strategy => (
+                <StrategyCard
+                  key={strategy.id}
+                  strategy={strategy}
+                />
+              ))}
+            </div>
+          </section>
+
+          {/* Custom Strategies */}
+          <section>
+            <h2 className="text-xl font-semibold mb-4">Custom Strategies</h2>
+            {customStrategies.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No custom strategies yet. Create one to get started.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {customStrategies.map(strategy => (
+                  <StrategyCard
+                    key={strategy.id}
+                    strategy={strategy}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
