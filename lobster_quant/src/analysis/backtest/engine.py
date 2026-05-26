@@ -225,4 +225,120 @@ class BacktestEngine:
             "best_trade": f"{result.best_trade*100:.2f}%",
             "worst_trade": f"{result.worst_trade*100:.2f}%",
         }
+    
+    def run_with_strategy(self, data: pd.DataFrame, strategy: Strategy, symbol: str = "") -> BacktestResult:
+        """Run backtest using a Strategy object's parameters.
+        
+        Args:
+            data: DataFrame with OHLCV and indicators
+            strategy: Strategy object with parameters
+            symbol: Stock symbol
+        
+        Returns:
+            BacktestResult with enhanced BacktestMetrics
+        """
+        # Temporarily override engine settings with strategy params
+        original_holding = self.holding_days
+        original_min_score = self.min_score
+        original_slippage = self.slippage
+        original_commission = self.commission
+        
+        try:
+            self.holding_days = strategy.params.holdingDays
+            self.min_score = strategy.params.minScore
+            self.slippage = strategy.params.slippagePct
+            self.commission = strategy.params.commissionPct
+            
+            # Generate score series using scoring engine
+            from src.core.signal_engine import get_signal_engine
+            signal_engine = get_signal_engine()
+            
+            # Calculate scores for each row
+            score_series = pd.Series(index=data.index, dtype=float)
+            for i in range(len(data)):
+                try:
+                    score_series.iloc[i] = signal_engine.scoring_engine.compute_score(data.iloc[:i+1]).iloc[-1]
+                except Exception:
+                    score_series.iloc[i] = 0
+            
+            # Run existing backtest
+            result = self.run(data, score_series, symbol)
+            
+            # Enhance metrics with new fields
+            result.metrics = self._calculate_enhanced_metrics(result)
+            
+            return result
+            
+        finally:
+            # Restore original settings
+            self.holding_days = original_holding
+            self.min_score = original_min_score
+            self.slippage = original_slippage
+            self.commission = original_commission
+    
+    def _calculate_enhanced_metrics(self, result: BacktestResult) -> BacktestMetrics:
+        """Calculate enhanced metrics from backtest result."""
+        trades = result.trades
+        if not trades:
+            return BacktestMetrics(
+                totalReturn=0, annualizedReturn=0, volatility=0,
+                sharpeRatio=0, maxDrawdown=0, winRate=0,
+                profitLossRatio=0, totalTrades=0, winningTrades=0,
+                losingTrades=0, avgHoldingDays=0, avgWin=0, avgLoss=0
+            )
+        
+        # Calculate win/loss stats
+        winning = [t for t in trades if t.return_pct is not None and t.return_pct > 0]
+        losing = [t for t in trades if t.return_pct is not None and t.return_pct <= 0]
+        
+        win_rate = len(winning) / len(trades) * 100 if trades else 0
+        avg_win = sum(t.return_pct for t in winning) / len(winning) if winning else 0
+        avg_loss = sum(t.return_pct for t in losing) / len(losing) if losing else 0
+        profit_loss_ratio = abs(avg_win / avg_loss) if avg_loss != 0 else 0
+        
+        avg_holding = sum(t.holding_days for t in trades) / len(trades) if trades else 0
+        
+        # Calculate equity curve metrics
+        equity_curve = result.equity_curve
+        if equity_curve and len(equity_curve) > 1:
+            values = equity_curve
+            total_return = (values[-1] - values[0]) / values[0] * 100 if values[0] else 0
+            
+            # Calculate volatility from daily returns
+            returns = pd.Series(values).pct_change().dropna()
+            volatility = returns.std() * np.sqrt(252) * 100 if len(returns) > 1 else 0
+            
+            # Calculate max drawdown
+            peak = pd.Series(values).expanding().max()
+            drawdown = (pd.Series(values) - peak) / peak
+            max_drawdown = abs(drawdown.min()) * 100
+            
+            # Calculate Sharpe ratio
+            sharpe = (returns.mean() * 252) / (returns.std() * np.sqrt(252)) if returns.std() > 0 else 0
+            
+            # Annualized return (assuming 252 trading days per year)
+            days = len(equity_curve)
+            annualized = ((1 + total_return/100) ** (252/days) - 1) * 100 if days > 0 else 0
+        else:
+            total_return = 0
+            volatility = 0
+            max_drawdown = 0
+            sharpe = 0
+            annualized = 0
+        
+        return BacktestMetrics(
+            totalReturn=round(total_return, 2),
+            annualizedReturn=round(annualized, 2),
+            volatility=round(volatility, 2),
+            sharpeRatio=round(sharpe, 2),
+            maxDrawdown=round(max_drawdown, 2),
+            winRate=round(win_rate, 2),
+            profitLossRatio=round(profit_loss_ratio, 2),
+            totalTrades=len(trades),
+            winningTrades=len(winning),
+            losingTrades=len(losing),
+            avgHoldingDays=round(avg_holding, 1),
+            avgWin=round(avg_win, 2),
+            avgLoss=round(avg_loss, 2)
+        )
 
