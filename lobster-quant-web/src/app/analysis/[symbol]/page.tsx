@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import {
   useStockData,
@@ -15,11 +16,23 @@ import { MetricCard } from '@/components/cards/MetricCard'
 import { SignalCard } from '@/components/cards/SignalCard'
 import { StatusCard } from '@/components/cards/StatusCard'
 import { CandlestickChart } from '@/components/charts/CandlestickChart'
+import { IndicatorToggle, type IndicatorType } from '@/components/charts/IndicatorToggle'
 import { TrendingUp, TrendingDown, BarChart3, Activity, Shield } from 'lucide-react'
 
 export default function AnalysisDetailPage() {
   const params = useParams()
   const symbol = params.symbol as string
+
+  // Indicator toggle state
+  const [activeIndicators, setActiveIndicators] = useState<IndicatorType[]>([])
+
+  const handleIndicatorToggle = useCallback((indicator: IndicatorType) => {
+    setActiveIndicators((prev) =>
+      prev.includes(indicator)
+        ? prev.filter((i) => i !== indicator)
+        : [...prev, indicator]
+    )
+  }, [])
 
   // Fetch all data for the stock
   // useStockData: full data for header display (price, name, change, volume)
@@ -163,7 +176,13 @@ export default function AnalysisDetailPage() {
         <TabsContent value="overview" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Price Chart</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Price Chart</CardTitle>
+                <IndicatorToggle
+                  activeIndicators={activeIndicators}
+                  onToggle={handleIndicatorToggle}
+                />
+              </div>
             </CardHeader>
             <CardContent>
               {candles && candles.length > 0 ? (
@@ -172,6 +191,7 @@ export default function AnalysisDetailPage() {
                   symbol={symbol}
                   height={500}
                   showVolume={true}
+                  activeIndicators={activeIndicators}
                 />
               ) : (
                 <div className="h-[400px] flex items-center justify-center text-text-secondary">
