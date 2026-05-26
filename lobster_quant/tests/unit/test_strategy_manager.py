@@ -264,3 +264,78 @@ class TestGetPresets:
         assert len(presets) == 1
         assert presets[0].id == "preset_only"
         assert presets[0].isPreset is True
+
+
+class TestCompareStrategies:
+    """Tests for compare_strategies."""
+
+    def test_compare_single_strategy(self, manager, created_strategy):
+        """Should return results for a single valid strategy."""
+        result = manager.compare_strategies(
+            [created_strategy.id], "AAPL", "2024-01-01", "2024-12-31"
+        )
+        assert "strategies" in result
+        assert "best_return" in result
+        assert "best_sharpe" in result
+        assert "lowest_drawdown" in result
+        assert len(result["strategies"]) == 1
+        assert result["strategies"][0]["id"] == created_strategy.id
+        assert result["strategies"][0]["name"] == "Test Strategy"
+
+    def test_compare_multiple_strategies(self, manager, sample_params):
+        """Should return results for multiple strategies and pick best."""
+        s1 = manager.create_strategy(name="S1", description="D1", params=sample_params)
+        s2 = manager.create_strategy(name="S2", description="D2", params=sample_params)
+
+        result = manager.compare_strategies(
+            [s1.id, s2.id], "AAPL", "2024-01-01", "2024-12-31"
+        )
+        assert len(result["strategies"]) == 2
+        ids = [s["id"] for s in result["strategies"]]
+        assert s1.id in ids
+        assert s2.id in ids
+
+    def test_compare_skips_nonexistent(self, manager, created_strategy):
+        """Should skip strategy IDs that don't exist."""
+        result = manager.compare_strategies(
+            [created_strategy.id, "nonexistent"], "AAPL", "2024-01-01", "2024-12-31"
+        )
+        assert len(result["strategies"]) == 1
+        assert result["strategies"][0]["id"] == created_strategy.id
+
+    def test_compare_all_nonexistent_returns_empty(self, manager):
+        """Should return empty strategies when all IDs are nonexistent."""
+        result = manager.compare_strategies(
+            ["fake1", "fake2"], "AAPL", "2024-01-01", "2024-12-31"
+        )
+        assert result["strategies"] == []
+
+    def test_compare_empty_ids_returns_empty(self, manager):
+        """Should return empty strategies when given empty list."""
+        result = manager.compare_strategies(
+            [], "AAPL", "2024-01-01", "2024-12-31"
+        )
+        assert result["strategies"] == []
+
+    def test_compare_placeholder_metrics_are_none(self, manager, created_strategy):
+        """Should return None for metrics (placeholder until Phase 3)."""
+        result = manager.compare_strategies(
+            [created_strategy.id], "AAPL", "2024-01-01", "2024-12-31"
+        )
+        assert result["strategies"][0]["metrics"] is None
+        assert result["strategies"][0]["equity_curve"] == []
+
+    def test_compare_returns_correct_structure(self, manager, created_strategy):
+        """Should return dictionary with all required keys."""
+        result = manager.compare_strategies(
+            [created_strategy.id], "AAPL", "2024-01-01", "2024-12-31"
+        )
+        assert isinstance(result, dict)
+        assert set(result.keys()) == {
+            "strategies",
+            "best_return",
+            "best_sharpe",
+            "lowest_drawdown",
+        }
+        for s in result["strategies"]:
+            assert set(s.keys()) == {"id", "name", "metrics", "equity_curve"}
