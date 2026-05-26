@@ -1,9 +1,9 @@
 """
-Backtest API Router
-Endpoints for strategy backtesting.
+Backtest API Router - Enhanced with strategy support.
+Endpoints for strategy backtesting, portfolio backtesting, and result management.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
 import sys
 import os
@@ -106,5 +106,165 @@ async def run_backtest(request: BacktestRequest):
         )
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/backtest/strategy", response_model=dict)
+async def run_strategy_backtest(
+    symbol: str,
+    strategy_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Run backtest with a specific strategy.
+
+    Args:
+        symbol: Stock symbol to backtest
+        strategy_id: ID of the strategy to use
+        start_date: Backtest start date (YYYY-MM-DD)
+        end_date: Backtest end date (YYYY-MM-DD)
+
+    Returns:
+        Backtest results with strategy info, metrics, trades, and equity curve
+    """
+    try:
+        from lobster_quant.src.core.strategy_manager import StrategyManager
+        from lobster_quant.src.core.data_engine import get_data_engine
+        from lobster_quant.src.core.indicator_engine import get_indicator_engine
+        from lobster_quant.src.analysis.backtest.engine import BacktestEngine
+
+        # Get strategy
+        manager = StrategyManager()
+        strategy = manager.get_strategy(strategy_id)
+        if strategy is None:
+            raise HTTPException(status_code=404, detail=f"Strategy {strategy_id} not found")
+
+        # Fetch and prepare data
+        data_engine = get_data_engine()
+        indicator_engine = get_indicator_engine()
+
+        stock_data = data_engine.fetch_stock(symbol)
+        if stock_data is None:
+            raise HTTPException(status_code=404, detail=f"Stock {symbol} not found")
+
+        df = indicator_engine.compute_all(stock_data.daily)
+
+        # Filter by date range if specified
+        if start_date:
+            df = df[df.index >= start_date]
+        if end_date:
+            df = df[df.index <= end_date]
+
+        # Run backtest with strategy
+        engine = BacktestEngine()
+        result = engine.run_with_strategy(df, strategy, symbol)
+
+        return {
+            "strategy_id": strategy_id,
+            "strategy_name": strategy.name,
+            "symbol": symbol,
+            "metrics": result.metrics.model_dump() if result.metrics else None,
+            "trades": [
+                {
+                    "entryDate": str(t.buy_date.date()) if t.buy_date else "",
+                    "exitDate": str(t.sell_date.date()) if t.sell_date else "",
+                    "entryPrice": t.buy_price,
+                    "exitPrice": t.sell_price or 0.0,
+                    "returnPercent": round((t.return_pct or 0.0) * 100, 2),
+                    "holdingDays": t.holding_days
+                }
+                for t in result.trades
+            ],
+            "equityCurve": result.equity_curve
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/backtest/portfolio", response_model=dict)
+async def run_portfolio_backtest(
+    symbols: List[str] = Query(..., description="List of stock symbols"),
+    strategy_id: str = Query(..., description="Strategy ID"),
+    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)")
+):
+    """Run portfolio backtest on multiple stocks.
+
+    Args:
+        symbols: List of stock symbols to backtest
+        strategy_id: ID of the strategy to use
+        start_date: Backtest start date (YYYY-MM-DD)
+        end_date: Backtest end date (YYYY-MM-DD)
+
+    Returns:
+        Portfolio backtest results with aggregated metrics
+    """
+    try:
+        from lobster_quant.src.core.strategy_manager import StrategyManager
+        from lobster_quant.src.core.portfolio_backtest import PortfolioBacktest
+
+        # Get strategy
+        manager = StrategyManager()
+        strategy = manager.get_strategy(strategy_id)
+        if strategy is None:
+            raise HTTPException(status_code=404, detail=f"Strategy {strategy_id} not found")
+
+        # Run portfolio backtest
+        portfolio = PortfolioBacktest()
+        result = portfolio.run(symbols, strategy, start_date, end_date)
+
+        return {
+            "strategy_id": strategy_id,
+            "strategy_name": strategy.name,
+            "symbols": symbols,
+            "metrics": result.metrics.model_dump() if result.metrics else None,
+            "trades": [
+                {
+                    "entryDate": str(t.buy_date.date()) if t.buy_date else "",
+                    "exitDate": str(t.sell_date.date()) if t.sell_date else "",
+                    "entryPrice": t.buy_price,
+                    "exitPrice": t.sell_price or 0.0,
+                    "returnPercent": round((t.return_pct or 0.0) * 100, 2),
+                    "holdingDays": t.holding_days
+                }
+                for t in result.trades
+            ],
+            "equityCurve": result.equity_curve
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/backtest/results", response_model=List[dict])
+async def list_backtest_results(strategy_id: Optional[str] = None):
+    """List backtest results.
+
+    Args:
+        strategy_id: Optional filter by strategy ID
+
+    Returns:
+        List of backtest result summaries
+    """
+    try:
+        from lobster_quant.src.storage.backtest_store import BacktestStore
+
+        store = BacktestStore()
+        results = store.list_results(strategy_id)
+
+        return [
+            {
+                "id": r.id if hasattr(r, 'id') else None,
+                "strategyId": r.strategy_id if hasattr(r, 'strategy_id') else None,
+                "symbol": r.symbol,
+                "metrics": r.metrics.model_dump() if r.metrics else None,
+                "createdAt": str(r.created_at) if hasattr(r, 'created_at') else None
+            }
+            for r in results
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
