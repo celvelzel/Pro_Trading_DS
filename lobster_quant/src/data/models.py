@@ -163,6 +163,7 @@ class BacktestResult(BaseModel):
     sharpe_ratio: Optional[float] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    metrics: Optional['BacktestMetrics'] = None
     
     model_config = ConfigDict(arbitrary_types_allowed=True)
     

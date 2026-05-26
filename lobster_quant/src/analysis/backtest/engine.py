@@ -8,7 +8,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 
-from src.data.models import Trade, BacktestResult
+from src.data.models import Trade, BacktestResult, Strategy, BacktestMetrics
 from src.config.settings import get_settings
 from src.utils.logging import get_logger
 from src.utils.exceptions import BacktestError
