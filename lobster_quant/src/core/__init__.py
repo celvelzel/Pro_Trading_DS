@@ -7,6 +7,7 @@ from .risk_engine import RiskEngine
 from .scoring_engine import ScoringEngine, get_scoring_engine
 from .signal_engine import SignalEngine, get_signal_engine
 from .events import Event, EventType, EventBus, event_bus
+from .portfolio_backtest import PortfolioBacktest
 
 __all__ = [
     "DataEngine",
@@ -20,4 +21,5 @@ __all__ = [
     "EventType",
     "EventBus",
     "event_bus",
+    "PortfolioBacktest",
 ]
