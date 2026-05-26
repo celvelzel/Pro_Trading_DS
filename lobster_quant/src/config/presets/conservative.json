@@ -1,0 +1,17 @@
+{
+  "id": "conservative",
+  "name": "Conservative",
+  "description": "Low-risk strategy with high score threshold and long holding period",
+  "params": {
+    "holdingDays": 30,
+    "minScore": 75,
+    "slippagePct": 0.001,
+    "commissionPct": 0.001,
+    "positionSizing": "fixed",
+    "positionSize": 0.05,
+    "initialCapital": 100000,
+    "maxPositions": 3
+  },
+  "logic": "default",
+  "isPreset": true
+}

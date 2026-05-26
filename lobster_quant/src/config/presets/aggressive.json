@@ -1,0 +1,17 @@
+{
+  "id": "aggressive",
+  "name": "Aggressive",
+  "description": "High-risk strategy with low score threshold and short holding period",
+  "params": {
+    "holdingDays": 10,
+    "minScore": 50,
+    "slippagePct": 0.001,
+    "commissionPct": 0.001,
+    "positionSizing": "fixed",
+    "positionSize": 0.15,
+    "initialCapital": 100000,
+    "maxPositions": 8
+  },
+  "logic": "default",
+  "isPreset": true
+}

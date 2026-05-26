@@ -1,0 +1,17 @@
+{
+  "id": "balanced",
+  "name": "Balanced",
+  "description": "Balanced strategy with moderate risk and reward",
+  "params": {
+    "holdingDays": 20,
+    "minScore": 60,
+    "slippagePct": 0.001,
+    "commissionPct": 0.001,
+    "positionSizing": "fixed",
+    "positionSize": 0.1,
+    "initialCapital": 100000,
+    "maxPositions": 5
+  },
+  "logic": "default",
+  "isPreset": true
+}
