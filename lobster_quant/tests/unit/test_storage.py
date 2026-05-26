@@ -8,8 +8,8 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 
-from lobster_quant.src.storage import StrategyStore, BacktestStore, SimulationStore
-from lobster_quant.src.data.models import (
+from src.storage import StrategyStore, BacktestStore, SimulationStore
+from src.data.models import (
     Strategy, StrategyParams, BacktestResult, SimulatedTrade, DailySnapshot
 )
 

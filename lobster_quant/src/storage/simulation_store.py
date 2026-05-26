@@ -4,11 +4,8 @@ Simulation Store - JSON persistence for simulated trades and snapshots.
 
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import datetime, timedelta
-
-
-from ..data.models import SimulatedTrade, DailySnapshot
 
 
 class SimulationStore:
@@ -26,7 +23,12 @@ class SimulationStore:
         self.trades_dir.mkdir(parents=True, exist_ok=True)
         self.snapshots_dir.mkdir(parents=True, exist_ok=True)
     
-    def save_trade(self, trade: SimulatedTrade) -> None:
+    def _get_model_classes(self):
+        """Lazy import to avoid triggering broken data/__init__.py."""
+        from lobster_quant.src.data.models import SimulatedTrade, DailySnapshot
+        return SimulatedTrade, DailySnapshot
+    
+    def save_trade(self, trade: Any) -> None:
         """Save a simulated trade."""
         self._ensure_dirs()
         
@@ -63,8 +65,10 @@ class SimulationStore:
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(trades, f, indent=2, default=str)
     
-    def get_trades(self, strategy_id: str, status: Optional[str] = None) -> List[SimulatedTrade]:
+    def get_trades(self, strategy_id: str, status: Optional[str] = None) -> List[Any]:
         """Get trades for a strategy, optionally filtered by status."""
+        SimulatedTrade, _ = self._get_model_classes()
+        
         strategy_trades_dir = self.trades_dir / strategy_id
         if not strategy_trades_dir.exists():
             return []
@@ -85,7 +89,7 @@ class SimulationStore:
         trades.sort(key=lambda t: t.entryDate, reverse=True)
         return trades
     
-    def save_snapshot(self, snapshot: DailySnapshot) -> None:
+    def save_snapshot(self, snapshot: Any) -> None:
         """Save daily snapshot."""
         self._ensure_dirs()
         
@@ -99,8 +103,10 @@ class SimulationStore:
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(snapshot.model_dump(), f, indent=2, default=str)
     
-    def get_snapshots(self, strategy_id: str, days: int = 30) -> List[DailySnapshot]:
+    def get_snapshots(self, strategy_id: str, days: int = 30) -> List[Any]:
         """Get recent snapshots for a strategy."""
+        _, DailySnapshot = self._get_model_classes()
+        
         strategy_snapshots_dir = self.snapshots_dir / strategy_id
         if not strategy_snapshots_dir.exists():
             return []

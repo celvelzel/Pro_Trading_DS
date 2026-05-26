@@ -4,11 +4,8 @@ Backtest Store - JSON persistence for backtest results.
 
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import datetime
-
-
-from ..data.models import BacktestResult
 
 
 class BacktestStore:
@@ -23,7 +20,12 @@ class BacktestStore:
         """Create directories if they don't exist."""
         self.results_dir.mkdir(parents=True, exist_ok=True)
     
-    def save_result(self, result: BacktestResult) -> str:
+    def _get_backtest_result_class(self):
+        """Lazy import to avoid triggering broken data/__init__.py."""
+        from src.data.models import BacktestResult
+        return BacktestResult
+    
+    def save_result(self, result: Any) -> str:
         """Save backtest result, return result ID."""
         self._ensure_dirs()
         
@@ -38,8 +40,10 @@ class BacktestStore:
         
         return result_id
     
-    def get_result(self, result_id: str) -> Optional[BacktestResult]:
+    def get_result(self, result_id: str) -> Optional[Any]:
         """Get backtest result by ID."""
+        BacktestResult = self._get_backtest_result_class()
+        
         file_path = self.results_dir / f"{result_id}.json"
         if not file_path.exists():
             return None
@@ -51,8 +55,9 @@ class BacktestStore:
         except Exception:
             return None
     
-    def list_results(self, strategy_id: Optional[str] = None) -> List[BacktestResult]:
+    def list_results(self, strategy_id: Optional[str] = None) -> List[Any]:
         """List backtest results, optionally filtered by strategy."""
+        BacktestResult = self._get_backtest_result_class()
         results = []
         
         for file in self.results_dir.glob("*.json"):
