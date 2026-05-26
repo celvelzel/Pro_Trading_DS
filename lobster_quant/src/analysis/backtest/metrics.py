@@ -5,8 +5,9 @@ Standalone metric calculation functions for backtest analysis.
 
 import numpy as np
 import pandas as pd
-from typing import Optional
+from typing import Dict, List, Optional
 
+from src.data.models import Trade
 from src.utils.logging import get_logger
 
 logger = get_logger()
@@ -137,14 +138,14 @@ def calculate_profit_factor(returns: pd.Series) -> float:
     return float(gross_profit / gross_loss)
 
 
-def calculate_win_rate(returns: pd.Series) -> float:
-    """Calculate win rate.
+def calculate_period_win_rate(returns: pd.Series) -> float:
+    """Calculate win rate from periodic returns.
 
     Args:
         returns: Series of periodic returns
 
     Returns:
-        Fraction of positive returns. Returns 0.0 for empty series.
+        Fraction of positive returns (0-1). Returns 0.0 for empty series.
     """
     returns = returns.dropna()
     if len(returns) == 0:
@@ -152,3 +153,155 @@ def calculate_win_rate(returns: pd.Series) -> float:
 
     wins = (returns > 0).sum()
     return float(wins / len(returns))
+
+
+def calculate_win_rate(trades: List[Trade]) -> float:
+    """Calculate win rate from trades.
+
+    Args:
+        trades: List of Trade objects
+
+    Returns:
+        Win rate as percentage (0-100)
+    """
+    if not trades:
+        return 0.0
+
+    winning = [t for t in trades if t.return_pct is not None and t.return_pct > 0]
+    return len(winning) / len(trades) * 100
+
+
+def calculate_profit_loss_ratio(trades: List[Trade]) -> float:
+    """Calculate profit/loss ratio.
+
+    Args:
+        trades: List of Trade objects
+
+    Returns:
+        Profit/loss ratio (avg_win / abs(avg_loss))
+    """
+    if not trades:
+        return 0.0
+
+    winning = [t for t in trades if t.return_pct is not None and t.return_pct > 0]
+    losing = [t for t in trades if t.return_pct is not None and t.return_pct <= 0]
+
+    avg_win = sum(t.return_pct for t in winning if t.return_pct is not None) / len(winning) if winning else 0.0
+    avg_loss = sum(t.return_pct for t in losing if t.return_pct is not None) / len(losing) if losing else 0.0
+
+    return abs(avg_win / avg_loss) if avg_loss != 0 else 0.0
+
+
+def calculate_monthly_returns(equity_curve: List[float], dates: List[str]) -> Dict[str, float]:
+    """Calculate monthly returns from equity curve.
+
+    Args:
+        equity_curve: List of equity values
+        dates: List of date strings (YYYY-MM-DD)
+
+    Returns:
+        Dictionary of monthly returns {YYYY-MM: return%}
+    """
+    if len(equity_curve) < 2 or len(dates) < 2:
+        return {}
+
+    monthly = {}
+    current_month = dates[0][:7]  # YYYY-MM
+    month_start_equity = equity_curve[0]
+
+    for i in range(1, len(dates)):
+        month = dates[i][:7]
+
+        if month != current_month:
+            # Calculate return for previous month
+            month_end_equity = equity_curve[i-1]
+            if month_start_equity > 0:
+                ret = (month_end_equity - month_start_equity) / month_start_equity * 100
+                monthly[current_month] = round(ret, 2)
+
+            current_month = month
+            month_start_equity = equity_curve[i]
+
+    # Handle last month
+    if month_start_equity > 0:
+        ret = (equity_curve[-1] - month_start_equity) / month_start_equity * 100
+        monthly[current_month] = round(ret, 2)
+
+    return monthly
+
+
+def calculate_yearly_returns(equity_curve: List[float], dates: List[str]) -> Dict[str, float]:
+    """Calculate yearly returns from equity curve.
+
+    Args:
+        equity_curve: List of equity values
+        dates: List of date strings (YYYY-MM-DD)
+
+    Returns:
+        Dictionary of yearly returns {YYYY: return%}
+    """
+    if len(equity_curve) < 2 or len(dates) < 2:
+        return {}
+
+    yearly = {}
+    current_year = dates[0][:4]
+    year_start_equity = equity_curve[0]
+
+    for i in range(1, len(dates)):
+        year = dates[i][:4]
+
+        if year != current_year:
+            # Calculate return for previous year
+            year_end_equity = equity_curve[i-1]
+            if year_start_equity > 0:
+                ret = (year_end_equity - year_start_equity) / year_start_equity * 100
+                yearly[current_year] = round(ret, 2)
+
+            current_year = year
+            year_start_equity = equity_curve[i]
+
+    # Handle last year
+    if year_start_equity > 0:
+        ret = (equity_curve[-1] - year_start_equity) / year_start_equity * 100
+        yearly[current_year] = round(ret, 2)
+
+    return yearly
+
+
+def calculate_rolling_metrics(returns: pd.Series, window: int = 22) -> Dict[str, pd.Series]:
+    """Calculate rolling window metrics.
+
+    Args:
+        returns: Series of periodic returns
+        window: Rolling window size in periods (default: 22 = 1 month)
+
+    Returns:
+        Dictionary with rolling metrics:
+        - rolling_return: Rolling cumulative return
+        - rolling_volatility: Rolling annualized volatility
+        - rolling_sharpe: Rolling Sharpe ratio
+    """
+    if len(returns) < window:
+        return {
+            "rolling_return": pd.Series(dtype=float),
+            "rolling_volatility": pd.Series(dtype=float),
+            "rolling_sharpe": pd.Series(dtype=float)
+        }
+
+    # Rolling cumulative return
+    rolling_return = returns.rolling(window).apply(lambda x: (1 + x).prod() - 1, raw=True)
+
+    # Rolling annualized volatility
+    rolling_vol = returns.rolling(window).std() * np.sqrt(252)
+
+    # Rolling Sharpe ratio
+    rolling_sharpe = returns.rolling(window).apply(
+        lambda x: (x.mean() * 252) / (x.std() * np.sqrt(252)) if x.std() > 0 else 0,
+        raw=True
+    )
+
+    return {
+        "rolling_return": pd.Series(rolling_return),
+        "rolling_volatility": pd.Series(rolling_vol),
+        "rolling_sharpe": pd.Series(rolling_sharpe)
+    }
