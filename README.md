@@ -60,6 +60,23 @@
 - **绩效指标**: Sharpe比率、Sortino比率、最大回撤、胜率、盈亏比
 - **权益曲线**: 可视化回测结果
 
+### 策略管理系统
+- **多策略支持**: 创建、编辑、删除自定义策略
+- **预设策略**: 内置保守型、平衡型、激进型三种策略
+- **策略比较**: 多策略并行对比，自动识别最佳策略
+- **参数配置**: 持仓天数、最低评分、仓位大小、最大持仓数等
+
+### 组合回测
+- **多股票回测**: 支持同时回测多只股票
+- **等权重分配**: 自动计算组合绩效
+- **聚合指标**: 组合级别的收益率、波动率、夏普比率
+
+### 每日模拟
+- **自动选股**: 基于策略参数自动筛选股票
+- **交易模拟**: 模拟买入/卖出操作
+- **绩效追踪**: 记录交易历史，计算滚动窗口绩效
+- **快照系统**: 每日保存投资组合状态
+
 ### 股票扫描器
 - **批量扫描**: 支持同时扫描多只股票
 - **评分筛选**: 按最低评分过滤
@@ -188,7 +205,9 @@ Pro_Trading_DS/
 │   │       ├── backtest.py   # 回测端点
 │   │       ├── scanner.py    # 扫描器端点
 │   │       ├── settings.py   # 设置端点
-│   │       └── stocks.py     # 股票数据端点
+│   │       ├── stocks.py     # 股票数据端点
+│   │       ├── strategy.py   # 策略管理端点
+│   │       └── simulation.py # 模拟端点
 │   ├── main.py                # FastAPI 应用入口
 │   └── requirements.txt       # Python依赖
 │
@@ -215,7 +234,10 @@ Pro_Trading_DS/
 │   │   │   ├── indicator_engine.py# 指标引擎
 │   │   │   ├── signal_engine.py# 信号引擎
 │   │   │   ├── risk_engine.py# 风险引擎
-│   │   │   └── strategy_manager.py# 策略管理
+│   │   │   ├── strategy_manager.py# 策略管理
+│   │   │   ├── portfolio_backtest.py# 组合回测
+│   │   │   ├── trade_simulator.py# 交易模拟
+│   │   │   └── scheduler.py# 调度器
 │   │   ├── data/              # 数据层
 │   │   │   ├── cache.py      # 数据缓存
 │   │   │   ├── models.py     # 数据模型
@@ -237,11 +259,16 @@ Pro_Trading_DS/
 │   │   │   ├── analysis/     # 股票分析页面
 │   │   │   ├── scanner/      # 股票扫描页面
 │   │   │   ├── backtest/     # 回测页面
+│   │   │   ├── strategy/     # 策略管理页面
+│   │   │   ├── simulation/   # 模拟仪表盘
 │   │   │   └── settings/     # 设置页面
 │   │   ├── components/        # React组件
 │   │   │   ├── charts/       # 图表组件
 │   │   │   ├── cards/        # 卡片组件
 │   │   │   ├── layout/       # 布局组件
+│   │   │   ├── strategy/     # 策略组件
+│   │   │   ├── backtest/     # 回测组件
+│   │   │   ├── simulation/   # 模拟组件
 │   │   │   └── ui/           # UI基础组件
 │   │   ├── hooks/             # React Hooks
 │   │   ├── lib/               # 工具函数和常量
@@ -359,6 +386,99 @@ results = engine.run(data, score_series, symbol="AAPL")
 - 胜率
 - 盈亏比
 
+### 5. 策略管理器 (StrategyManager)
+
+管理策略的创建、编辑、删除和比较。
+
+```python
+from lobster_quant.src.core.strategy_manager import StrategyManager
+
+manager = StrategyManager()
+
+# 列出所有策略
+strategies = manager.list_strategies()
+
+# 创建自定义策略
+from lobster_quant.src.data.models import StrategyParams
+params = StrategyParams(
+    holdingDays=15,
+    minScore=65,
+    positionSize=0.12,
+    maxPositions=4
+)
+strategy = manager.create_strategy("My Strategy", "自定义策略", params)
+
+# 比较策略
+comparison = manager.compare_strategies(
+    ["conservative", "balanced", "aggressive"],
+    "AAPL",
+    "2024-01-01",
+    "2024-12-31"
+)
+```
+
+**预设策略**:
+| 策略 | 持仓天数 | 最低评分 | 仓位大小 | 最大持仓 |
+|------|----------|----------|----------|----------|
+| Conservative | 30 | 75 | 5% | 3 |
+| Balanced | 20 | 60 | 10% | 5 |
+| Aggressive | 10 | 50 | 15% | 8 |
+
+### 6. 组合回测 (PortfolioBacktest)
+
+多股票组合回测引擎。
+
+```python
+from lobster_quant.src.core.portfolio_backtest import PortfolioBacktest
+
+portfolio = PortfolioBacktest()
+result = portfolio.run(
+    symbols=["AAPL", "TSLA", "GOOG"],
+    strategy=strategy,
+    start_date="2024-01-01",
+    end_date="2024-12-31"
+)
+
+print(f"Total Return: {result.metrics.totalReturn}%")
+print(f"Sharpe Ratio: {result.metrics.sharpeRatio}")
+print(f"Max Drawdown: {result.metrics.maxDrawdown}%")
+```
+
+### 7. 交易模拟器 (TradeSimulator)
+
+每日交易模拟引擎。
+
+```python
+from lobster_quant.src.core.trade_simulator import TradeSimulator
+
+simulator = TradeSimulator()
+
+# 扫描股票
+selected = simulator.scan_stocks(strategy, ["AAPL", "TSLA", "GOOG"])
+
+# 执行交易
+trades = simulator.execute_trades(strategy.id, selected)
+
+# 运行每日模拟
+snapshot = simulator.run_daily(strategy.id, ["AAPL", "TSLA", "GOOG"])
+```
+
+### 8. 调度器 (SimulationScheduler)
+
+管理每日模拟执行。
+
+```python
+from lobster_quant.src.core.scheduler import SimulationScheduler
+
+scheduler = SimulationScheduler()
+
+# 运行所有策略
+results = scheduler.run_daily(market="US")
+
+# 运行单个策略
+result = scheduler.run_strategy(strategy_id="balanced", market="US")
+```
+
 ---
 
 ## 📡 API文档
@@ -401,19 +521,62 @@ results = engine.run(data, score_series, symbol="AAPL")
 
 | 方法 | 路径 | 描述 |
 |------|------|------|
-| POST | `/run` | 运行回测 |
+| POST | `/run` | 运行基础回测 |
+| POST | `/backtest/strategy` | 运行策略回测 |
+| POST | `/backtest/portfolio` | 运行组合回测 |
+| GET | `/results` | 获取回测结果列表 |
 
-**请求体**:
+**策略回测请求**:
+```
+POST /api/backtest/backtest/strategy?symbol=AAPL&strategy_id=balanced&start_date=2024-01-01&end_date=2024-12-31
+```
+
+**组合回测请求体**:
 ```json
 {
-  "symbol": "AAPL",
-  "period": "1y",
-  "holdingDays": 20,
-  "minScore": 20,
-  "slippagePct": 0.001,
-  "commissionPct": 0.001
+  "symbols": ["AAPL", "TSLA", "GOOG"],
+  "strategy_id": "balanced",
+  "start_date": "2024-01-01",
+  "end_date": "2024-12-31"
 }
 ```
+
+### 策略管理 `/api/strategy`
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | `/strategies` | 获取所有策略 |
+| GET | `/strategies/{id}` | 获取单个策略 |
+| POST | `/strategies` | 创建策略 |
+| PUT | `/strategies/{id}` | 更新策略 |
+| DELETE | `/strategies/{id}` | 删除策略 |
+| POST | `/strategies/compare` | 比较策略 |
+
+**创建策略请求体**:
+```json
+{
+  "name": "My Strategy",
+  "description": "自定义策略",
+  "params": {
+    "holdingDays": 15,
+    "minScore": 65,
+    "positionSizing": "dynamic",
+    "positionSize": 0.12,
+    "initialCapital": 50000,
+    "maxPositions": 4
+  }
+}
+```
+
+### 每日模拟 `/api/simulation`
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| POST | `/simulation/run` | 运行单策略模拟 |
+| POST | `/simulation/run-all` | 运行所有策略模拟 |
+| GET | `/simulation/trades` | 获取交易记录 |
+| GET | `/simulation/snapshots` | 获取每日快照 |
+| GET | `/simulation/performance` | 获取绩效指标 |
 
 ### 设置管理 `/api/settings`
 
@@ -451,10 +614,24 @@ results = engine.run(data, score_series, symbol="AAPL")
 - 虚拟滚动优化 (大量结果)
 
 ### 策略回测 (Backtest)
-- 回测参数配置
+- 策略选择器
+- 单股票/多股票切换
+- 时间范围选择
 - 权益曲线图表
 - 交易记录表格
-- 绩效指标展示
+- 绩效指标展示（可展开详细指标）
+
+### 策略管理 (Strategy)
+- 策略列表（预设+自定义）
+- 创建/编辑/删除策略
+- 策略参数配置
+- 策略比较视图
+
+### 模拟仪表盘 (Simulation)
+- 每日模拟触发
+- 交易记录（开仓/平仓）
+- 绩效指标卡片
+- 滚动窗口分析
 
 ### 设置 (Settings)
 - 数据源配置
@@ -753,6 +930,38 @@ docker-compose up -d
 ---
 
 ## 📝 更新日志
+
+### Phase 2 (2026-05-26)
+
+#### 策略管理系统
+- **策略管理器**: 创建、编辑、删除自定义策略
+- **预设策略**: 内置保守型、平衡型、激进型三种策略
+- **策略比较**: 多策略并行对比，自动识别最佳策略
+- **策略存储**: JSON文件持久化策略配置
+
+#### 回测引擎增强
+- **策略回测**: 基于策略参数运行回测
+- **组合回测**: 多股票组合回测，等权重分配
+- **增强指标**: 胜率、盈亏比、月度/年度收益分解
+- **滚动窗口**: 支持1周/1月/3月/6月/1年窗口分析
+
+#### 每日模拟系统
+- **交易模拟器**: 模拟买入/卖出操作
+- **调度器**: 支持手动/自动运行每日模拟
+- **快照系统**: 每日保存投资组合状态
+- **绩效追踪**: 记录交易历史，计算滚动绩效
+
+#### 前端新页面
+- **策略管理页面**: 策略列表、创建/编辑/删除
+- **增强回测页面**: 策略选择、单/多股票切换
+- **模拟仪表盘**: 每日模拟触发、交易记录、绩效指标
+
+#### API新增
+- **策略管理API**: 6个端点 (CRUD + 比较)
+- **增强回测API**: 3个新端点 (策略/组合回测)
+- **模拟API**: 5个端点 (运行/交易/快照/绩效)
+
+---
 
 ### Phase 1 (2026-05-09)
 
