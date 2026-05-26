@@ -25,7 +25,7 @@ class SimulationStore:
     
     def _get_model_classes(self):
         """Lazy import to avoid triggering broken data/__init__.py."""
-        from lobster_quant.src.data.models import SimulatedTrade, DailySnapshot
+        from src.data.models import SimulatedTrade, DailySnapshot
         return SimulatedTrade, DailySnapshot
     
     def save_trade(self, trade: Any) -> None:
