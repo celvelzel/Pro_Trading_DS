@@ -8,6 +8,7 @@ import {
   Search,
   BarChart3,
   FlaskConical,
+  Settings,
 } from 'lucide-react'
 
 const navItems = [
@@ -31,14 +32,19 @@ const navItems = [
     href: '/backtest',
     icon: FlaskConical,
   },
+  {
+    title: 'Settings',
+    href: '/settings',
+    icon: Settings,
+  },
 ]
 
 export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-surface border-t border-gray-200">
-      <div className="flex justify-around items-center h-16">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-surface border-t border-gray-200 safe-bottom">
+      <div className="flex justify-around items-center h-16 px-1">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href)
           return (
@@ -46,14 +52,14 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center gap-1 px-3 py-2 text-xs font-medium transition-colors',
+                'flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium transition-colors min-w-0',
                 isActive
                   ? 'text-primary'
                   : 'text-text-tertiary hover:text-text-primary'
               )}
             >
-              <item.icon className="w-5 h-5" />
-              <span>{item.title}</span>
+              <item.icon className="w-5 h-5 flex-shrink-0" />
+              <span className="truncate">{item.title}</span>
             </Link>
           )
         })}

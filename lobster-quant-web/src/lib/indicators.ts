@@ -96,6 +96,7 @@ export function calculateRSI(data: number[], period: number = 14): (number | nul
 // ============================================================================
 
 export interface MACDLine {
+  time?: number
   macd: number | null
   signal: number | null
   histogram: number | null
@@ -106,7 +107,7 @@ export function calculateMACD(
   fastPeriod: number = 12,
   slowPeriod: number = 26,
   signalPeriod: number = 9
-): MACDLine[] {
+): (number | null)[][] {
   const fastEMA = calculateEMA(data, fastPeriod)
   const slowEMA = calculateEMA(data, slowPeriod)
 
@@ -125,19 +126,25 @@ export function calculateMACD(
   const signalLine = calculateEMA(validMACD, signalPeriod)
 
   // Calculate Histogram
-  const result: MACDLine[] = []
+  const macdResult: (number | null)[] = []
+  const signalResult: (number | null)[] = []
+  const histogramResult: (number | null)[] = []
   let signalIdx = 0
   for (let i = 0; i < data.length; i++) {
     if (macdLine[i] === null) {
-      result.push({ macd: null, signal: null, histogram: null })
+      macdResult.push(null)
+      signalResult.push(null)
+      histogramResult.push(null)
     } else {
       const signal = signalIdx < signalLine.length ? signalLine[signalIdx] : null
       const histogram = macdLine[i] !== null && signal !== null ? (macdLine[i] ?? 0) - signal : null
-      result.push({ macd: macdLine[i], signal, histogram })
+      macdResult.push(macdLine[i])
+      signalResult.push(signal)
+      histogramResult.push(histogram)
       signalIdx++
     }
   }
-  return result
+  return [macdResult, signalResult, histogramResult]
 }
 
 // ============================================================================

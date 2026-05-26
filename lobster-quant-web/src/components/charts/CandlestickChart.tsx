@@ -4,7 +4,7 @@ import { useEffect, useRef, memo } from 'react'
 import { createChart, IChartApi, ISeriesApi, CandlestickSeries, HistogramSeries, LineSeries } from 'lightweight-charts'
 import type { Candle } from '@/lib/types'
 import type { IndicatorType } from './IndicatorToggle'
-import { calculateSMA, calculateEMA, calculateBollingerBands, getClosePrices, formatIndicatorData } from '@/lib/indicators'
+import { calculateSMA, calculateEMA, calculateBollingerBands, calculateRSI, calculateMACD, getClosePrices, formatIndicatorData } from '@/lib/indicators'
 
 interface CandlestickChartProps {
   data: Candle[]
@@ -158,6 +158,101 @@ export const CandlestickChart = memo(function CandlestickChart({
       }
     }
 
+    // RSI sub-chart
+    if (activeIndicators.includes('rsi') && chartContainerRef.current) {
+      const rsiContainer = document.createElement('div')
+      rsiContainer.style.width = '100%'
+      rsiContainer.style.height = '120px'
+      chartContainerRef.current.parentNode?.insertBefore(rsiContainer, chartContainerRef.current.nextSibling)
+
+      const rsiChart = createChart(rsiContainer, {
+        width: chartContainerRef.current.clientWidth,
+        height: 120,
+        layout: {
+          background: { color: '#FFFFFF' },
+          textColor: '#5F6368',
+        },
+        grid: {
+          vertLines: { color: '#F0F0F0' },
+          horzLines: { color: '#F0F0F0' },
+        },
+        timeScale: {
+          visible: false,
+        },
+      })
+
+      const rsiData = calculateRSI(getClosePrices(data), 14)
+      const rsiSeries = rsiChart.addSeries(LineSeries, {
+        color: '#9C27B0',
+        lineWidth: 1,
+      })
+      rsiSeries.setData(formatIndicatorData(data, rsiData) as any)
+
+      // Add RSI levels (30 and 70)
+      const rsiLine30 = rsiSeries.createPriceLine({ price: 30, color: '#EA433580', lineWidth: 1, lineStyle: 2 })
+      const rsiLine70 = rsiSeries.createPriceLine({ price: 70, color: '#EA433580', lineWidth: 1, lineStyle: 2 })
+
+      rsiChart.timeScale().fitContent()
+    }
+
+    // MACD sub-chart
+    if (activeIndicators.includes('macd') && chartContainerRef.current) {
+      const macdContainer = document.createElement('div')
+      macdContainer.style.width = '100%'
+      macdContainer.style.height = '120px'
+      chartContainerRef.current.parentNode?.insertBefore(macdContainer, chartContainerRef.current.nextSibling?.nextSibling || null)
+
+      const macdChart = createChart(macdContainer, {
+        width: chartContainerRef.current.clientWidth,
+        height: 120,
+        layout: {
+          background: { color: '#FFFFFF' },
+          textColor: '#5F6368',
+        },
+        grid: {
+          vertLines: { color: '#F0F0F0' },
+          horzLines: { color: '#F0F0F0' },
+        },
+        timeScale: {
+          visible: false,
+        },
+      })
+
+      const [macdData, signalData, histogramData] = calculateMACD(getClosePrices(data), 12, 26, 9)
+      
+      // MACD line
+      const macdLine = macdChart.addSeries(LineSeries, {
+        color: '#2196F3',
+        lineWidth: 1,
+      })
+      macdLine.setData(macdData.map((v, i) => ({
+        time: data[i].time as any,
+        value: v ?? 0,
+      })).filter((_, i) => macdData[i] !== null))
+
+      // Signal line
+      const signalLine = macdChart.addSeries(LineSeries, {
+        color: '#FF9800',
+        lineWidth: 1,
+      })
+      signalLine.setData(signalData.map((v, i) => ({
+        time: data[i].time as any,
+        value: v ?? 0,
+      })).filter((_, i) => signalData[i] !== null))
+
+      // Histogram
+      const histogramSeries = macdChart.addSeries(HistogramSeries, {
+        color: '#4CAF50',
+      })
+      histogramSeries.setData(histogramData.map((v, i) => ({
+        time: data[i].time as any,
+        value: v ?? 0,
+        color: (v ?? 0) >= 0 ? '#34A85380' : '#EA433580',
+      })).filter((_, i) => histogramData[i] !== null))
+
+      macdChart.timeScale().fitContent()
+    }
+
     // Fit content
     chart.timeScale().fitContent()
 
@@ -182,11 +277,25 @@ export const CandlestickChart = memo(function CandlestickChart({
     }
   }, [data, height, showVolume, activeIndicators])
 
+  const showRSI = activeIndicators.includes('rsi')
+  const showMACD = activeIndicators.includes('macd')
+
   return (
-    <div
-      ref={chartContainerRef}
-      className={className}
-      style={{ width: '100%', height: `${height}px` }}
-    />
+    <div className={className}>
+      <div
+        ref={chartContainerRef}
+        style={{ width: '100%', height: `${height}px` }}
+      />
+      {showRSI && (
+        <div className="mt-1 px-1">
+          <p className="text-xs text-text-tertiary">RSI (14)</p>
+        </div>
+      )}
+      {showMACD && (
+        <div className="mt-1 px-1">
+          <p className="text-xs text-text-tertiary">MACD (12, 26, 9)</p>
+        </div>
+      )}
+    </div>
   )
 })
