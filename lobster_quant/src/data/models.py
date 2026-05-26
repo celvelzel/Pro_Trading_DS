@@ -4,7 +4,7 @@ Standardized data structures using Pydantic v2.
 """
 
 from datetime import datetime
-from typing import Optional, Literal, Any
+from typing import Optional, Literal, Any, Dict, List
 from pydantic import BaseModel, Field, ConfigDict
 import pandas as pd
 import numpy as np
@@ -284,3 +284,73 @@ class HealthStatus(BaseModel):
     @property
     def is_healthy(self) -> bool:
         return self.status == "healthy"
+
+
+class StrategyParams(BaseModel):
+    """Strategy parameters configuration."""
+    holdingDays: int = Field(default=20, ge=5, le=100)
+    minScore: int = Field(default=60, ge=0, le=100)
+    slippagePct: float = Field(default=0.001, ge=0.0, le=0.01)
+    commissionPct: float = Field(default=0.001, ge=0.0, le=0.01)
+    positionSizing: Literal["fixed", "dynamic"] = "fixed"
+    positionSize: float = Field(default=0.1, ge=0.01, le=1.0)
+    initialCapital: float = Field(default=100000, ge=1000)
+    maxPositions: int = Field(default=5, ge=1, le=20)
+
+
+class Strategy(BaseModel):
+    """Strategy definition model."""
+    id: str
+    name: str
+    description: str
+    params: StrategyParams
+    logic: Literal["default", "momentum", "mean_reversion"] = "default"
+    isPreset: bool = False
+    createdAt: datetime
+    updatedAt: Optional[datetime] = None
+
+
+class BacktestMetrics(BaseModel):
+    """Comprehensive backtest performance metrics."""
+    totalReturn: float
+    annualizedReturn: float
+    volatility: float
+    sharpeRatio: float
+    maxDrawdown: float
+    winRate: float
+    profitLossRatio: float
+    totalTrades: int
+    winningTrades: int
+    losingTrades: int
+    avgHoldingDays: float
+    avgWin: float
+    avgLoss: float
+    monthlyReturns: Optional[Dict[str, float]] = None
+    yearlyReturns: Optional[Dict[str, float]] = None
+
+
+class SimulatedTrade(BaseModel):
+    """Single simulated trade record."""
+    id: str
+    strategyId: str
+    symbol: str
+    entryDate: str
+    entryPrice: float
+    exitDate: Optional[str] = None
+    exitPrice: Optional[float] = None
+    shares: int
+    status: Literal["open", "closed"] = "open"
+    pnl: Optional[float] = None
+    pnlPercent: Optional[float] = None
+
+
+class DailySnapshot(BaseModel):
+    """Daily simulation snapshot."""
+    date: str
+    strategyId: str
+    selectedStocks: List[Dict[str, Any]]
+    openTrades: List[SimulatedTrade]
+    closedTrades: List[SimulatedTrade]
+    portfolioValue: float
+    cash: float
+    invested: float

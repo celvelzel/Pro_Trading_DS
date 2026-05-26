@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
@@ -61,6 +62,7 @@ export default function RootLayout({
               </div>
             </GlobalErrorBoundary>
           </QueryProvider>
+          <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>
     </html>

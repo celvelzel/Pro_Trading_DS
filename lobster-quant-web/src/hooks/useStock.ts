@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import type {
   StockData,
@@ -193,6 +194,12 @@ export function useStockRisk(symbol: string) {
 export function useScanStocks() {
   return useMutation<ScanResponse, Error, ScanParams>({
     mutationFn: (params) => api.post('/api/scanner/scan', params),
+    onSuccess: (data) => {
+      toast.success(`Found ${data.results?.length ?? 0} stocks`)
+    },
+    onError: (error) => {
+      toast.error(`Scan failed: ${error.message}`)
+    },
   })
 }
 
@@ -206,6 +213,12 @@ export function useScanStocks() {
 export function useRunBacktest() {
   return useMutation<BacktestResult, Error, BacktestParams>({
     mutationFn: (params) => api.post('/api/backtest/run', params),
+    onSuccess: () => {
+      toast.success('Backtest completed')
+    },
+    onError: (error) => {
+      toast.error(`Backtest failed: ${error.message}`)
+    },
   })
 }
 

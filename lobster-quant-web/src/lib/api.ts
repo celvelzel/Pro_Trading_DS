@@ -7,6 +7,23 @@ import { API_BASE_URL } from './constants'
 import type { ApiError } from './types'
 
 // ============================================================================
+// Status Code Messages
+// ============================================================================
+
+/**
+ * User-friendly error messages for common HTTP status codes.
+ */
+const STATUS_MESSAGES: Record<number, string> = {
+  400: 'Invalid request',
+  401: 'Unauthorized',
+  403: 'Access denied',
+  404: 'Resource not found',
+  429: 'Rate limited. Please try again later.',
+  500: 'Server error. Please try again later.',
+  503: 'Service unavailable',
+}
+
+// ============================================================================
 // API Client Class
 // ============================================================================
 
@@ -15,6 +32,39 @@ class ApiClient {
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl
+  }
+
+  /**
+   * Build a structured ApiError from a failed response.
+   * Attempts to parse the response body for a server-provided message,
+   * falling back to user-friendly messages for common status codes.
+   */
+  private async buildError(response: Response): Promise<ApiError> {
+    let detail: string | undefined
+
+    // Try to extract a message from the response body
+    try {
+      const body = await response.json()
+      if (typeof body === 'object' && body !== null) {
+        const raw =
+          (body as Record<string, unknown>).detail ??
+          (body as Record<string, unknown>).message ??
+          (body as Record<string, unknown>).error
+        if (typeof raw === 'string') {
+          detail = raw
+        }
+      }
+    } catch {
+      // Response body is not JSON or empty — ignore
+    }
+
+    if (!detail) {
+      detail =
+        STATUS_MESSAGES[response.status] ??
+        `API error: ${response.status} ${response.statusText}`
+    }
+
+    return { detail, status: response.status }
   }
 
   /**
@@ -31,11 +81,7 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      const error: ApiError = {
-        detail: `API error: ${response.status} ${response.statusText}`,
-        status: response.status,
-      }
-      throw error
+      throw await this.buildError(response)
     }
 
     return response.json()
@@ -56,11 +102,7 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      const error: ApiError = {
-        detail: `API error: ${response.status} ${response.statusText}`,
-        status: response.status,
-      }
-      throw error
+      throw await this.buildError(response)
     }
 
     return response.json()
@@ -81,11 +123,7 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      const error: ApiError = {
-        detail: `API error: ${response.status} ${response.statusText}`,
-        status: response.status,
-      }
-      throw error
+      throw await this.buildError(response)
     }
 
     return response.json()
@@ -105,11 +143,7 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      const error: ApiError = {
-        detail: `API error: ${response.status} ${response.statusText}`,
-        status: response.status,
-      }
-      throw error
+      throw await this.buildError(response)
     }
 
     return response.json()
@@ -121,62 +155,3 @@ class ApiClient {
 // ============================================================================
 
 export const api = new ApiClient(API_BASE_URL)
-
-// ============================================================================
-// Convenience Functions
-// ============================================================================
-
-/**
- * Fetch stock data for a given symbol.
- */
-export async function fetchStockData(symbol: string) {
-  return api.get(`/api/stocks/${symbol}`)
-}
-
-/**
- * Fetch technical indicators for a given symbol.
- */
-export async function fetchIndicators(symbol: string) {
-  return api.get(`/api/stocks/${symbol}/indicators`)
-}
-
-/**
- * Fetch trading signals for a given symbol.
- */
-export async function fetchSignals(symbol: string) {
-  return api.get(`/api/stocks/${symbol}/signals`)
-}
-
-/**
- * Fetch options analysis for a given symbol.
- */
-export async function fetchOptionsAnalysis(symbol: string) {
-  return api.get(`/api/stocks/${symbol}/options`)
-}
-
-/**
- * Fetch risk assessment for a given symbol.
- */
-export async function fetchRiskAssessment(symbol: string) {
-  return api.get(`/api/stocks/${symbol}/risk`)
-}
-
-/**
- * Scan stocks based on market and minimum score.
- */
-export async function scanStocks(market: string, minScore: number) {
-  return api.post('/api/scanner/scan', { market, minScore })
-}
-
-/**
- * Run a strategy backtest.
- */
-export async function runBacktest(params: {
-  symbol: string
-  holdingDays: number
-  minScore: number
-  startDate?: string
-  endDate?: string
-}) {
-  return api.post('/api/backtest/run', params)
-}

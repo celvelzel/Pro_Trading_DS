@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import type {
   AppSettings,
@@ -52,6 +53,10 @@ export function useUpdateSettings() {
     mutationFn: (params) => api.put('/api/settings', params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.all })
+      toast.success('Settings saved')
+    },
+    onError: (error) => {
+      toast.error(`Failed to save settings: ${error.message}`)
     },
   })
 }
@@ -67,6 +72,10 @@ export function useResetSettings() {
     mutationFn: () => api.post('/api/settings/reset', {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.all })
+      toast.success('Settings reset to defaults')
+    },
+    onError: (error) => {
+      toast.error(`Failed to reset settings: ${error.message}`)
     },
   })
 }

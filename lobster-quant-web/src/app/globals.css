@@ -11,10 +11,11 @@
   --color-primary-light: #4285F4;
   --color-primary-lighter: #669DF6;
 
-  /* Semantic Colors */
+  /* Semantic Colors - Trading */
   --color-success: #34A853;
   --color-error: #EA4335;
   --color-warning: #FBBC04;
+  --color-info: #4285F4;
   --color-neutral: #9AA0A6;
 
   /* Background Colors */
@@ -116,6 +117,12 @@
   --input: #3c4043;
   --ring: #8ab4f8;
   --chart-1: #8ab4f8;
+
+  /* Semantic Colors - Trading (Dark Mode) */
+  --color-success: #81C995;
+  --color-error: #F28B82;
+  --color-warning: #FDD663;
+  --color-info: #8AB4F8;
   --chart-2: #81c995;
   --chart-3: #fdd663;
   --chart-4: #f28b82;
