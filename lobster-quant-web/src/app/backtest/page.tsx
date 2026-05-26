@@ -3,10 +3,18 @@
 import { useState } from 'react';
 import { BacktestForm, BacktestParams, MetricsCard } from '@/components/backtest';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useStrategyStore, BacktestMetrics } from '@/stores/strategyStore';
+import { BacktestMetrics } from '@/stores/strategyStore';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+interface Trade {
+  entryDate: string;
+  exitDate?: string;
+  entryPrice: number;
+  exitPrice?: number;
+  returnPercent: number;
+  holdingDays: number;
+}
 
 interface BacktestResult {
   strategy_id: string;
@@ -14,7 +22,7 @@ interface BacktestResult {
   symbol?: string;
   symbols?: string[];
   metrics: BacktestMetrics | null;
-  trades: any[];
+  trades: Trade[];
   equityCurve: number[];
 }
 
