@@ -8,6 +8,7 @@ from .scoring_engine import ScoringEngine, get_scoring_engine
 from .signal_engine import SignalEngine, get_signal_engine
 from .events import Event, EventType, EventBus, event_bus
 from .portfolio_backtest import PortfolioBacktest
+from .trade_simulator import TradeSimulator
 
 __all__ = [
     "DataEngine",
@@ -22,4 +23,5 @@ __all__ = [
     "EventBus",
     "event_bus",
     "PortfolioBacktest",
+    "TradeSimulator",
 ]
