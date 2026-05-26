@@ -14,7 +14,9 @@ import {
 import { Slider } from '@/components/ui/slider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SignalCard } from '@/components/cards/SignalCard'
-import { Search } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
+import { ErrorState } from '@/components/ui/error-state'
+import { Search, BarChart3, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import type { Market, StockResult } from '@/lib/types'
 
@@ -131,13 +133,19 @@ export default function ScannerPage() {
 
       {/* Empty State */}
       {scanMutation.isSuccess && results.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-text-secondary text-lg">
-              No stocks found matching your criteria. Try lowering the minimum score.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon="search"
+          title="No stocks found"
+          message="Try lowering the minimum score or selecting a different market."
+        />
+      )}
+
+      {/* Error State */}
+      {scanMutation.isError && (
+        <ErrorState
+          message="Failed to scan stocks. Please try again."
+          onRetry={handleScan}
+        />
       )}
     </div>
   )
