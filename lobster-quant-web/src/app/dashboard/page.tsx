@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useStockData, useStockRisk, usePrefetchStock } from '@/hooks/useStock'
+import { useStockData, useStockRisk, useStockCandles, usePrefetchStock } from '@/hooks/useStock'
 import { MetricCard } from '@/components/cards/MetricCard'
 import { StatusCard } from '@/components/cards/StatusCard'
 import { CandlestickChart } from '@/components/charts/CandlestickChart'
+import { TimeframeSelector, type Timeframe } from '@/components/charts/TimeframeSelector'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PrefetchLink } from '@/components/ui/prefetch-link'
 import { STOCK_LISTS } from '@/lib/constants'
@@ -14,8 +15,12 @@ import { StockCompareView } from '@/components/watchlist/StockCompareView'
 import { useWatchlistStore } from '@/stores/watchlistStore'
 
 export default function DashboardPage() {
+  // Timeframe state
+  const [timeframe, setTimeframe] = useState<Timeframe>('1y')
+
   // Fetch benchmark data (SPY)
   const { data: benchmark, isLoading: benchmarkLoading } = useStockData('SPY')
+  const { data: candles, isLoading: candlesLoading } = useStockCandles('SPY', timeframe)
   const { data: risk, isLoading: riskLoading } = useStockRisk('SPY')
   const prefetchStock = usePrefetchStock()
 
@@ -93,19 +98,25 @@ export default function DashboardPage() {
       {/* Price Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>SPY Price Chart</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>SPY Price Chart</CardTitle>
+            <TimeframeSelector
+              activeTimeframe={timeframe}
+              onSelect={setTimeframe}
+            />
+          </div>
         </CardHeader>
         <CardContent>
-          {benchmark?.candles && benchmark.candles.length > 0 ? (
+          {candles && candles.length > 0 ? (
             <CandlestickChart
-              data={benchmark.candles}
+              data={candles}
               symbol="SPY"
               height={400}
               showVolume={true}
             />
           ) : (
             <div className="h-[400px] flex items-center justify-center text-text-secondary">
-              {benchmarkLoading ? 'Loading chart data...' : 'No chart data available'}
+              {candlesLoading ? 'Loading chart data...' : 'No chart data available'}
             </div>
           )}
         </CardContent>
