@@ -31,6 +31,14 @@ from .settings import (
     SettingsUpdateRequest,
     SettingsResponse,
 )
+from .strategy import (
+    StrategyParamsRequest,
+    CreateStrategyRequest,
+    UpdateStrategyRequest,
+    StrategyResponse,
+    CompareStrategiesRequest,
+    StrategyComparisonResponse,
+)
 
 __all__ = [
     # Common
@@ -63,4 +71,11 @@ __all__ = [
     "AppSettings",
     "SettingsUpdateRequest",
     "SettingsResponse",
+    # Strategy
+    "StrategyParamsRequest",
+    "CreateStrategyRequest",
+    "UpdateStrategyRequest",
+    "StrategyResponse",
+    "CompareStrategiesRequest",
+    "StrategyComparisonResponse",
 ]

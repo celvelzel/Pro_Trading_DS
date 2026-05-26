@@ -1,6 +1,6 @@
 """Strategy API Router."""
 from fastapi import APIRouter, HTTPException
-from typing import List
+from typing import List, Literal, cast
 import sys
 import os
 
@@ -10,6 +10,8 @@ from api.models.strategy import (
     CreateStrategyRequest, UpdateStrategyRequest, 
     StrategyResponse, CompareStrategiesRequest, StrategyComparisonResponse
 )
+
+PositionSizingType = Literal["fixed", "dynamic"]
 
 router = APIRouter()
 
@@ -82,7 +84,7 @@ async def create_strategy(request: CreateStrategyRequest):
             minScore=request.params.minScore,
             slippagePct=request.params.slippagePct,
             commissionPct=request.params.commissionPct,
-            positionSizing=request.params.positionSizing,
+            positionSizing=cast(PositionSizingType, request.params.positionSizing),
             positionSize=request.params.positionSize,
             initialCapital=request.params.initialCapital,
             maxPositions=request.params.maxPositions
@@ -124,7 +126,7 @@ async def update_strategy(strategy_id: str, request: UpdateStrategyRequest):
                 minScore=request.params.minScore,
                 slippagePct=request.params.slippagePct,
                 commissionPct=request.params.commissionPct,
-                positionSizing=request.params.positionSizing,
+                positionSizing=cast(PositionSizingType, request.params.positionSizing),
                 positionSize=request.params.positionSize,
                 initialCapital=request.params.initialCapital,
                 maxPositions=request.params.maxPositions
