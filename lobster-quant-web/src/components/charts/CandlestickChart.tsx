@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, memo } from 'react'
+import { useTheme } from 'next-themes'
 import { createChart, IChartApi, ISeriesApi, CandlestickSeries, HistogramSeries, LineSeries } from 'lightweight-charts'
 import type { Candle } from '@/lib/types'
 import type { IndicatorType } from './IndicatorToggle'
@@ -37,6 +38,20 @@ export const CandlestickChart = memo(function CandlestickChart({
 }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+
+  // Theme-aware colors
+  const chartColors = {
+    background: isDark ? '#0a0a0a' : '#FFFFFF',
+    text: isDark ? '#e0e0e0' : '#202124',
+    grid: isDark ? '#1a1a1a' : '#F0F0F0',
+    border: isDark ? '#333333' : '#F0F0F0',
+    upColor: '#34A853',
+    downColor: '#EA4335',
+    volumeUp: isDark ? 'rgba(52, 168, 83, 0.3)' : 'rgba(52, 168, 83, 0.5)',
+    volumeDown: isDark ? 'rgba(234, 67, 53, 0.3)' : 'rgba(234, 67, 53, 0.5)',
+  }
 
   useEffect(() => {
     if (!chartContainerRef.current || data.length === 0) return
@@ -46,21 +61,21 @@ export const CandlestickChart = memo(function CandlestickChart({
       width: chartContainerRef.current.clientWidth,
       height,
       layout: {
-        background: { color: '#FFFFFF' },
-        textColor: '#202124',
+        background: { color: chartColors.background },
+        textColor: chartColors.text,
       },
       grid: {
-        vertLines: { color: '#F0F0F0' },
-        horzLines: { color: '#F0F0F0' },
+        vertLines: { color: chartColors.grid },
+        horzLines: { color: chartColors.grid },
       },
       crosshair: {
         mode: 0, // Normal mode
       },
       rightPriceScale: {
-        borderColor: '#F0F0F0',
+        borderColor: chartColors.border,
       },
       timeScale: {
-        borderColor: '#F0F0F0',
+        borderColor: chartColors.border,
         timeVisible: true,
         secondsVisible: false,
       },
@@ -68,12 +83,12 @@ export const CandlestickChart = memo(function CandlestickChart({
 
     // Add candlestick series
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#34A853',
-      downColor: '#EA4335',
-      borderDownColor: '#EA4335',
-      borderUpColor: '#34A853',
-      wickDownColor: '#EA4335',
-      wickUpColor: '#34A853',
+      upColor: chartColors.upColor,
+      downColor: chartColors.downColor,
+      borderDownColor: chartColors.downColor,
+      borderUpColor: chartColors.upColor,
+      wickDownColor: chartColors.downColor,
+      wickUpColor: chartColors.upColor,
     })
 
     // Set candlestick data
@@ -90,7 +105,7 @@ export const CandlestickChart = memo(function CandlestickChart({
     // Add volume series if enabled
     if (showVolume) {
       const volumeSeries = chart.addSeries(HistogramSeries, {
-        color: '#26a69a',
+        color: chartColors.volumeUp,
         priceFormat: {
           type: 'volume',
         },
@@ -108,7 +123,7 @@ export const CandlestickChart = memo(function CandlestickChart({
         data.map((d) => ({
           time: d.time as any,
           value: d.volume,
-          color: d.close >= d.open ? '#34A85380' : '#EA433580',
+          color: d.close >= d.open ? chartColors.volumeUp : chartColors.volumeDown,
         }))
       )
     }
@@ -206,12 +221,12 @@ export const CandlestickChart = memo(function CandlestickChart({
         width: chartContainerRef.current.clientWidth,
         height: 120,
         layout: {
-          background: { color: '#FFFFFF' },
-          textColor: '#5F6368',
+          background: { color: chartColors.background },
+          textColor: chartColors.text,
         },
         grid: {
-          vertLines: { color: '#F0F0F0' },
-          horzLines: { color: '#F0F0F0' },
+          vertLines: { color: chartColors.grid },
+          horzLines: { color: chartColors.grid },
         },
         timeScale: {
           visible: false,
@@ -247,7 +262,7 @@ export const CandlestickChart = memo(function CandlestickChart({
       histogramSeries.setData(histogramData.map((v, i) => ({
         time: data[i].time as any,
         value: v ?? 0,
-        color: (v ?? 0) >= 0 ? '#34A85380' : '#EA433580',
+        color: (v ?? 0) >= 0 ? chartColors.volumeUp : chartColors.volumeDown,
       })).filter((_, i) => histogramData[i] !== null))
 
       macdChart.timeScale().fitContent()
@@ -275,7 +290,7 @@ export const CandlestickChart = memo(function CandlestickChart({
       chart.remove()
       chartRef.current = null
     }
-  }, [data, height, showVolume, activeIndicators])
+  }, [data, height, showVolume, activeIndicators, isDark, chartColors])
 
   const showRSI = activeIndicators.includes('rsi')
   const showMACD = activeIndicators.includes('macd')

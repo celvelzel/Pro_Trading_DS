@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useStrategyStore, Strategy } from '@/stores/strategyStore';
+import { useState, useEffect, useCallback } from 'react';
+import { useStrategyStore } from '@/stores/strategyStore';
 import { StrategySelector } from '@/components/strategy';
 import { TradeList } from '@/components/simulation/TradeList';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -51,14 +51,7 @@ export default function SimulationPage() {
     fetchStrategies();
   }, [fetchStrategies]);
 
-  useEffect(() => {
-    if (selectedStrategyId) {
-      fetchTrades();
-      fetchPerformance();
-    }
-  }, [selectedStrategyId]);
-
-  const fetchTrades = async () => {
+  const fetchTrades = useCallback(async () => {
     if (!selectedStrategyId) return;
     
     setLoading(true);
@@ -72,9 +65,9 @@ export default function SimulationPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedStrategyId]);
 
-  const fetchPerformance = async () => {
+  const fetchPerformance = useCallback(async () => {
     if (!selectedStrategyId) return;
     
     try {
@@ -85,7 +78,14 @@ export default function SimulationPage() {
     } catch (err) {
       console.error('Failed to fetch performance:', err);
     }
-  };
+  }, [selectedStrategyId]);
+
+  useEffect(() => {
+    if (selectedStrategyId) {
+      fetchTrades();
+      fetchPerformance();
+    }
+  }, [selectedStrategyId, fetchTrades, fetchPerformance]);
 
   const runSimulation = async () => {
     if (!selectedStrategyId) return;

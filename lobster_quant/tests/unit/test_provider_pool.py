@@ -124,11 +124,32 @@ class TestProviderPool:
 
     # --- Status reporting ---
 
+    def _make_cb_status(self, state: str = "closed", available: bool = True) -> dict:
+        """Create a mock circuit breaker status dict."""
+        return {
+            "name": "test",
+            "state": state,
+            "failure_count": 0,
+            "success_count": 0,
+            "last_failure": None,
+            "is_available": available,
+            "config": {
+                "failure_threshold": 5,
+                "recovery_timeout": 60,
+                "half_open_max_calls": 1,
+            },
+        }
+
     def test_get_provider_status_structure(self):
         """Should return status dict with correct structure."""
         pool = ProviderPool("US")
 
         pool.add_provider(self._make_provider("alpha"), priority=1)
+
+        # Patch get_status to avoid deadlock in CircuitBreaker (non-reentrant lock)
+        pool._providers[0].circuit_breaker.get_status = MagicMock(
+            return_value=self._make_cb_status()
+        )
 
         status = pool.get_provider_status()
         assert status["market"] == "US"
@@ -142,6 +163,10 @@ class TestProviderPool:
         pool = ProviderPool("test")
 
         pool.add_provider(self._make_provider("p1"), priority=1)
+
+        pool._providers[0].circuit_breaker.get_status = MagicMock(
+            return_value=self._make_cb_status()
+        )
 
         status = pool.get_provider_status()
         entry = status["providers"][0]
@@ -165,6 +190,13 @@ class TestProviderPool:
         cb = pool._providers[1].circuit_breaker
         cb._state = CircuitState.OPEN
         cb._last_failure_time = datetime.now()
+
+        pool._providers[0].circuit_breaker.get_status = MagicMock(
+            return_value=self._make_cb_status()
+        )
+        pool._providers[1].circuit_breaker.get_status = MagicMock(
+            return_value=self._make_cb_status(state="open", available=False)
+        )
 
         status = pool.get_provider_status()
         assert status["total_providers"] == 2

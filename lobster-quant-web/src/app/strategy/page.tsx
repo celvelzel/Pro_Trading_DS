@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useStrategyStore, Strategy } from '@/stores/strategyStore';
+import { useStrategyStore, Strategy, StrategyParams } from '@/stores/strategyStore';
 import { StrategyCard, StrategyForm } from '@/components/strategy';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -25,12 +25,12 @@ export default function StrategyPage() {
     fetchStrategies();
   }, [fetchStrategies]);
 
-  const handleCreate = async (name: string, description: string, params: any) => {
+  const handleCreate = async (name: string, description: string, params: StrategyParams) => {
     await createStrategy(name, description, params);
     setShowForm(false);
   };
 
-  const handleUpdate = async (name: string, description: string, params: any) => {
+  const handleUpdate = async (name: string, description: string, params: StrategyParams) => {
     if (editingStrategy) {
       await updateStrategy(editingStrategy.id, { name, description, params });
       setEditingStrategy(undefined);

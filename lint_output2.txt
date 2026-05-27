@@ -1,0 +1,154 @@
+﻿
+> lobster-quant-web@0.1.0 lint
+> eslint
+
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\dashboard\page.tsx
+  28:11  warning  'symbols' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\scanner\page.tsx
+  197:26  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\scanner\page.tsx:197:26
+  195 |   const parentRef = useRef<HTMLDivElement>(null)
+  196 |
+> 197 |   const rowVirtualizer = useVirtualizer({
+      |                          ^^^^^^^^^^^^^^ TanStack Virtual's `useVirtualizer()` API returns functions that cannot be memoized safely
+  198 |     count: results.length,
+  199 |     getScrollElement: () => parentRef.current,
+  200 |     estimateSize: () => 180, // Estimated card height in px  react-hooks/incompatible-library
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\settings\page.tsx
+  187:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\settings\page.tsx:187:5
+  185 |   // ---- Validate on tab change ----
+  186 |   useEffect(() => {
+> 187 |     setValidationErrors(validateCurrentTab())
+      |     ^^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  188 |   }, [activeTab, validateCurrentTab])
+  189 |
+  190 |   // ---- Save handler: PUT to /api/settings ----  react-hooks/set-state-in-effect
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\simulation\page.tsx
+   4:28  warning  'Strategy' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+   7:29  warning  'CardHeader' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   7:41  warning  'CardTitle' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   9:10  warning  'Badge' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  41:11  warning  'strategies' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+  56:7   error    Error: Cannot access variable before it is declared
+
+`fetchTrades` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\simulation\page.tsx:56:7
+  54 |   useEffect(() => {
+  55 |     if (selectedStrategyId) {
+> 56 |       fetchTrades();
+     |       ^^^^^^^^^^^ `fetchTrades` accessed before it is declared
+  57 |       fetchPerformance();
+  58 |     }
+  59 |   }, [selectedStrategyId]);
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\simulation\page.tsx:61:3
+  59 |   }, [selectedStrategyId]);
+  60 |
+> 61 |   const fetchTrades = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |     if (!selectedStrategyId) return;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 63 |     
+     鈥?     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 74 |     }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 75 |   };
+     | ^^^^^ `fetchTrades` is declared here
+  76 |
+  77 |   const fetchPerformance = async () => {
+  78 |     if (!selectedStrategyId) return;  react-hooks/immutability
+  57:7   error    Error: Cannot access variable before it is declared
+
+`fetchPerformance` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\simulation\page.tsx:57:7
+  55 |     if (selectedStrategyId) {
+  56 |       fetchTrades();
+> 57 |       fetchPerformance();
+     |       ^^^^^^^^^^^^^^^^ `fetchPerformance` accessed before it is declared
+  58 |     }
+  59 |   }, [selectedStrategyId]);
+  60 |
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\simulation\page.tsx:77:3
+  75 |   };
+  76 |
+> 77 |   const fetchPerformance = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 78 |     if (!selectedStrategyId) return;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 79 |     
+     鈥?     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 87 |     }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 88 |   };
+     | ^^^^^ `fetchPerformance` is declared here
+  89 |
+  90 |   const runSimulation = async () => {
+  91 |     if (!selectedStrategyId) return;                  react-hooks/immutability
+  59:6   warning  React Hook useEffect has missing dependencies: 'fetchPerformance' and 'fetchTrades'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           react-hooks/exhaustive-deps
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\app\strategy\page.tsx
+  28:74  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:74  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\components\charts\CandlestickChart.tsx
+    4:34  warning  'ISeriesApi' is defined but never used          @typescript-eslint/no-unused-vars
+   32:3   warning  'symbol' is defined but never used              @typescript-eslint/no-unused-vars
+   82:25  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  109:27  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  127:56  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  129:56  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  131:57  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  140:56  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  142:56  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  153:58  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  155:59  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  157:58  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  189:63  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  192:13  warning  'rsiLine30' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  193:13  warning  'rsiLine70' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  229:31  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  239:31  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  248:31  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\components\layout\MobileNav.tsx
+  11:3  warning  'Settings' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\components\ui\empty-state.tsx
+  3:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\components\watchlist\StockCompareView.tsx
+  65:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\components\watchlist\WatchlistAddDialog.tsx
+  13:16  warning  'X' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\components\watchlist\WatchlistTable.tsx
+  13:3   warning  'Minus' is defined but never used           @typescript-eslint/no-unused-vars
+  37:18  warning  'label' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\hooks\useSettings.ts
+  7:3  warning  'AppSettings' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Develop\canvas\Pro_Trading_DS\lobster-quant-web\src\lib\indicators.ts
+  78:13  warning  'prevRSI' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+鉁?39 problems (20 errors, 19 warnings)
+
