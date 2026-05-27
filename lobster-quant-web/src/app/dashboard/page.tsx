@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const { data: risk, isLoading: riskLoading } = useStockRisk('SPY')
 
   // Watchlist state
-  const { symbols, addSymbol } = useWatchlistStore()
+  const { addSymbol } = useWatchlistStore()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [compareSymbols, setCompareSymbols] = useState<string[]>([])
 

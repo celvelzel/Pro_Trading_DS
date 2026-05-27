@@ -6,7 +6,7 @@ import { StrategySelector } from '@/components/strategy';
 import { TradeList } from '@/components/simulation/TradeList';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, RefreshCw, Loader2 } from 'lucide-react';
 import { ErrorState } from '@/components/ui/error-state';
@@ -38,7 +38,7 @@ interface PerformanceMetrics {
 }
 
 export default function SimulationPage() {
-  const { strategies, fetchStrategies } = useStrategyStore();
+  const { fetchStrategies } = useStrategyStore();
   const [selectedStrategyId, setSelectedStrategyId] = useState('');
   const [market, setMarket] = useState('US');
   const [trades, setTrades] = useState<SimulatedTrade[]>([]);
