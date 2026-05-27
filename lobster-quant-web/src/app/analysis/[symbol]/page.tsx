@@ -17,6 +17,7 @@ import { SignalCard } from '@/components/cards/SignalCard'
 import { StatusCard } from '@/components/cards/StatusCard'
 import { CandlestickChart } from '@/components/charts/CandlestickChart'
 import { IndicatorToggle, type IndicatorType } from '@/components/charts/IndicatorToggle'
+import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { TrendingUp, TrendingDown, BarChart3, Activity, Shield } from 'lucide-react'
 
 export default function AnalysisDetailPage() {
@@ -73,6 +74,15 @@ export default function AnalysisDetailPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Analysis', href: '/analysis' },
+          { label: symbol },
+        ]}
+      />
+
       {/* Price Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>

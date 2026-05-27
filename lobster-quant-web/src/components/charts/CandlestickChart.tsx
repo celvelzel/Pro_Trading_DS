@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, memo } from 'react'
 import { useTheme } from 'next-themes'
-import { createChart, IChartApi, ISeriesApi, CandlestickSeries, HistogramSeries, LineSeries } from 'lightweight-charts'
+import { createChart, IChartApi, CandlestickSeries, HistogramSeries, LineSeries } from 'lightweight-charts'
 import type { Candle } from '@/lib/types'
 import type { IndicatorType } from './IndicatorToggle'
 import { calculateSMA, calculateEMA, calculateBollingerBands, calculateRSI, calculateMACD, getClosePrices, formatIndicatorData } from '@/lib/indicators'
@@ -30,7 +30,6 @@ interface CandlestickChartProps {
  */
 export const CandlestickChart = memo(function CandlestickChart({
   data,
-  symbol,
   height = 400,
   showVolume = true,
   activeIndicators = [],
