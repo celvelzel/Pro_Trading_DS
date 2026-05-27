@@ -146,7 +146,6 @@ export default function SettingsPage() {
   // ---- Local UI state ----
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [saveValidationErrors, setSaveValidationErrors] = useState<ValidationErrors>({})
   const [activeTab, setActiveTab] = useState('markets')
 
   // ---- Sync server settings into Zustand on first load ----
@@ -199,7 +198,6 @@ export default function SettingsPage() {
     }
 
     if (Object.keys(allErrors).length > 0) {
-      setSaveValidationErrors(allErrors)
       setSaveStatus('error')
       setErrorMessage('Please fix validation errors before saving')
       setTimeout(() => {
