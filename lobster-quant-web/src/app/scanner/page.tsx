@@ -90,8 +90,17 @@ export default function ScannerPage() {
             {/* Scan Button */}
             <div className="flex items-end">
               <Button onClick={handleScan} disabled={scanMutation.isPending}>
-                <Search className="w-4 h-4 mr-2" />
-                {scanMutation.isPending ? 'Scanning...' : 'Scan'}
+                {scanMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4 mr-2" />
+                    Scan Stocks
+                  </>
+                )}
               </Button>
             </div>
           </div>

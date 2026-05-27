@@ -22,7 +22,7 @@ export function StrategySelector({ value, onChange, excludePresets = false }: St
     : strategies;
 
   return (
-    <Select value={value} onValueChange={onChange} disabled={loading}>
+    <Select value={value} onValueChange={(value) => value && onChange(value)} disabled={loading}>
       <SelectTrigger>
         <SelectValue placeholder={loading ? 'Loading...' : 'Select strategy'} />
       </SelectTrigger>

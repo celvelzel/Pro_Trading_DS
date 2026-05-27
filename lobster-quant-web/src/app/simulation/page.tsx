@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Play, RefreshCw } from 'lucide-react';
+import { Play, RefreshCw, Loader2 } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -156,12 +156,30 @@ export default function SimulationPage() {
         </div>
         <div className="flex gap-2">
           <Button onClick={runAllSimulations} disabled={running} variant="outline">
-            <RefreshCw className={`h-4 w-4 mr-2 ${running ? 'animate-spin' : ''}`} />
-            Run All
+            {running ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Run All
+              </>
+            )}
           </Button>
           <Button onClick={runSimulation} disabled={running || !selectedStrategyId}>
-            <Play className={`h-4 w-4 mr-2 ${running ? 'animate-spin' : ''}`} />
-            Run Selected
+            {running ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4 mr-2" />
+                Run Selected
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -179,7 +197,7 @@ export default function SimulationPage() {
         </div>
         <div>
           <label className="text-sm font-medium mb-2 block">Market</label>
-          <Select value={market} onValueChange={setMarket}>
+          <Select value={market} onValueChange={(value) => setMarket(value || 'US')}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

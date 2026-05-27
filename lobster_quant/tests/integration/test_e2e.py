@@ -23,16 +23,27 @@ from src.compat import LegacyAdapter
 
 
 @pytest.fixture
-def mock_engine():
+def mock_engine(tmp_path):
     """Create a data engine with mock provider."""
-    # Register mock provider for all markets
-    engine = DataEngine()
+    from src.data.provider_pool import ProviderPool
+    from src.data.cache import DataCache
+    
+    # Create engine without initializing default providers
+    engine = DataEngine.__new__(DataEngine)
+    engine.settings = None
+    engine.cache = DataCache(cache_dir=str(tmp_path), default_ttl=3600)
+    engine._semaphore = None
+    
+    # Create mock provider
     mock = MockProvider(trend=0.001, volatility=0.02, seed=42)
-    engine.providers = {
-        'us_stock': mock,
-        'hk_stock': mock,
-        'a_stock': mock,
-    }
+    
+    # Create provider pools for all markets
+    engine.provider_pools = {}
+    for market in ['us_stock', 'hk_stock', 'a_stock']:
+        pool = ProviderPool(market)
+        pool.add_provider(mock, priority=1)
+        engine.provider_pools[market] = pool
+    
     return engine
 
 
@@ -130,16 +141,28 @@ class TestEndToEndWorkflow:
 class TestLegacyAdapter:
     """Test backward-compatible API."""
     
-    def test_fetch_daily(self):
+    def _create_engine_with_mock(self, tmp_path, trend=0.001, volatility=0.02, seed=42):
+        """Helper to create a DataEngine with mock provider."""
+        from src.data.provider_pool import ProviderPool
+        from src.data.cache import DataCache
+        
+        engine = DataEngine.__new__(DataEngine)
+        engine.settings = None
+        engine.cache = DataCache(cache_dir=str(tmp_path), default_ttl=3600)
+        engine._semaphore = None
+        
+        mock = MockProvider(trend=trend, volatility=volatility, seed=seed)
+        engine.provider_pools = {}
+        for market in ['us_stock', 'hk_stock', 'a_stock']:
+            pool = ProviderPool(market)
+            pool.add_provider(mock, priority=1)
+            engine.provider_pools[market] = pool
+        
+        return engine
+    
+    def test_fetch_daily(self, tmp_path):
         adapter = LegacyAdapter()
-        # Override provider with mock
-        mock = MockProvider(trend=0.001, volatility=0.02, seed=42)
-        adapter._data_engine = DataEngine()
-        adapter._data_engine.providers = {
-            'us_stock': mock,
-            'hk_stock': mock,
-            'a_stock': mock,
-        }
+        adapter._data_engine = self._create_engine_with_mock(tmp_path)
         
         df = adapter.fetch_daily("TEST", years=1)
         assert df is not None
@@ -155,15 +178,9 @@ class TestLegacyAdapter:
         assert 'slope_daily' in result.columns
         assert 'rsi' in result.columns
     
-    def test_get_signal(self):
+    def test_get_signal(self, tmp_path):
         adapter = LegacyAdapter()
-        mock = MockProvider(trend=0.002, volatility=0.015, seed=42)
-        adapter._data_engine = DataEngine()
-        adapter._data_engine.providers = {
-            'us_stock': mock,
-            'hk_stock': mock,
-            'a_stock': mock,
-        }
+        adapter._data_engine = self._create_engine_with_mock(tmp_path, trend=0.002, volatility=0.015)
         
         signal = adapter.get_signal("TEST", years=1)
         assert signal is not None

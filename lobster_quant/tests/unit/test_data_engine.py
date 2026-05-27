@@ -14,8 +14,10 @@ def mock_engine():
         mock_settings.return_value = MagicMock(
             enable_us_stock=True, enable_hk_stock=False, enable_a_stock=False,
             us_data_provider="mock", hk_data_provider="mock", a_data_provider="mock",
+            us_data_sources="mock", hk_data_sources="mock",
             data_years=1, data_cache_dir="./data/test_cache", data_cache_ttl=3600,
-            data_timeout=10, benchmark_symbol="SPY"
+            data_timeout=10, benchmark_symbol="SPY",
+            circuit_breaker_failure_threshold=5, circuit_breaker_recovery_timeout=60
         )
         engine = DataEngine()
         return engine
@@ -24,7 +26,7 @@ def mock_engine():
 class TestDataEngine:
     def test_initialization(self, mock_engine):
         assert mock_engine is not None
-        assert len(mock_engine.providers) > 0
+        assert len(mock_engine.provider_pools) > 0
 
     def test_get_market_us(self, mock_engine):
         assert mock_engine._get_market("AAPL") == "us_stock"

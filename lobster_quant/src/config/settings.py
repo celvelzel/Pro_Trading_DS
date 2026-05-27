@@ -45,6 +45,16 @@ class Settings(BaseSettings):
     hk_data_provider: Literal["yfinance", "mock"] = Field(default="yfinance")
     a_data_provider: Literal["akshare", "mock"] = Field(default="akshare")
     
+    # Data source priority (comma-separated, highest priority first)
+    us_data_sources: str = Field(
+        default="yfinance,alpha_vantage,polygon",
+        description="US stock data source priority (comma-separated)"
+    )
+    hk_data_sources: str = Field(
+        default="yfinance,alpha_vantage,polygon",
+        description="HK stock data source priority (comma-separated)"
+    )
+    
     # ============================================================
     # Technical Indicator Parameters
     # ============================================================
@@ -83,6 +93,34 @@ class Settings(BaseSettings):
     off_gap_threshold: float = Field(default=0.08, ge=0.01, le=0.30)
     off_min_volume_ratio: float = Field(default=0.05, ge=0.0, le=1.0)
     off_ma200_recovery_days: int = Field(default=60, ge=10, le=200)
+    
+    # ============================================================
+    # Circuit Breaker Configuration
+    # ============================================================
+    circuit_breaker_failure_threshold: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Circuit breaker failure threshold"
+    )
+    circuit_breaker_recovery_timeout: int = Field(
+        default=60,
+        ge=10,
+        le=600,
+        description="Circuit breaker recovery timeout in seconds"
+    )
+    
+    # ============================================================
+    # API Keys (optional, for fallback data sources)
+    # ============================================================
+    alpha_vantage_api_key: Optional[str] = Field(
+        default=None,
+        description="Alpha Vantage API key"
+    )
+    polygon_api_key: Optional[str] = Field(
+        default=None,
+        description="Polygon.io API key"
+    )
     
     # ============================================================
     # Benchmark

@@ -4,13 +4,16 @@ Unified data access layer with caching and async support.
 """
 
 import asyncio
-from typing import Optional, Dict, List
+import time
+from typing import Optional, Dict, List, Any
 from datetime import datetime
 import pandas as pd
 
 from ..data.providers.base import DataProvider, DataProviderFactory
 from ..data.cache import DataCache
 from ..data.models import StockData
+from ..data.provider_pool import ProviderPool
+from ..data.circuit_breaker import CircuitBreakerConfig
 from ..config.settings import get_settings
 from ..utils.logging import get_logger
 from ..utils.exceptions import DataFetchError
@@ -34,35 +37,85 @@ class DataEngine:
             cache_dir=self.settings.data_cache_dir,
             default_ttl=self.settings.data_cache_ttl
         )
-        self.providers: Dict[str, DataProvider] = {}
+        self.provider_pools: Dict[str, ProviderPool] = {}
         self._semaphore = asyncio.Semaphore(max_concurrent)
-        self._initialize_providers()
+        self._initialize_provider_pools()
     
-    def _initialize_providers(self) -> None:
-        """Initialize data providers based on configuration."""
+    def _initialize_provider_pools(self) -> None:
+        """Initialize data provider pools based on configuration."""
+        circuit_config = CircuitBreakerConfig(
+            failure_threshold=self.settings.circuit_breaker_failure_threshold,
+            recovery_timeout=self.settings.circuit_breaker_recovery_timeout
+        )
+        
         # US stocks
         if self.settings.enable_us_stock:
-            self.providers['us_stock'] = DataProviderFactory.create(
-                self.settings.us_data_provider,
-                timeout=self.settings.data_timeout
-            )
-            logger.info(f"US stock provider: {self.providers['us_stock'].name}")
+            pool = ProviderPool("us_stock")
+            sources = [s.strip() for s in self.settings.us_data_sources.split(",")]
+            for priority, source in enumerate(sources, start=1):
+                try:
+                    provider = self._create_provider(source, circuit_config)
+                    if provider:
+                        pool.add_provider(provider, priority)
+                except Exception as e:
+                    logger.warning(f"Failed to initialize US provider {source}: {e}")
+            self.provider_pools['us_stock'] = pool
+            logger.info(f"US stock provider pool: {', '.join(sources)}")
         
         # HK stocks
         if self.settings.enable_hk_stock:
-            self.providers['hk_stock'] = DataProviderFactory.create(
-                self.settings.hk_data_provider,
-                timeout=self.settings.data_timeout
-            )
-            logger.info(f"HK stock provider: {self.providers['hk_stock'].name}")
+            pool = ProviderPool("hk_stock")
+            sources = [s.strip() for s in self.settings.hk_data_sources.split(",")]
+            for priority, source in enumerate(sources, start=1):
+                try:
+                    provider = self._create_provider(source, circuit_config)
+                    if provider:
+                        pool.add_provider(provider, priority)
+                except Exception as e:
+                    logger.warning(f"Failed to initialize HK provider {source}: {e}")
+            self.provider_pools['hk_stock'] = pool
+            logger.info(f"HK stock provider pool: {', '.join(sources)}")
         
-        # A-shares
+        # A-shares (single provider, no pool needed)
         if self.settings.enable_a_stock:
-            self.providers['a_stock'] = DataProviderFactory.create(
-                self.settings.a_data_provider,
+            pool = ProviderPool("a_stock")
+            try:
+                provider = DataProviderFactory.create(
+                    self.settings.a_data_provider,
+                    timeout=self.settings.data_timeout
+                )
+                pool.add_provider(provider, priority=1)
+            except Exception as e:
+                logger.warning(f"Failed to initialize A-share provider: {e}")
+            self.provider_pools['a_stock'] = pool
+    
+    def _create_provider(self, source: str, circuit_config: CircuitBreakerConfig) -> Optional[DataProvider]:
+        """Create a data provider by name."""
+        if source == "yfinance":
+            return DataProviderFactory.create("yfinance", timeout=self.settings.data_timeout)
+        elif source == "alpha_vantage":
+            if not self.settings.alpha_vantage_api_key:
+                logger.warning("Alpha Vantage API key not configured, skipping")
+                return None
+            return DataProviderFactory.create(
+                "alpha_vantage",
+                api_key=self.settings.alpha_vantage_api_key,
                 timeout=self.settings.data_timeout
             )
-            logger.info(f"A-share provider: {self.providers['a_stock'].name}")
+        elif source == "polygon":
+            if not self.settings.polygon_api_key:
+                logger.warning("Polygon API key not configured, skipping")
+                return None
+            return DataProviderFactory.create(
+                "polygon",
+                api_key=self.settings.polygon_api_key,
+                timeout=self.settings.data_timeout
+            )
+        elif source == "mock":
+            return DataProviderFactory.create("mock", timeout=self.settings.data_timeout)
+        else:
+            logger.warning(f"Unknown provider: {source}")
+            return None
     
     def _get_market(self, symbol: str) -> str:
         """Determine market type from symbol."""
@@ -81,12 +134,18 @@ class DataEngine:
         return 'us_stock'
     
     def _get_provider(self, symbol: str) -> Optional[DataProvider]:
-        """Get appropriate provider for symbol."""
+        """Get appropriate provider for symbol (backward compatibility)."""
         market = self._get_market(symbol)
-        return self.providers.get(market)
+        pool = self.provider_pools.get(market)
+        if pool is None:
+            return None
+        available = pool.get_available_providers()
+        if available:
+            return available[0].provider
+        return None
     
     def fetch_stock(self, symbol: str, years: Optional[int] = None) -> Optional[StockData]:
-        """Fetch complete stock data with caching.
+        """Fetch complete stock data with caching and provider pool fallback.
         
         Args:
             symbol: Stock symbol
@@ -104,22 +163,57 @@ class DataEngine:
             logger.debug(f"Cache hit for {symbol}")
             return cached
         
-        # Fetch from provider
-        provider = self._get_provider(symbol)
-        if provider is None:
-            logger.error(f"No provider available for {symbol}")
+        # Get market and pool
+        market = self._get_market(symbol)
+        pool = self.provider_pools.get(market)
+        
+        if not pool:
+            logger.error(f"No provider pool for market: {market}")
             return None
         
-        try:
-            data = provider.fetch_stock_data(symbol, years)
-            if data is not None:
-                self.cache.set(cache_key, data)
-                logger.info(f"Fetched and cached {symbol} ({len(data.daily)} rows)")
-            return data
-            
-        except Exception as e:
-            logger.error(f"Failed to fetch {symbol}: {e}")
-            return None
+        # Try each provider in priority order
+        for entry in pool.get_available_providers():
+            try:
+                start_time = time.time()
+                result = entry.provider.fetch_daily(symbol, years)
+                response_time = time.time() - start_time
+                
+                if result is not None and not result.empty:
+                    # Record success
+                    entry.circuit_breaker.record_success()
+                    entry.success_count += 1
+                    entry.avg_response_time = (
+                        (entry.avg_response_time * (entry.success_count - 1) + response_time)
+                        / entry.success_count
+                    )
+                    entry.last_used = datetime.now()
+                    
+                    # Build StockData
+                    stock_data = entry.provider.fetch_stock_data(symbol, years)
+                    if stock_data is not None:
+                        self.cache.set(cache_key, stock_data)
+                        logger.info(
+                            f"Fetched {symbol} from {entry.provider.name} "
+                            f"({len(result)} rows, {response_time:.2f}s)"
+                        )
+                        return stock_data
+                    
+            except Exception as e:
+                entry.circuit_breaker.record_failure()
+                entry.failure_count += 1
+                logger.warning(
+                    f"Provider {entry.provider.name} failed for {symbol}: {e}"
+                )
+                continue
+        
+        # All providers failed - try stale cache
+        stale_cached = self.cache.get(cache_key)
+        if stale_cached is not None:
+            logger.warning(f"All providers failed for {symbol}, using stale cache")
+            return stale_cached
+        
+        logger.error(f"No data available for {symbol} from any provider")
+        return None
     
     async def fetch_stock_async(self, symbol: str, years: Optional[int] = None) -> Optional[StockData]:
         """Async version of fetch_stock with concurrency control."""
@@ -162,9 +256,17 @@ class DataEngine:
         Returns:
             Dictionary mapping provider name to health status
         """
+        result = {}
+        for market, pool in self.provider_pools.items():
+            for entry in pool.get_available_providers():
+                result[entry.provider.name] = entry.provider.health_check()
+        return result
+    
+    def get_provider_status(self) -> Dict[str, Any]:
+        """Get status of all provider pools."""
         return {
-            name: provider.health_check()
-            for name, provider in self.providers.items()
+            market: pool.get_provider_status()
+            for market, pool in self.provider_pools.items()
         }
     
     def clear_cache(self) -> int:

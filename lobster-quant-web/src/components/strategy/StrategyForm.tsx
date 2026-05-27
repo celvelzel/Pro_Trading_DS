@@ -122,8 +122,8 @@ export function StrategyForm({ strategy, onSubmit, onCancel }: StrategyFormProps
             <Label>Position Sizing</Label>
             <Select
               value={params.positionSizing}
-              onValueChange={(value: 'fixed' | 'dynamic') => 
-                setParams({ ...params, positionSizing: value })
+              onValueChange={(value) => 
+                setParams({ ...params, positionSizing: value || 'fixed' })
               }
             >
               <SelectTrigger>

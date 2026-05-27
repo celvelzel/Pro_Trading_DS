@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Play } from 'lucide-react';
 
 interface BacktestFormProps {
   onRun: (params: BacktestParams) => Promise<void>;
@@ -116,7 +117,17 @@ export function BacktestForm({ onRun, loading }: BacktestFormProps) {
           </div>
 
           <Button type="submit" className="w-full" disabled={loading || !strategyId}>
-            {loading ? 'Running Backtest...' : 'Run Backtest'}
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Running Backtest...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4 mr-2" />
+                Run Backtest
+              </>
+            )}
           </Button>
         </form>
       </CardContent>

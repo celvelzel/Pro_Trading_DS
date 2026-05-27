@@ -107,11 +107,14 @@ class YFinanceProvider(DataProvider):
     def health_check(self) -> bool:
         """Check if Yahoo Finance API is accessible."""
         try:
-            ticker = yf.Ticker("SPY")
-            info = ticker.fast_info
-            return info.last_price is not None
+            import yfinance as yf
+            # Try to fetch a small amount of data for a liquid stock
+            ticker = yf.Ticker("AAPL")
+            hist = ticker.history(period="1d")
+            self._health_status = not hist.empty
+            return self._health_status
         except Exception as e:
-            logger.warning(f"YFinance health check failed: {e}")
+            logger.warning(f"yfinance health check failed: {e}")
             self._health_status = False
             return False
 

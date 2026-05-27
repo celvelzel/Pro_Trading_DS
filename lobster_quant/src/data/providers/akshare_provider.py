@@ -93,16 +93,18 @@ class AkShareProvider(DataProvider):
         """Check if AkShare API is accessible."""
         try:
             self._ensure_import()
-            # Try to fetch a well-known stock
+            # Try to fetch a small amount of data for a liquid stock
             df = self._ak.stock_zh_a_hist(
-                symbol="600519",
+                symbol="000001",
                 period="daily",
                 start_date="20240101",
-                end_date="20240102"
+                end_date="20240110",
+                adjust="qfq"
             )
-            return not df.empty
+            self._health_status = not df.empty
+            return self._health_status
         except Exception as e:
-            logger.warning(f"AkShare health check failed: {e}")
+            logger.warning(f"akshare health check failed: {e}")
             self._health_status = False
             return False
 
