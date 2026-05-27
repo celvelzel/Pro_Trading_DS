@@ -9,6 +9,8 @@ import {
   BarChart3,
   FlaskConical,
   Settings,
+  Target,
+  Play,
 } from 'lucide-react'
 
 const navItems = [
@@ -28,14 +30,19 @@ const navItems = [
     icon: BarChart3,
   },
   {
+    title: 'Strategy',
+    href: '/strategy',
+    icon: Target,
+  },
+  {
     title: 'Backtest',
     href: '/backtest',
     icon: FlaskConical,
   },
   {
-    title: 'Settings',
-    href: '/settings',
-    icon: Settings,
+    title: 'Simulation',
+    href: '/simulation',
+    icon: Play,
   },
 ]
 

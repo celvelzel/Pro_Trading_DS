@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useWatchlistStore } from '@/stores/watchlistStore'
+import type { WatchlistStockData } from '@/hooks/useWatchlistData'
 import {
   TrendingUp,
   TrendingDown,
@@ -13,25 +14,16 @@ import {
   Trash2,
   BarChart3,
   Plus,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react'
 
-interface WatchlistStock {
-  symbol: string
-  name?: string
-  price?: number
-  change?: number
-  changePercent?: number
-  signal?: {
-    type: 'bullish' | 'bearish' | 'neutral'
-    score: number
-  }
-}
-
 interface WatchlistTableProps {
-  stocks: WatchlistStock[]
+  stocks: WatchlistStockData[]
   loading?: boolean
   onAddClick?: () => void
   onCompareClick?: (symbols: string[]) => void
+  onRefresh?: () => void
   className?: string
 }
 
@@ -51,19 +43,110 @@ function SignalBadge({ type, score }: { type: string; score: number }) {
   )
 }
 
+function PriceChange({ change, changePercent }: { change?: number; changePercent?: number }) {
+  if (change === undefined || changePercent === undefined) {
+    return <span className="text-text-tertiary text-sm">--</span>
+  }
+
+  const isPositive = change >= 0
+  const Icon = isPositive ? TrendingUp : TrendingDown
+
+  return (
+    <div className={cn('flex items-center gap-1', isPositive ? 'text-success' : 'text-error')}>
+      <Icon className="w-3 h-3" />
+      <span className="text-sm font-medium">
+        {isPositive ? '+' : ''}{change.toFixed(2)} ({isPositive ? '+' : ''}{changePercent.toFixed(2)}%)
+      </span>
+    </div>
+  )
+}
+
+function StockRowSkeleton() {
+  return (
+    <div className="flex items-center gap-4 py-3 animate-pulse">
+      <div className="h-4 w-4 bg-muted rounded" />
+      <div className="h-4 w-16 bg-muted rounded" />
+      <div className="flex-1" />
+      <div className="h-4 w-24 bg-muted rounded" />
+      <div className="h-4 w-20 bg-muted rounded" />
+      <div className="h-6 w-12 bg-muted rounded-full" />
+    </div>
+  )
+}
+
+function StockRow({ stock }: { stock: WatchlistStockData }) {
+  const { selectedSymbols, toggleSelect } = useWatchlistStore()
+  const isSelected = selectedSymbols.includes(stock.symbol)
+
+  if (stock.isLoading) {
+    return <StockRowSkeleton />
+  }
+
+  return (
+    <div className="flex items-center gap-4 py-3 border-b last:border-b-0">
+      {/* Checkbox */}
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={() => toggleSelect(stock.symbol)}
+        className="h-4 w-4 rounded border-gray-300"
+      />
+
+      {/* Symbol */}
+      <Link
+        href={`/analysis/${stock.symbol}`}
+        className="font-medium text-text-primary hover:text-primary transition-colors min-w-[60px]"
+      >
+        {stock.symbol}
+      </Link>
+
+      <div className="flex-1" />
+
+      {/* Price */}
+      <div className="text-right min-w-[80px]">
+        {stock.price !== undefined ? (
+          <span className="font-mono text-text-primary">${stock.price.toFixed(2)}</span>
+        ) : (
+          <span className="text-text-tertiary">--</span>
+        )}
+      </div>
+
+      {/* Change */}
+      <div className="min-w-[120px]">
+        <PriceChange change={stock.change} changePercent={stock.changePercent} />
+      </div>
+
+      {/* Signal */}
+      <div className="min-w-[60px]">
+        {stock.signal ? (
+          <SignalBadge type={stock.signal.type} score={stock.signal.score} />
+        ) : stock.error ? (
+          <div className="flex items-center gap-1 text-error" title={stock.error}>
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-xs">Error</span>
+          </div>
+        ) : (
+          <span className="text-text-tertiary text-sm">--</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export const WatchlistTable = memo(function WatchlistTable({
   stocks,
   loading = false,
   onAddClick,
   onCompareClick,
+  onRefresh,
   className,
 }: WatchlistTableProps) {
-  const { selectedSymbols, toggleSelect, selectAll, deselectAll, removeSelected } =
+  const { selectedSymbols, selectAll, deselectAll, removeSelected } =
     useWatchlistStore()
 
   const allSelected = stocks.length > 0 && selectedSymbols.length === stocks.length
 
-  if (loading) {
+  if (loading && stocks.length === 0) {
     return (
       <Card className={className}>
         <CardHeader>
@@ -75,14 +158,31 @@ export const WatchlistTable = memo(function WatchlistTable({
         <CardContent>
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4 animate-pulse">
-                <div className="h-4 w-4 bg-muted rounded" />
-                <div className="h-4 w-16 bg-muted rounded" />
-                <div className="flex-1" />
-                <div className="h-4 w-20 bg-muted rounded" />
-                <div className="h-4 w-16 bg-muted rounded" />
-              </div>
+              <StockRowSkeleton key={i} />
             ))}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (stocks.length === 0) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Watchlist</span>
+            <Button variant="outline" size="sm" onClick={onAddClick}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add Stock
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-text-tertiary">
+            <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium mb-2">No stocks in watchlist</p>
+            <p className="text-sm">Add stocks to track their prices and signals</p>
           </div>
         </CardContent>
       </Card>
@@ -93,43 +193,56 @@ export const WatchlistTable = memo(function WatchlistTable({
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span>Watchlist</span>
-            <span className="text-sm font-normal text-text-secondary">
-              {stocks.length} stocks
+            <span className="text-sm font-normal text-text-tertiary">
+              ({stocks.length} {stocks.length === 1 ? 'stock' : 'stocks'})
             </span>
+            {loading && (
+              <RefreshCw className="w-4 h-4 text-text-tertiary animate-spin" />
+            )}
           </div>
           <div className="flex items-center gap-2">
-            {selectedSymbols.length > 0 && (
-              <>
-                <Button variant="outline" size="sm" onClick={deselectAll}>
-                  Deselect All
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onCompareClick?.(selectedSymbols)}
-                  disabled={selectedSymbols.length < 2}
-                >
-                  <BarChart3 className="w-4 h-4 mr-1" />
-                  Compare ({selectedSymbols.length})
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={removeSelected}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Remove
-                </Button>
-              </>
-            )}
-            {selectedSymbols.length === 0 && (
-              <Button variant="outline" size="sm" onClick={selectAll}>
-                Select All
+            {/* Refresh button */}
+            {onRefresh && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRefresh}
+                disabled={loading}
+                title="Refresh data"
+              >
+                <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
               </Button>
             )}
-            <Button size="sm" onClick={onAddClick}>
+
+            {/* Compare button */}
+            {selectedSymbols.length > 1 && onCompareClick && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onCompareClick(selectedSymbols)}
+              >
+                <BarChart3 className="w-4 h-4 mr-1" />
+                Compare ({selectedSymbols.length})
+              </Button>
+            )}
+
+            {/* Select/Deselect all */}
+            <Button variant="ghost" size="sm" onClick={allSelected ? deselectAll : selectAll}>
+              {allSelected ? 'Deselect All' : 'Select All'}
+            </Button>
+
+            {/* Remove selected */}
+            {selectedSymbols.length > 0 && (
+              <Button variant="destructive" size="sm" onClick={removeSelected}>
+                <Trash2 className="w-4 h-4 mr-1" />
+                Remove ({selectedSymbols.length})
+              </Button>
+            )}
+
+            {/* Add button */}
+            <Button variant="outline" size="sm" onClick={onAddClick}>
               <Plus className="w-4 h-4 mr-1" />
               Add
             </Button>
@@ -137,112 +250,11 @@ export const WatchlistTable = memo(function WatchlistTable({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {stocks.length === 0 ? (
-          <div className="text-center py-8 text-text-secondary">
-            <p className="mb-2">No stocks in watchlist</p>
-            <Button variant="outline" onClick={onAddClick}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add Stock
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {/* Header */}
-            <div className="flex items-center gap-4 px-3 py-2 text-xs font-medium text-text-secondary border-b">
-              <div className="w-4" />
-              <div className="w-16">Symbol</div>
-              <div className="flex-1">Name</div>
-              <div className="w-20 text-right">Price</div>
-              <div className="w-20 text-right">Change</div>
-              <div className="w-16 text-center">Signal</div>
-              <div className="w-8" />
-            </div>
-
-            {/* Rows */}
-            {stocks.map((stock) => {
-              const isSelected = selectedSymbols.includes(stock.symbol)
-              const isPositive = (stock.change ?? 0) >= 0
-
-              return (
-                <div
-                  key={stock.symbol}
-                  className={cn(
-                    'flex items-center gap-4 px-3 py-3 rounded-lg transition-colors',
-                    isSelected
-                      ? 'bg-primary/10 border border-primary/20'
-                      : 'hover:bg-bg-hover'
-                  )}
-                >
-                  {/* Checkbox */}
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleSelect(stock.symbol)}
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-
-                  {/* Symbol */}
-                  <Link
-                    href={`/analysis/${stock.symbol}`}
-                    className="w-16 font-semibold text-text-primary hover:text-primary transition-colors"
-                  >
-                    {stock.symbol}
-                  </Link>
-
-                  {/* Name */}
-                  <div className="flex-1 text-sm text-text-secondary truncate">
-                    {stock.name || '-'}
-                  </div>
-
-                  {/* Price */}
-                  <div className="w-20 text-right font-mono">
-                    {stock.price ? `$${stock.price.toFixed(2)}` : '-'}
-                  </div>
-
-                  {/* Change */}
-                  <div
-                    className={cn(
-                      'w-20 text-right font-mono text-sm',
-                      isPositive ? 'text-success' : 'text-error'
-                    )}
-                  >
-                    {stock.change !== undefined ? (
-                      <div className="flex items-center justify-end gap-1">
-                        {isPositive ? (
-                          <TrendingUp className="w-3 h-3" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3" />
-                        )}
-                        <span>
-                          {isPositive ? '+' : ''}
-                          {stock.changePercent?.toFixed(2)}%
-                        </span>
-                      </div>
-                    ) : (
-                      '-'
-                    )}
-                  </div>
-
-                  {/* Signal */}
-                  <div className="w-16 text-center">
-                    {stock.signal ? (
-                      <SignalBadge type={stock.signal.type} score={stock.signal.score} />
-                    ) : (
-                      '-'
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <Link href={`/analysis/${stock.symbol}`}>
-                    <Button variant="ghost" size="icon" className="w-8 h-8">
-                      <BarChart3 className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        <div className="divide-y">
+          {stocks.map((stock) => (
+            <StockRow key={stock.symbol} stock={stock} />
+          ))}
+        </div>
       </CardContent>
     </Card>
   )

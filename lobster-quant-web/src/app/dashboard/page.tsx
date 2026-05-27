@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useStockData, useStockRisk, useStockCandles, usePrefetchStock } from '@/hooks/useStock'
+import { useStockData, useStockRisk, useStockCandles } from '@/hooks/useStock'
 import { useWatchlistData } from '@/hooks/useWatchlistData'
 import { MetricCard } from '@/components/cards/MetricCard'
 import { StatusCard } from '@/components/cards/StatusCard'
@@ -23,13 +23,11 @@ export default function DashboardPage() {
   const { data: benchmark, isLoading: benchmarkLoading } = useStockData('SPY')
   const { data: candles, isLoading: candlesLoading } = useStockCandles('SPY', timeframe)
   const { data: risk, isLoading: riskLoading } = useStockRisk('SPY')
-  const prefetchStock = usePrefetchStock()
 
   // Watchlist state
-  const { symbols, addSymbol, removeSymbol, selectedSymbols, toggleSelect, deselectAll, removeSelected } = useWatchlistStore()
+  const { symbols, addSymbol } = useWatchlistStore()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [compareSymbols, setCompareSymbols] = useState<string[]>([])
-  const [showCompare, setShowCompare] = useState(false)
 
   // Fetch real-time data for watchlist stocks
   const { stocks: watchlistStocks, isLoading: watchlistLoading, refetch: refetchWatchlist } = useWatchlistData()
@@ -127,9 +125,10 @@ export default function DashboardPage() {
       {/* Watchlist */}
       <WatchlistTable
         stocks={watchlistStocks}
-        loading={false}
+        loading={watchlistLoading}
         onAddClick={() => setAddDialogOpen(true)}
         onCompareClick={(syms) => setCompareSymbols(syms)}
+        onRefresh={refetchWatchlist}
       />
 
       {/* Quick Access - Popular Stocks */}

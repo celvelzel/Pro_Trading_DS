@@ -10,6 +10,8 @@ import {
   FlaskConical,
   Settings,
   TrendingUp,
+  Target,
+  Play,
 } from 'lucide-react'
 
 const navItems = [
@@ -29,9 +31,19 @@ const navItems = [
     icon: BarChart3,
   },
   {
+    title: 'Strategy',
+    href: '/strategy',
+    icon: Target,
+  },
+  {
     title: 'Backtest',
     href: '/backtest',
     icon: FlaskConical,
+  },
+  {
+    title: 'Simulation',
+    href: '/simulation',
+    icon: Play,
   },
 ]
 
