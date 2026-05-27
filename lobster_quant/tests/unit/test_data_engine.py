@@ -2,22 +2,33 @@
 Tests for DataEngine.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from src.core.data_engine import DataEngine, get_data_engine
 from src.data.models import StockData
 
 
 @pytest.fixture
 def mock_engine():
-    with patch('src.core.data_engine.get_settings') as mock_settings:
+    with patch("src.core.data_engine.get_settings") as mock_settings:
         mock_settings.return_value = MagicMock(
-            enable_us_stock=True, enable_hk_stock=False, enable_a_stock=False,
-            us_data_provider="mock", hk_data_provider="mock", a_data_provider="mock",
-            us_data_sources="mock", hk_data_sources="mock",
-            data_years=1, data_cache_dir="./data/test_cache", data_cache_ttl=3600,
-            data_timeout=10, benchmark_symbol="SPY",
-            circuit_breaker_failure_threshold=5, circuit_breaker_recovery_timeout=60
+            enable_us_stock=True,
+            enable_hk_stock=False,
+            enable_a_stock=False,
+            us_data_provider="mock",
+            hk_data_provider="mock",
+            a_data_provider="mock",
+            us_data_sources="mock",
+            hk_data_sources="mock",
+            data_years=1,
+            data_cache_dir="./data/test_cache",
+            data_cache_ttl=3600,
+            data_timeout=10,
+            benchmark_symbol="SPY",
+            circuit_breaker_failure_threshold=5,
+            circuit_breaker_recovery_timeout=60,
         )
         engine = DataEngine()
         return engine

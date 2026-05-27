@@ -3,10 +3,10 @@ Strategy Manager - Business logic for strategy CRUD operations.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from src.storage.strategy_store import StrategyStore
 from src.data.models import Strategy, StrategyParams
+from src.storage.strategy_store import StrategyStore
 
 
 class StrategyManager:
@@ -15,17 +15,15 @@ class StrategyManager:
     def __init__(self, data_dir: str = "data"):
         self.store = StrategyStore(data_dir)
 
-    def list_strategies(self) -> List[Strategy]:
+    def list_strategies(self) -> list[Strategy]:
         """List all strategies (presets + custom)."""
         return self.store.list_strategies()
 
-    def get_strategy(self, strategy_id: str) -> Optional[Strategy]:
+    def get_strategy(self, strategy_id: str) -> Strategy | None:
         """Get strategy by ID."""
         return self.store.get_strategy(strategy_id)
 
-    def create_strategy(
-        self, name: str, description: str, params: StrategyParams
-    ) -> Strategy:
+    def create_strategy(self, name: str, description: str, params: StrategyParams) -> Strategy:
         """Create a new custom strategy.
 
         Args:
@@ -51,7 +49,7 @@ class StrategyManager:
         self.store.save_strategy(strategy)
         return strategy
 
-    def update_strategy(self, strategy_id: str, **kwargs) -> Optional[Strategy]:
+    def update_strategy(self, strategy_id: str, **kwargs) -> Strategy | None:
         """Update an existing custom strategy.
 
         Args:
@@ -90,13 +88,13 @@ class StrategyManager:
         except ValueError:
             return False
 
-    def get_presets(self) -> List[Strategy]:
+    def get_presets(self) -> list[Strategy]:
         """Get all preset strategies."""
         return [s for s in self.list_strategies() if s.isPreset]
 
     def compare_strategies(
-        self, strategy_ids: List[str], symbol: str, start_date: str, end_date: str
-    ) -> Dict[str, Any]:
+        self, strategy_ids: list[str], symbol: str, start_date: str, end_date: str
+    ) -> dict[str, Any]:
         """Compare multiple strategies by running backtests.
 
         Args:
@@ -149,9 +147,7 @@ class StrategyManager:
             )
             lowest_drawdown = min(
                 results,
-                key=lambda x: x["metrics"].maxDrawdown
-                if x["metrics"]
-                else float("inf"),
+                key=lambda x: x["metrics"].maxDrawdown if x["metrics"] else float("inf"),
             )
             best_return_id = best_return["id"]
             best_sharpe_id = best_sharpe["id"]

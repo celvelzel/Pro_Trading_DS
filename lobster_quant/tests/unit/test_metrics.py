@@ -21,10 +21,10 @@ from src.analysis.backtest.metrics import (
 )
 from src.data.models import Trade
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_trade(return_pct: float) -> Trade:
     """Create a closed Trade stub with a given return_pct."""
@@ -41,6 +41,7 @@ def _make_trade(return_pct: float) -> Trade:
 # ---------------------------------------------------------------------------
 # Existing metrics (smoke)
 # ---------------------------------------------------------------------------
+
 
 class TestSharpeRatio:
     def test_positive_returns(self):
@@ -97,6 +98,7 @@ class TestPeriodWinRate:
 # New metrics – Trade-based
 # ---------------------------------------------------------------------------
 
+
 class TestWinRate:
     def test_all_winners(self):
         trades = [_make_trade(5), _make_trade(10), _make_trade(1)]
@@ -138,6 +140,7 @@ class TestProfitLossRatio:
 # ---------------------------------------------------------------------------
 # New metrics – Equity-curve decomposition
 # ---------------------------------------------------------------------------
+
 
 class TestMonthlyReturns:
     def test_single_month(self):
@@ -191,6 +194,7 @@ class TestYearlyReturns:
 # ---------------------------------------------------------------------------
 # New metrics – Rolling window
 # ---------------------------------------------------------------------------
+
 
 class TestRollingMetrics:
     def test_returns_keys(self):

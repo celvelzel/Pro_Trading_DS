@@ -3,21 +3,20 @@ Lobster Quant - Trade Simulator
 Simulates daily trading based on strategy signals.
 """
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any
 
 from ..data.models import (
-    SimulatedTrade,
     DailySnapshot,
+    SimulatedTrade,
     Strategy,
 )
 from ..storage.simulation_store import SimulationStore
-from .strategy_manager import StrategyManager
+from ..utils.logging import get_logger
 from .data_engine import get_data_engine
 from .indicator_engine import get_indicator_engine
 from .signal_engine import get_signal_engine
-from ..utils.logging import get_logger
+from .strategy_manager import StrategyManager
 
 logger = get_logger()
 
@@ -35,9 +34,7 @@ class TradeSimulator:
         self.store = SimulationStore(data_dir)
         self.strategy_manager = StrategyManager(data_dir)
 
-    def scan_stocks(
-        self, strategy: Strategy, stock_list: List[str]
-    ) -> List[Dict[str, Any]]:
+    def scan_stocks(self, strategy: Strategy, stock_list: list[str]) -> list[dict[str, Any]]:
         """Scan stocks and return those meeting strategy criteria.
 
         Args:
@@ -56,9 +53,6 @@ class TradeSimulator:
                 stock_data = self.data_engine.fetch_stock(symbol)
                 if stock_data is None:
                     continue
-
-                # Compute indicators
-                df = self.indicator_engine.compute_all(stock_data.daily)
 
                 # Generate signal
                 signal = self.signal_engine.generate_signal(stock_data)
@@ -86,8 +80,8 @@ class TradeSimulator:
         return selected[: strategy.params.maxPositions]
 
     def execute_trades(
-        self, strategy_id: str, selected_stocks: List[Dict[str, Any]]
-    ) -> List[SimulatedTrade]:
+        self, strategy_id: str, selected_stocks: list[dict[str, Any]]
+    ) -> list[SimulatedTrade]:
         """Execute buy trades for selected stocks.
 
         Args:
@@ -122,9 +116,7 @@ class TradeSimulator:
             else:
                 # Dynamic: scale by score
                 score_factor = stock["score"] / 100
-                position_value = (
-                    initial_capital * strategy.params.positionSize * score_factor
-                )
+                position_value = initial_capital * strategy.params.positionSize * score_factor
 
             # Check if enough capital
             if position_value > available:
@@ -156,7 +148,7 @@ class TradeSimulator:
 
         return new_trades
 
-    def update_open_trades(self, strategy_id: str) -> List[SimulatedTrade]:
+    def update_open_trades(self, strategy_id: str) -> list[SimulatedTrade]:
         """Check open trades for exit conditions and close if met.
 
         Args:
@@ -191,24 +183,18 @@ class TradeSimulator:
                     trade.exitPrice = current_price
                     trade.status = "closed"
                     trade.pnl = (current_price - trade.entryPrice) * trade.shares
-                    trade.pnlPercent = (
-                        (current_price - trade.entryPrice) / trade.entryPrice * 100
-                    )
+                    trade.pnlPercent = (current_price - trade.entryPrice) / trade.entryPrice * 100
 
                     self.store.save_trade(trade)
                     closed_trades.append(trade)
 
             except Exception as e:
-                logger.warning(
-                    f"Failed to update trade for {trade.symbol}: {e}"
-                )
+                logger.warning(f"Failed to update trade for {trade.symbol}: {e}")
                 continue
 
         return closed_trades
 
-    def run_daily(
-        self, strategy_id: str, stock_list: List[str]
-    ) -> DailySnapshot:
+    def run_daily(self, strategy_id: str, stock_list: list[str]) -> DailySnapshot:
         """Run daily simulation for a strategy.
 
         Args:
@@ -229,7 +215,7 @@ class TradeSimulator:
         selected_stocks = self.scan_stocks(strategy, stock_list)
 
         # 3. Execute new trades
-        new_trades = self.execute_trades(strategy_id, selected_stocks)
+        self.execute_trades(strategy_id, selected_stocks)
 
         # 4. Get current portfolio state
         open_trades = self.store.get_trades(strategy_id, status="open")

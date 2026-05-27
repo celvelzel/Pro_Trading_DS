@@ -2,10 +2,11 @@
 Unit tests for StrategyManager.
 """
 
-import pytest
-import tempfile
 import shutil
+import tempfile
 from datetime import datetime
+
+import pytest
 
 from src.core.strategy_manager import StrategyManager
 from src.data.models import Strategy, StrategyParams
@@ -131,9 +132,7 @@ class TestUpdateStrategy:
 
     def test_update_description(self, manager, created_strategy):
         """Should update strategy description."""
-        result = manager.update_strategy(
-            created_strategy.id, description="New description"
-        )
+        result = manager.update_strategy(created_strategy.id, description="New description")
         assert result is not None
         assert result.description == "New description"
 
@@ -287,9 +286,7 @@ class TestCompareStrategies:
         s1 = manager.create_strategy(name="S1", description="D1", params=sample_params)
         s2 = manager.create_strategy(name="S2", description="D2", params=sample_params)
 
-        result = manager.compare_strategies(
-            [s1.id, s2.id], "AAPL", "2024-01-01", "2024-12-31"
-        )
+        result = manager.compare_strategies([s1.id, s2.id], "AAPL", "2024-01-01", "2024-12-31")
         assert len(result["strategies"]) == 2
         ids = [s["id"] for s in result["strategies"]]
         assert s1.id in ids
@@ -305,16 +302,12 @@ class TestCompareStrategies:
 
     def test_compare_all_nonexistent_returns_empty(self, manager):
         """Should return empty strategies when all IDs are nonexistent."""
-        result = manager.compare_strategies(
-            ["fake1", "fake2"], "AAPL", "2024-01-01", "2024-12-31"
-        )
+        result = manager.compare_strategies(["fake1", "fake2"], "AAPL", "2024-01-01", "2024-12-31")
         assert result["strategies"] == []
 
     def test_compare_empty_ids_returns_empty(self, manager):
         """Should return empty strategies when given empty list."""
-        result = manager.compare_strategies(
-            [], "AAPL", "2024-01-01", "2024-12-31"
-        )
+        result = manager.compare_strategies([], "AAPL", "2024-01-01", "2024-12-31")
         assert result["strategies"] == []
 
     def test_compare_placeholder_metrics_are_none(self, manager, created_strategy):

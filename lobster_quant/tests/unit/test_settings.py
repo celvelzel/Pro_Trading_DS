@@ -2,9 +2,8 @@
 Tests for Settings configuration.
 """
 
-import pytest
 from src.config.settings import Settings, get_settings, reload_settings
-from src.config.validation import validate_settings, validate_weight_sum, validate_market_config
+from src.config.validation import validate_market_config, validate_settings, validate_weight_sum
 
 
 class TestSettings:
@@ -57,10 +56,16 @@ class TestGetSettings:
 
 class TestValidation:
     def test_validate_weight_sum_valid(self):
-        assert validate_weight_sum({"trend": 0.4, "momentum": 0.2, "volume": 0.15, "pattern": 0.25}) is True
+        assert (
+            validate_weight_sum({"trend": 0.4, "momentum": 0.2, "volume": 0.15, "pattern": 0.25})
+            is True
+        )
 
     def test_validate_weight_sum_invalid(self):
-        assert validate_weight_sum({"trend": 0.5, "momentum": 0.5, "volume": 0.5, "pattern": 0.5}) is False
+        assert (
+            validate_weight_sum({"trend": 0.5, "momentum": 0.5, "volume": 0.5, "pattern": 0.5})
+            is False
+        )
 
     def test_validate_market_config_valid(self):
         warnings = validate_market_config(["us_stock", "hk_stock"])

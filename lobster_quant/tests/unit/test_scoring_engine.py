@@ -2,9 +2,9 @@
 Tests for ScoringEngine.
 """
 
-import pytest
 import pandas as pd
-import numpy as np
+import pytest
+
 from src.core.scoring_engine import ScoringEngine, get_scoring_engine
 from src.utils.exceptions import ScoringError
 
@@ -26,15 +26,15 @@ class TestScoringEngine:
         assert result.max() <= 100
 
     def test_score_with_missing_columns_raises(self, scoring_engine):
-        df = pd.DataFrame({'close': [100, 101, 102]})
+        df = pd.DataFrame({"close": [100, 101, 102]})
         with pytest.raises(ScoringError):
             scoring_engine.compute_score(df)
 
     def test_score_with_slope_wm(self, scoring_engine, sample_ohlcv_df_with_indicators):
         df = sample_ohlcv_df_with_indicators.copy()
-        df['slope_weekly'] = df['slope_daily'] * 0.5
-        df['slope_monthly'] = df['slope_daily'] * 0.3
-        slope_wm = df[['slope_weekly', 'slope_monthly']]
+        df["slope_weekly"] = df["slope_daily"] * 0.5
+        df["slope_monthly"] = df["slope_daily"] * 0.3
+        slope_wm = df[["slope_weekly", "slope_monthly"]]
         result = scoring_engine.compute_score(df, slope_wm=slope_wm)
         assert isinstance(result, pd.Series)
 

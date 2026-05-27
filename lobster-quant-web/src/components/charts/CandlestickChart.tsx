@@ -84,7 +84,7 @@ export const CandlestickChart = memo(function CandlestickChart({
     // Set candlestick data
     candlestickSeries.setData(
       data.map((d) => ({
-        time: d.time as any,
+        time: d.time as UTCTimestamp,
         open: d.open,
         high: d.high,
         low: d.low,
@@ -111,7 +111,7 @@ export const CandlestickChart = memo(function CandlestickChart({
 
       volumeSeries.setData(
         data.map((d) => ({
-          time: d.time as any,
+          time: d.time as UTCTimestamp,
           value: d.volume,
           color: d.close >= d.open ? chartColors.volumeUp : chartColors.volumeDown,
         }))
@@ -129,11 +129,11 @@ export const CandlestickChart = memo(function CandlestickChart({
         const sma200 = calculateSMA(closePrices, 200)
 
         chart.addSeries(LineSeries, { color: '#2196F3', lineWidth: 1 })
-          .setData(formatIndicatorData(data, sma20) as any)
+          .setData(formatIndicatorData(data, sma20))
         chart.addSeries(LineSeries, { color: '#4CAF50', lineWidth: 1 })
-          .setData(formatIndicatorData(data, sma50) as any)
+          .setData(formatIndicatorData(data, sma50))
         chart.addSeries(LineSeries, { color: '#F44336', lineWidth: 1 })
-          .setData(formatIndicatorData(data, sma200) as any)
+          .setData(formatIndicatorData(data, sma200))
       }
 
       // EMA overlays
@@ -142,9 +142,9 @@ export const CandlestickChart = memo(function CandlestickChart({
         const ema26 = calculateEMA(closePrices, 26)
 
         chart.addSeries(LineSeries, { color: '#FF9800', lineWidth: 1 })
-          .setData(formatIndicatorData(data, ema12) as any)
+          .setData(formatIndicatorData(data, ema12))
         chart.addSeries(LineSeries, { color: '#9C27B0', lineWidth: 1 })
-          .setData(formatIndicatorData(data, ema26) as any)
+          .setData(formatIndicatorData(data, ema26))
       }
 
       // Bollinger Bands overlays
@@ -155,11 +155,11 @@ export const CandlestickChart = memo(function CandlestickChart({
         const lower = bbData.map(d => d.lower)
         
         chart.addSeries(LineSeries, { color: '#607D8B', lineWidth: 1 })
-          .setData(formatIndicatorData(data, upper) as any)
-        chart.addSeries(LineSeries, { color: '#607D8B', lineWidth: 1 })
-          .setData(formatIndicatorData(data, lower) as any)
-        chart.addSeries(LineSeries, { color: '#607D8B', lineWidth: 1, lineStyle: 2 })
-          .setData(formatIndicatorData(data, middle) as any)
+          .setData(formatIndicatorData(data, upper))
+        chart.addSeries(LineSeries, { color: '#607D8B80', lineWidth: 1 })
+          .setData(formatIndicatorData(data, lower))
+        chart.addSeries(LineSeries, { color: '#607D8B40', lineWidth: 1 })
+          .setData(formatIndicatorData(data, middle))
       }
     }
 

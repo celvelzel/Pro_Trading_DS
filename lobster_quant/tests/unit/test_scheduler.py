@@ -2,9 +2,9 @@
 Unit tests for SimulationScheduler.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
-from datetime import datetime
+
+import pytest
 
 from src.core.scheduler import SimulationScheduler
 
@@ -12,8 +12,10 @@ from src.core.scheduler import SimulationScheduler
 @pytest.fixture
 def mock_scheduler():
     """Create a SimulationScheduler with mocked dependencies."""
-    with patch("src.core.scheduler.TradeSimulator") as MockSimulator, \
-         patch("src.core.scheduler.StrategyManager") as MockManager:
+    with (
+        patch("src.core.scheduler.TradeSimulator") as MockSimulator,
+        patch("src.core.scheduler.StrategyManager") as MockManager,
+    ):
 
         scheduler = SimulationScheduler(data_dir="test_data")
         yield scheduler, MockSimulator, MockManager

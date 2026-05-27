@@ -3,10 +3,11 @@ Lobster Quant - Event System
 Lightweight publish-subscribe event bus for module decoupling.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
-from typing import Any, Callable, Optional
+from typing import Any
 
 from ..utils.logging import get_logger
 
@@ -56,9 +57,7 @@ class EventBus:
     def __init__(self):
         self._subscribers: dict[EventType, list[Callable[[Event], None]]] = {}
 
-    def subscribe(
-        self, event_type: EventType, handler: Callable[[Event], None]
-    ) -> None:
+    def subscribe(self, event_type: EventType, handler: Callable[[Event], None]) -> None:
         """Subscribe a handler to an event type.
 
         Args:
@@ -89,14 +88,11 @@ class EventBus:
                 handler(event)
             except Exception:
                 logger.error(
-                    f"Event handler '{handler.__name__}' failed for "
-                    f"{event.type.name}",
+                    f"Event handler '{handler.__name__}' failed for " f"{event.type.name}",
                     exc_info=True,
                 )
 
-    def unsubscribe(
-        self, event_type: EventType, handler: Callable[[Event], None]
-    ) -> None:
+    def unsubscribe(self, event_type: EventType, handler: Callable[[Event], None]) -> None:
         """Remove a handler subscription.
 
         Args:
@@ -107,7 +103,7 @@ class EventBus:
             self._subscribers[event_type].remove(handler)
             logger.debug(f"Unsubscribed from {event_type.name}: {handler.__name__}")
 
-    def clear(self, event_type: Optional[EventType] = None) -> None:
+    def clear(self, event_type: EventType | None = None) -> None:
         """Clear subscribers.
 
         Args:

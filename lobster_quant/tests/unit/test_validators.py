@@ -2,16 +2,18 @@
 Tests for validators.
 """
 
-import pytest
-import pandas as pd
 from datetime import date
+
+import pandas as pd
+import pytest
+
+from src.utils.exceptions import ValidationError
 from src.utils.validators import (
-    validate_symbol,
-    validate_date_range,
     validate_dataframe_columns,
+    validate_date_range,
+    validate_symbol,
     validate_timeframe,
 )
-from src.utils.exceptions import ValidationError
 
 
 class TestValidateSymbol:
@@ -68,17 +70,17 @@ class TestValidateDateRange:
 
 class TestValidateDataframeColumns:
     def test_valid_dataframe(self):
-        df = pd.DataFrame({'a': [1], 'b': [2]})
-        assert validate_dataframe_columns(df, ['a', 'b']) is True
+        df = pd.DataFrame({"a": [1], "b": [2]})
+        assert validate_dataframe_columns(df, ["a", "b"]) is True
 
     def test_missing_columns_raises(self):
-        df = pd.DataFrame({'a': [1]})
+        df = pd.DataFrame({"a": [1]})
         with pytest.raises(ValidationError):
-            validate_dataframe_columns(df, ['a', 'b', 'c'])
+            validate_dataframe_columns(df, ["a", "b", "c"])
 
     def test_none_dataframe_raises(self):
         with pytest.raises(ValidationError):
-            validate_dataframe_columns(None, ['a'])
+            validate_dataframe_columns(None, ["a"])
 
 
 class TestValidateTimeframe:

@@ -2,13 +2,14 @@
 Tests for PortfolioBacktest - multi-stock portfolio backtest engine.
 """
 
-import pytest
-import pandas as pd
-import numpy as np
 from datetime import datetime
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from src.analysis.backtest.portfolio import PortfolioBacktest, EquityPoint
+import numpy as np
+import pandas as pd
+import pytest
+
+from src.analysis.backtest.portfolio import EquityPoint, PortfolioBacktest
 from src.data.models import (
     BacktestMetrics,
     BacktestResult,
@@ -16,7 +17,6 @@ from src.data.models import (
     StrategyParams,
     Trade,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

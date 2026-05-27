@@ -82,6 +82,7 @@ export default function SimulationPage() {
 
   useEffect(() => {
     if (selectedStrategyId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchTrades();
       fetchPerformance();
     }

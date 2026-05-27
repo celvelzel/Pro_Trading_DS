@@ -2,9 +2,8 @@
 Lobster Quant - Configuration Validation
 """
 
-from .settings import Settings
-from ..utils.exceptions import ConfigValidationError, ConfigError
 from ..utils.logging import get_logger
+from .settings import Settings
 
 logger = get_logger()
 
@@ -40,27 +39,19 @@ def validate_settings(settings: Settings) -> list[str]:
 
     # Check holding_days > 0
     if settings.backtest_holding_days <= 0:
-        warnings.append(
-            f"backtest_holding_days must be > 0, got {settings.backtest_holding_days}"
-        )
+        warnings.append(f"backtest_holding_days must be > 0, got {settings.backtest_holding_days}")
 
     # Check min_score >= 0
     if settings.backtest_min_score < 0:
-        warnings.append(
-            f"backtest_min_score must be >= 0, got {settings.backtest_min_score}"
-        )
+        warnings.append(f"backtest_min_score must be >= 0, got {settings.backtest_min_score}")
 
     # Check data_years 1-10
     if not (1 <= settings.data_years <= 10):
-        warnings.append(
-            f"data_years must be 1-10, got {settings.data_years}"
-        )
+        warnings.append(f"data_years must be 1-10, got {settings.data_years}")
 
     # Check cache_ttl >= 300
     if settings.data_cache_ttl < 300:
-        warnings.append(
-            f"data_cache_ttl must be >= 300, got {settings.data_cache_ttl}"
-        )
+        warnings.append(f"data_cache_ttl must be >= 300, got {settings.data_cache_ttl}")
 
     return warnings
 

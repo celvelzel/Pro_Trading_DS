@@ -2,10 +2,12 @@
 Tests for SignalEngine.
 """
 
-import pytest
 from datetime import datetime
+
+import pytest
+
 from src.core.signal_engine import SignalEngine, get_signal_engine
-from src.data.models import StockData, SignalResult
+from src.data.models import SignalResult, StockData
 
 
 @pytest.fixture
@@ -15,7 +17,9 @@ def signal_engine():
 
 @pytest.fixture
 def mock_stock_data(sample_ohlcv_df):
-    return StockData(symbol="TEST", daily=sample_ohlcv_df, last_update=datetime.now(), source="mock")
+    return StockData(
+        symbol="TEST", daily=sample_ohlcv_df, last_update=datetime.now(), source="mock"
+    )
 
 
 class TestSignalEngine:

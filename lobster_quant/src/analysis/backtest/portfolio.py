@@ -3,19 +3,17 @@ Lobster Quant - Portfolio Backtest
 Multi-stock portfolio backtest engine with result aggregation.
 """
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import List, Optional
 
 import numpy as np
 import pandas as pd
 
 from src.analysis.backtest.engine import BacktestEngine
 from src.analysis.backtest.metrics import (
-    calculate_sharpe_ratio,
     calculate_max_drawdown,
-    calculate_win_rate,
     calculate_profit_loss_ratio,
+    calculate_sharpe_ratio,
+    calculate_win_rate,
 )
 from src.core.data_engine import get_data_engine
 from src.core.indicator_engine import get_indicator_engine
@@ -55,10 +53,10 @@ class PortfolioBacktest:
 
     def run(
         self,
-        symbols: List[str],
+        symbols: list[str],
         strategy: Strategy,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> BacktestResult:
         """Run portfolio backtest on multiple stocks.
 
@@ -71,7 +69,7 @@ class PortfolioBacktest:
         Returns:
             BacktestResult with aggregated portfolio metrics.
         """
-        results: List[BacktestResult] = []
+        results: list[BacktestResult] = []
 
         for symbol in symbols:
             try:
@@ -107,21 +105,21 @@ class PortfolioBacktest:
 
     def _aggregate_results(
         self,
-        results: List[BacktestResult],
+        results: list[BacktestResult],
         strategy: Strategy,
-        symbols: List[str],
+        symbols: list[str],
     ) -> BacktestResult:
         """Aggregate multiple backtest results into a single portfolio result."""
         if not results:
             return BacktestResult(symbol=", ".join(symbols))
 
         # Collect all trades
-        all_trades: List[Trade] = []
+        all_trades: list[Trade] = []
         for r in results:
             all_trades.extend(r.trades)
 
         # Build per-stock equity curves (list[float] from BacktestResult.equity_curve)
-        equity_curves: List[List[float]] = [
+        equity_curves: list[list[float]] = [
             r.equity_curve for r in results if r.equity_curve and len(r.equity_curve) > 1
         ]
         aggregated_equity = self._aggregate_equity_curves(equity_curves)
@@ -147,7 +145,7 @@ class PortfolioBacktest:
             end_date=end,
         )
 
-    def _aggregate_equity_curves(self, curves: List[List[float]]) -> List[float]:
+    def _aggregate_equity_curves(self, curves: list[list[float]]) -> list[float]:
         """Aggregate multiple equity curves by averaging aligned values.
 
         Each curve is a list of floats where index 0 = initial capital
@@ -158,7 +156,7 @@ class PortfolioBacktest:
             return []
 
         max_len = max(len(c) for c in curves)
-        aggregated: List[float] = []
+        aggregated: list[float] = []
 
         for i in range(max_len):
             values = [c[i] for c in curves if i < len(c)]
@@ -169,8 +167,8 @@ class PortfolioBacktest:
 
     def _calculate_portfolio_metrics(
         self,
-        trades: List[Trade],
-        equity_curve: List[float],
+        trades: list[Trade],
+        equity_curve: list[float],
     ) -> BacktestMetrics:
         """Calculate portfolio-level metrics from aggregated data."""
         if not trades:
@@ -192,25 +190,26 @@ class PortfolioBacktest:
 
         # Trade-level statistics using unified metrics functions
         closed_trades = [t for t in trades if t.return_pct is not None]
-        trade_returns: List[float] = [t.return_pct for t in closed_trades]  # type: ignore[misc]
+        trade_returns: list[float] = [t.return_pct for t in closed_trades]  # type: ignore[misc]
         winning = [r for r in trade_returns if r > 0]
         losing = [r for r in trade_returns if r <= 0]
 
-        total = len(closed_trades) if closed_trades else len(trades)
         win_rate = calculate_win_rate(trades)
         avg_win = sum(winning) / len(winning) if winning else 0.0
         avg_loss = sum(losing) / len(losing) if losing else 0.0
         profit_loss_ratio = calculate_profit_loss_ratio(trades)
-        avg_holding = (
-            sum(t.holding_days for t in trades) / len(trades) if trades else 0
-        )
+        avg_holding = sum(t.holding_days for t in trades) / len(trades) if trades else 0
 
         # Equity-curve-level metrics using unified metrics functions
         if equity_curve and len(equity_curve) > 1:
             equity_series = pd.Series(equity_curve)
             daily_returns = equity_series.pct_change().dropna()
 
-            total_return = (equity_curve[-1] - equity_curve[0]) / equity_curve[0] * 100 if equity_curve[0] else 0
+            total_return = (
+                (equity_curve[-1] - equity_curve[0]) / equity_curve[0] * 100
+                if equity_curve[0]
+                else 0
+            )
             volatility = daily_returns.std() * np.sqrt(252) * 100 if len(daily_returns) > 1 else 0
             max_drawdown = calculate_max_drawdown(equity_series) * 100
             sharpe = calculate_sharpe_ratio(daily_returns)

@@ -2,9 +2,9 @@
 Tests for EventBus and Event system.
 """
 
-import pytest
 from unittest.mock import MagicMock
-from src.core.events import EventBus, Event, EventType, event_bus
+
+from src.core.events import Event, EventBus, EventType, event_bus
 
 
 class TestEventType:

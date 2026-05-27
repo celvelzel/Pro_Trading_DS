@@ -3,20 +3,17 @@ Lobster Quant - Unified Configuration
 Pydantic Settings with environment variable support.
 """
 
-from typing import Literal, Optional
+from typing import Literal
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Unified application settings."""
-    
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
-    
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
     # ============================================================
     # Application
     # ============================================================
@@ -24,14 +21,14 @@ class Settings(BaseSettings):
     app_version: str = "2.0.0"
     debug: bool = Field(default=False, description="Enable debug mode")
     log_level: str = Field(default="INFO", description="Logging level")
-    
+
     # ============================================================
     # Market Configuration
     # ============================================================
     enable_us_stock: bool = Field(default=True, description="Enable US stock market")
     enable_hk_stock: bool = Field(default=True, description="Enable HK stock market")
     enable_a_stock: bool = Field(default=False, description="Enable A-share market")
-    
+
     # ============================================================
     # Data Configuration
     # ============================================================
@@ -39,22 +36,22 @@ class Settings(BaseSettings):
     data_cache_dir: str = Field(default="./data/cache", description="Cache directory")
     data_cache_ttl: int = Field(default=3600, ge=300, description="Cache TTL in seconds")
     data_timeout: int = Field(default=10, ge=1, le=60, description="API timeout in seconds")
-    
+
     # Data providers
     us_data_provider: Literal["yfinance", "mock"] = Field(default="yfinance")
     hk_data_provider: Literal["yfinance", "mock"] = Field(default="yfinance")
     a_data_provider: Literal["akshare", "mock"] = Field(default="akshare")
-    
+
     # Data source priority (comma-separated, highest priority first)
     us_data_sources: str = Field(
         default="yfinance,alpha_vantage,polygon",
-        description="US stock data source priority (comma-separated)"
+        description="US stock data source priority (comma-separated)",
     )
     hk_data_sources: str = Field(
         default="yfinance,alpha_vantage,polygon",
-        description="HK stock data source priority (comma-separated)"
+        description="HK stock data source priority (comma-separated)",
     )
-    
+
     # ============================================================
     # Technical Indicator Parameters
     # ============================================================
@@ -67,7 +64,7 @@ class Settings(BaseSettings):
     macd_signal: int = Field(default=9, ge=5, le=50)
     bb_period: int = Field(default=20, ge=5, le=100)
     bb_std: float = Field(default=2.0, ge=1.0, le=4.0)
-    
+
     # ============================================================
     # Scoring Weights (must sum to 1.0)
     # ============================================================
@@ -75,7 +72,7 @@ class Settings(BaseSettings):
     score_weight_momentum: float = Field(default=0.20, ge=0.0, le=1.0)
     score_weight_volume: float = Field(default=0.15, ge=0.0, le=1.0)
     score_weight_pattern: float = Field(default=0.25, ge=0.0, le=1.0)
-    
+
     # ============================================================
     # Backtest Parameters
     # ============================================================
@@ -84,7 +81,7 @@ class Settings(BaseSettings):
     backtest_lookback_days: int = Field(default=500, ge=100, le=2000)
     backtest_slippage_pct: float = Field(default=0.001, ge=0.0, le=0.01)
     backtest_commission_pct: float = Field(default=0.001, ge=0.0, le=0.01)
-    
+
     # ============================================================
     # OFF Filter Parameters
     # ============================================================
@@ -93,40 +90,30 @@ class Settings(BaseSettings):
     off_gap_threshold: float = Field(default=0.08, ge=0.01, le=0.30)
     off_min_volume_ratio: float = Field(default=0.05, ge=0.0, le=1.0)
     off_ma200_recovery_days: int = Field(default=60, ge=10, le=200)
-    
+
     # ============================================================
     # Circuit Breaker Configuration
     # ============================================================
     circuit_breaker_failure_threshold: int = Field(
-        default=5,
-        ge=1,
-        le=20,
-        description="Circuit breaker failure threshold"
+        default=5, ge=1, le=20, description="Circuit breaker failure threshold"
     )
     circuit_breaker_recovery_timeout: int = Field(
-        default=60,
-        ge=10,
-        le=600,
-        description="Circuit breaker recovery timeout in seconds"
+        default=60, ge=10, le=600, description="Circuit breaker recovery timeout in seconds"
     )
-    
+
     # ============================================================
     # API Keys (optional, for fallback data sources)
     # ============================================================
-    alpha_vantage_api_key: Optional[str] = Field(
-        default=None,
-        description="Alpha Vantage API key"
-    )
-    polygon_api_key: Optional[str] = Field(
-        default=None,
-        description="Polygon.io API key"
-    )
-    
+    alpha_vantage_api_key: str | None = Field(default=None, description="Alpha Vantage API key")
+    polygon_api_key: str | None = Field(default=None, description="Polygon.io API key")
+
     # ============================================================
     # Benchmark
     # ============================================================
-    benchmark_symbol: str = Field(default="SPY", description="Benchmark symbol for market comparison")
-    
+    benchmark_symbol: str = Field(
+        default="SPY", description="Benchmark symbol for market comparison"
+    )
+
     # ============================================================
     # Computed Properties
     # ============================================================
@@ -139,12 +126,12 @@ class Settings(BaseSettings):
             "volume": self.score_weight_volume,
             "pattern": self.score_weight_pattern,
         }
-    
+
     @property
     def is_debug(self) -> bool:
         """Check if debug mode is enabled."""
         return self.debug
-    
+
     @property
     def enabled_markets(self) -> list[str]:
         """Get list of enabled markets."""
@@ -156,26 +143,31 @@ class Settings(BaseSettings):
         if self.enable_a_stock:
             markets.append("a_stock")
         return markets
-    
+
     # ============================================================
     # Validators
     # ============================================================
-    @field_validator("score_weight_trend", "score_weight_momentum", 
-                     "score_weight_volume", "score_weight_pattern")
+    @field_validator(
+        "score_weight_trend", "score_weight_momentum", "score_weight_volume", "score_weight_pattern"
+    )
     @classmethod
     def validate_weights(cls, v: float) -> float:
         """Ensure individual weights are valid."""
         return round(v, 2)
-    
+
     def validate_weight_sum(self) -> bool:
         """Check if weights sum to approximately 1.0."""
-        total = (self.score_weight_trend + self.score_weight_momentum + 
-                 self.score_weight_volume + self.score_weight_pattern)
+        total = (
+            self.score_weight_trend
+            + self.score_weight_momentum
+            + self.score_weight_volume
+            + self.score_weight_pattern
+        )
         return abs(total - 1.0) < 0.01
 
 
 # Global settings instance
-_settings: Optional[Settings] = None
+_settings: Settings | None = None
 
 
 def get_settings() -> Settings:

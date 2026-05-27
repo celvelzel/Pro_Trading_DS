@@ -3,11 +3,10 @@ Lobster Quant - Core Engine
 """
 
 from .data_engine import DataEngine, get_data_engine
+from .events import Event, EventBus, EventType, event_bus
 from .risk_engine import RiskEngine
 from .scoring_engine import ScoringEngine, get_scoring_engine
 from .signal_engine import SignalEngine, get_signal_engine
-from .events import Event, EventType, EventBus, event_bus
-from src.analysis.backtest.portfolio import PortfolioBacktest
 from .trade_simulator import TradeSimulator
 
 __all__ = [
@@ -22,6 +21,5 @@ __all__ = [
     "EventType",
     "EventBus",
     "event_bus",
-    "PortfolioBacktest",
     "TradeSimulator",
 ]

@@ -2,10 +2,11 @@
 Tests for DataCache.
 """
 
-import pytest
-import tempfile
 import shutil
-from pathlib import Path
+import tempfile
+
+import pytest
+
 from src.data.cache import DataCache
 
 
@@ -48,8 +49,8 @@ class TestDataCache:
         cache.set("key1", "value1")
         stats = cache.get_stats()
         assert isinstance(stats, dict)
-        assert 'memory_items' in stats
-        assert 'disk_items' in stats
+        assert "memory_items" in stats
+        assert "disk_items" in stats
 
     def test_memory_cache_hit(self, cache):
         cache.set("key1", "value1")
@@ -58,13 +59,13 @@ class TestDataCache:
         assert result == "value1"
 
     def test_cleanup_expired(self, cache):
-        from unittest.mock import patch
         from datetime import datetime, timedelta
-        
+        from unittest.mock import patch
+
         cache.set("expired_key", "value", ttl=10)
-        
+
         future_time = datetime.now() + timedelta(seconds=20)
-        with patch('src.data.cache.datetime') as mock_dt:
+        with patch("src.data.cache.datetime") as mock_dt:
             mock_dt.now.return_value = future_time
             mock_dt.fromisoformat = datetime.fromisoformat
             removed = cache.cleanup_expired()

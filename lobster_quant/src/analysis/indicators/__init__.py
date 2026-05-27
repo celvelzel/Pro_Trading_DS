@@ -3,19 +3,15 @@ Lobster Quant - Technical Indicators
 All indicators are registered in the IndicatorRegistry.
 """
 
+# Import to trigger registration
+from . import momentum, trend, volatility, volume
 from .base import (
     Indicator,
-    IndicatorResult,
     IndicatorRegistry,
-    rolling_slope,
+    IndicatorResult,
     normalize_series,
+    rolling_slope,
 )
-
-# Import to trigger registration
-from . import trend
-from . import momentum
-from . import volatility
-from . import volume
 
 __all__ = [
     "Indicator",

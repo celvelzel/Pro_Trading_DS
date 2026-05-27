@@ -2,9 +2,10 @@
 Tests for CircuitBreaker class.
 """
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import patch
+
+import pytest
 
 from src.data.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, CircuitState
 
@@ -238,7 +239,9 @@ class TestGetStatus:
     source uses threading.RLock or restructures the locking.
     """
 
-    @pytest.mark.skip(reason="Deadlock: get_status -> is_available -> state re-acquires non-reentrant Lock")
+    @pytest.mark.skip(
+        reason="Deadlock: get_status -> is_available -> state re-acquires non-reentrant Lock"
+    )
     def test_status_contains_expected_keys(self, default_cb):
         status = default_cb.get_status()
         assert "name" in status
@@ -249,7 +252,9 @@ class TestGetStatus:
         assert "is_available" in status
         assert "config" in status
 
-    @pytest.mark.skip(reason="Deadlock: get_status -> is_available -> state re-acquires non-reentrant Lock")
+    @pytest.mark.skip(
+        reason="Deadlock: get_status -> is_available -> state re-acquires non-reentrant Lock"
+    )
     def test_status_values(self, default_cb):
         status = default_cb.get_status()
         assert status["name"] == "test"
@@ -258,7 +263,9 @@ class TestGetStatus:
         assert status["success_count"] == 0
         assert status["is_available"] is True
 
-    @pytest.mark.skip(reason="Deadlock: get_status -> is_available -> state re-acquires non-reentrant Lock")
+    @pytest.mark.skip(
+        reason="Deadlock: get_status -> is_available -> state re-acquires non-reentrant Lock"
+    )
     def test_status_after_failure(self, default_cb):
         default_cb.record_failure()
         status = default_cb.get_status()

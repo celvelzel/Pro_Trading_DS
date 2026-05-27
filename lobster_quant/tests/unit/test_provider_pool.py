@@ -2,13 +2,14 @@
 Tests for ProviderPool class.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import MagicMock, PropertyMock
 
-from src.data.provider_pool import ProviderPool, ProviderEntry
+import pytest
+
+from src.data.circuit_breaker import CircuitState
+from src.data.provider_pool import ProviderPool
 from src.data.providers.base import DataProvider
-from src.data.circuit_breaker import CircuitBreaker, CircuitState
 
 
 class TestProviderPool:

@@ -2,17 +2,18 @@
 Tests for TradeSimulator.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import patch
+
+import pytest
 
 from src.data.models import (
-    Strategy,
-    StrategyParams,
-    StockData,
+    DailySnapshot,
     SignalResult,
     SimulatedTrade,
-    DailySnapshot,
+    StockData,
+    Strategy,
+    StrategyParams,
 )
 
 
@@ -87,11 +88,13 @@ def trade_simulator(tmp_path):
     """Create a TradeSimulator with mocked dependencies."""
     from src.core.trade_simulator import TradeSimulator
 
-    with patch("src.core.trade_simulator.get_data_engine") as mock_data, \
-         patch("src.core.trade_simulator.get_indicator_engine") as mock_indicator, \
-         patch("src.core.trade_simulator.get_signal_engine") as mock_signal_engine, \
-         patch("src.core.trade_simulator.SimulationStore") as mock_store_cls, \
-         patch("src.core.trade_simulator.StrategyManager") as mock_manager_cls:
+    with (
+        patch("src.core.trade_simulator.get_data_engine") as mock_data,
+        patch("src.core.trade_simulator.get_indicator_engine") as mock_indicator,
+        patch("src.core.trade_simulator.get_signal_engine") as mock_signal_engine,
+        patch("src.core.trade_simulator.SimulationStore") as mock_store_cls,
+        patch("src.core.trade_simulator.StrategyManager") as mock_manager_cls,
+    ):
 
         sim = TradeSimulator(data_dir=str(tmp_path))
         yield sim
@@ -100,9 +103,7 @@ def trade_simulator(tmp_path):
 class TestScanStocks:
     """Tests for scan_stocks method."""
 
-    def test_returns_matching_stocks(
-        self, trade_simulator, strategy, mock_stock_data, mock_signal
-    ):
+    def test_returns_matching_stocks(self, trade_simulator, strategy, mock_stock_data, mock_signal):
         """Stocks meeting criteria should be returned."""
         trade_simulator.data_engine.fetch_stock.return_value = mock_stock_data
         trade_simulator.indicator_engine.compute_all.return_value = mock_stock_data.daily
@@ -114,9 +115,7 @@ class TestScanStocks:
         assert result[0]["symbol"] == "AAPL"
         assert result[0]["score"] == 75.0
 
-    def test_filters_low_score(
-        self, trade_simulator, strategy, mock_stock_data
-    ):
+    def test_filters_low_score(self, trade_simulator, strategy, mock_stock_data):
         """Stocks below minScore should be filtered out."""
         low_signal = SignalResult(
             symbol="AAPL",
@@ -149,9 +148,7 @@ class TestScanStocks:
 
         assert len(result) == 0
 
-    def test_respects_max_positions(
-        self, trade_simulator, mock_stock_data, mock_signal
-    ):
+    def test_respects_max_positions(self, trade_simulator, mock_stock_data, mock_signal):
         """Should limit results to maxPositions."""
         params = StrategyParams(
             minScore=0,
@@ -175,9 +172,7 @@ class TestScanStocks:
 
         assert len(result) <= 2
 
-    def test_sorted_by_score_descending(
-        self, trade_simulator, mock_stock_data
-    ):
+    def test_sorted_by_score_descending(self, trade_simulator, mock_stock_data):
         """Results should be sorted by score (highest first)."""
         params = StrategyParams(minScore=0, maxPositions=10, initialCapital=100000)
         test_strategy = Strategy(
@@ -366,9 +361,7 @@ class TestExecuteTrades:
 class TestUpdateOpenTrades:
     """Tests for update_open_trades method."""
 
-    def test_closes_expired_trade(
-        self, trade_simulator, strategy, mock_trade, mock_stock_data
-    ):
+    def test_closes_expired_trade(self, trade_simulator, strategy, mock_trade, mock_stock_data):
         """Trades past holdingDays should be closed."""
         trade_simulator.strategy_manager.get_strategy.return_value = strategy
         trade_simulator.store.get_trades.return_value = [mock_trade]
@@ -426,9 +419,7 @@ class TestUpdateOpenTrades:
 class TestRunDaily:
     """Tests for run_daily method."""
 
-    def test_creates_snapshot(
-        self, trade_simulator, strategy, mock_stock_data, mock_signal
-    ):
+    def test_creates_snapshot(self, trade_simulator, strategy, mock_stock_data, mock_signal):
         """Should create and save a daily snapshot."""
         trade_simulator.strategy_manager.get_strategy.return_value = strategy
         trade_simulator.store.get_trades.return_value = []
@@ -450,9 +441,7 @@ class TestRunDaily:
         with pytest.raises(ValueError, match="not found"):
             trade_simulator.run_daily("missing", ["AAPL"])
 
-    def test_full_workflow(
-        self, trade_simulator, strategy, mock_stock_data, mock_signal
-    ):
+    def test_full_workflow(self, trade_simulator, strategy, mock_stock_data, mock_signal):
         """Should run the full scan → execute → snapshot workflow."""
         trade_simulator.strategy_manager.get_strategy.return_value = strategy
         trade_simulator.store.get_trades.return_value = []

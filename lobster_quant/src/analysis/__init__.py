@@ -2,15 +2,15 @@
 Lobster Quant - Analysis Layer
 """
 
+from .backtest import BacktestEngine
 from .indicators import (
     Indicator,
-    IndicatorResult,
     IndicatorRegistry,
-    rolling_slope,
+    IndicatorResult,
     normalize_series,
+    rolling_slope,
 )
 from .signals import SignalGenerator
-from .backtest import BacktestEngine
 
 __all__ = [
     "Indicator",
