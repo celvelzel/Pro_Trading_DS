@@ -4,6 +4,7 @@
  */
 
 import type { Candle } from './types'
+import type { Time } from 'lightweight-charts'
 
 // ============================================================================
 // Simple Moving Average (SMA)
@@ -75,7 +76,6 @@ export function calculateRSI(data: number[], period: number = 14): (number | nul
       const rs = avgLoss === 0 ? 100 : avgGain / avgLoss
       result.push(100 - 100 / (1 + rs))
     } else {
-      const prevRSI = result[result.length - 1] ?? 50
       const avgGain =
         ((gains.slice(-period - 1, -1).reduce((a, b) => a + b, 0) / period) * (period - 1) +
           gains[gains.length - 1]) /
@@ -235,11 +235,11 @@ export function getClosePrices(candles: Candle[]): number[] {
 export function formatIndicatorData(
   candles: Candle[],
   values: (number | null)[]
-): { time: number; value: number }[] {
-  const result: { time: number; value: number }[] = []
+): { time: Time; value: number }[] {
+  const result: { time: Time; value: number }[] = []
   for (let i = 0; i < candles.length; i++) {
     if (values[i] !== null) {
-      result.push({ time: candles[i].time, value: values[i] as number })
+      result.push({ time: candles[i].time as Time, value: values[i] as number })
     }
   }
   return result

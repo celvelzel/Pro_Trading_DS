@@ -10,7 +10,6 @@ import type { WatchlistStockData } from '@/hooks/useWatchlistData'
 import {
   TrendingUp,
   TrendingDown,
-  Minus,
   Trash2,
   BarChart3,
   Plus,
@@ -34,7 +33,7 @@ function SignalBadge({ type, score }: { type: string; score: number }) {
     neutral: { color: 'text-warning bg-warning/10', label: 'Neutral' },
   }
 
-  const { color, label } = config[type as keyof typeof config] || config.neutral
+  const { color } = config[type as keyof typeof config] || config.neutral
 
   return (
     <span className={cn('px-2 py-1 rounded-full text-xs font-medium', color)}>

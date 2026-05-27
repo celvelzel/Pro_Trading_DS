@@ -1,6 +1,5 @@
 import { memo, type ReactNode } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
 import { Search, BarChart3, FlaskConical, Inbox } from 'lucide-react'
 
 interface EmptyStateProps {

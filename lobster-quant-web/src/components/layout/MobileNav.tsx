@@ -8,7 +8,6 @@ import {
   Search,
   BarChart3,
   FlaskConical,
-  Settings,
   Target,
   Play,
 } from 'lucide-react'

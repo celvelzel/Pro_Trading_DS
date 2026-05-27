@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useEffect, useRef } from 'react'
-import { createChart, ColorType, LineSeries, type IChartApi } from 'lightweight-charts'
+import { createChart, ColorType, LineSeries, type IChartApi, type UTCTimestamp } from 'lightweight-charts'
 import { Button } from '@/components/ui/button'
 import { X } from 'lucide-react'
 
@@ -62,7 +62,7 @@ export const StockCompareView = memo(function StockCompareView({
       if (stock.data.length > 0) {
         const firstValue = stock.data[0].value
         const normalizedData = stock.data.map((d) => ({
-          time: d.time as any,
+          time: d.time as UTCTimestamp,
           value: ((d.value - firstValue) / firstValue) * 100,
         }))
         series.setData(normalizedData)
