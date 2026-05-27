@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, memo } from 'react'
 import { useTheme } from 'next-themes'
-import { createChart, IChartApi, CandlestickSeries, HistogramSeries, LineSeries } from 'lightweight-charts'
+import { createChart, IChartApi, CandlestickSeries, HistogramSeries, LineSeries, type UTCTimestamp } from 'lightweight-charts'
 import type { Candle } from '@/lib/types'
 import type { IndicatorType } from './IndicatorToggle'
 import { calculateSMA, calculateEMA, calculateBollingerBands, calculateRSI, calculateMACD, getClosePrices, formatIndicatorData } from '@/lib/indicators'
@@ -93,7 +93,7 @@ export const CandlestickChart = memo(function CandlestickChart({
     // Set candlestick data
     candlestickSeries.setData(
       data.map((d) => ({
-        time: d.time as any,
+        time: d.time as UTCTimestamp,
         open: d.open,
         high: d.high,
         low: d.low,
@@ -120,7 +120,7 @@ export const CandlestickChart = memo(function CandlestickChart({
 
       volumeSeries.setData(
         data.map((d) => ({
-          time: d.time as any,
+          time: d.time as UTCTimestamp,
           value: d.volume,
           color: d.close >= d.open ? chartColors.volumeUp : chartColors.volumeDown,
         }))
@@ -138,11 +138,11 @@ export const CandlestickChart = memo(function CandlestickChart({
         const sma200 = calculateSMA(closePrices, 200)
 
         chart.addSeries(LineSeries, { color: '#2196F3', lineWidth: 1 })
-          .setData(formatIndicatorData(data, sma20) as any)
+          .setData(formatIndicatorData(data, sma20))
         chart.addSeries(LineSeries, { color: '#4CAF50', lineWidth: 1 })
-          .setData(formatIndicatorData(data, sma50) as any)
+          .setData(formatIndicatorData(data, sma50))
         chart.addSeries(LineSeries, { color: '#F44336', lineWidth: 1 })
-          .setData(formatIndicatorData(data, sma200) as any)
+          .setData(formatIndicatorData(data, sma200))
       }
 
       // EMA overlays

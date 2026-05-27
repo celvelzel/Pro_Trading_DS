@@ -16,6 +16,7 @@ import { MetricCard } from '@/components/cards/MetricCard'
 import { SignalCard } from '@/components/cards/SignalCard'
 import { StatusCard } from '@/components/cards/StatusCard'
 import { CandlestickChart } from '@/components/charts/CandlestickChart'
+import { ChartSkeleton } from '@/components/charts/ChartSkeleton'
 import { IndicatorToggle, type IndicatorType } from '@/components/charts/IndicatorToggle'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { TrendingUp, TrendingDown, BarChart3, Activity, Shield } from 'lucide-react'
@@ -49,12 +50,12 @@ export default function AnalysisDetailPage() {
   // Loading state
   if (stockLoading) {
     return (
-      <div className="p-6">
+      <div className="p-6 space-y-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-48" />
           <div className="h-4 bg-gray-200 rounded w-32" />
-          <div className="h-[400px] bg-gray-200 rounded" />
         </div>
+        <ChartSkeleton height={400} />
       </div>
     )
   }
