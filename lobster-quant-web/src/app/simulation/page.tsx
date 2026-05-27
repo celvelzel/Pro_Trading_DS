@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, RefreshCw, Loader2 } from 'lucide-react';
+import { ErrorState } from '@/components/ui/error-state';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -185,9 +186,14 @@ export default function SimulationPage() {
       </div>
 
       {error && (
-        <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6">
-          {error}
-        </div>
+        <ErrorState 
+          message={error} 
+          onRetry={() => {
+            setError(null)
+            fetchTrades()
+            fetchPerformance()
+          }}
+        />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">

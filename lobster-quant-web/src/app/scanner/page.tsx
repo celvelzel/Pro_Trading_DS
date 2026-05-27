@@ -109,13 +109,10 @@ export default function ScannerPage() {
 
       {/* Error State */}
       {scanMutation.isError && (
-        <Card className="border-error">
-          <CardContent className="p-4">
-            <p className="text-error">
-              Scan failed: {scanMutation.error?.message || 'Unknown error'}
-            </p>
-          </CardContent>
-        </Card>
+        <ErrorState 
+          message={scanMutation.error?.message || 'Failed to scan stocks'} 
+          onRetry={() => scanMutation.mutate({ market, minScore })}
+        />
       )}
 
       {/* Results */}

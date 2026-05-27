@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { BacktestForm, BacktestParams, MetricsCard } from '@/components/backtest';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BacktestMetrics } from '@/stores/strategyStore';
+import { ErrorState } from '@/components/ui/error-state';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -30,11 +31,13 @@ export default function BacktestPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastParams, setLastParams] = useState<BacktestParams | null>(null);
 
   const handleRunBacktest = async (params: BacktestParams) => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setLastParams(params);
 
     try {
       let response;
@@ -95,11 +98,10 @@ export default function BacktestPage() {
         {/* Right: Results */}
         <div className="lg:col-span-2 space-y-6">
           {error && (
-            <Card className="border-destructive">
-              <CardContent className="pt-6">
-                <p className="text-destructive">{error}</p>
-              </CardContent>
-            </Card>
+            <ErrorState 
+              message={error} 
+              onRetry={lastParams ? () => handleRunBacktest(lastParams) : undefined}
+            />
           )}
 
           {loading && (

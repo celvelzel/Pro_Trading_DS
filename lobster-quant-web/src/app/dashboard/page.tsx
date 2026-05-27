@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useStockData, useStockRisk, useStockCandles, usePrefetchStock } from '@/hooks/useStock'
+import { useWatchlistData } from '@/hooks/useWatchlistData'
 import { MetricCard } from '@/components/cards/MetricCard'
 import { StatusCard } from '@/components/cards/StatusCard'
 import { CandlestickChart } from '@/components/charts/CandlestickChart'
@@ -30,15 +31,8 @@ export default function DashboardPage() {
   const [compareSymbols, setCompareSymbols] = useState<string[]>([])
   const [showCompare, setShowCompare] = useState(false)
 
-  // Convert watchlist symbols to stock data (using mock data for now)
-  const watchlistStocks = symbols.map((symbol) => ({
-    symbol,
-    name: undefined,
-    price: undefined,
-    change: undefined,
-    changePercent: undefined,
-    signal: undefined,
-  }))
+  // Fetch real-time data for watchlist stocks
+  const { stocks: watchlistStocks, isLoading: watchlistLoading, refetch: refetchWatchlist } = useWatchlistData()
 
   return (
     <div className="p-6 space-y-6">
