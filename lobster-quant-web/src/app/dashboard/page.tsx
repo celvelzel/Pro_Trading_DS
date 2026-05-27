@@ -14,13 +14,14 @@ import { WatchlistTable } from '@/components/watchlist/WatchlistTable'
 import { WatchlistAddDialog } from '@/components/watchlist/WatchlistAddDialog'
 import { StockCompareView } from '@/components/watchlist/StockCompareView'
 import { useWatchlistStore } from '@/stores/watchlistStore'
+import { formatDistanceToNow } from 'date-fns'
 
 export default function DashboardPage() {
   // Timeframe state
   const [timeframe, setTimeframe] = useState<Timeframe>('1y')
 
   // Fetch benchmark data (SPY)
-  const { data: benchmark, isLoading: benchmarkLoading } = useStockData('SPY')
+  const { data: benchmark, isLoading: benchmarkLoading, dataUpdatedAt: benchmarkUpdatedAt } = useStockData('SPY')
   const { data: candles, isLoading: candlesLoading } = useStockCandles('SPY', timeframe)
   const { data: risk, isLoading: riskLoading } = useStockRisk('SPY')
 
@@ -35,11 +36,22 @@ export default function DashboardPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-text-primary">Dashboard</h1>
-        <p className="text-text-secondary mt-1">
-          Market overview and quick analysis
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-text-primary">Dashboard</h1>
+          <p className="text-text-secondary mt-1">
+            Market overview and quick analysis
+          </p>
+        </div>
+        
+        {/* Data Freshness Indicator */}
+        {benchmarkUpdatedAt && (
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">
+              Last updated: {formatDistanceToNow(new Date(benchmarkUpdatedAt), { addSuffix: true })}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Status Cards */}

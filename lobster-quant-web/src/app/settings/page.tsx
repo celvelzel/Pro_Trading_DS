@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useSettings, useUpdateSettings, useResetSettings } from '@/hooks/useSettings'
 import { Button } from '@/components/ui/button'
@@ -146,7 +146,7 @@ export default function SettingsPage() {
   // ---- Local UI state ----
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
+  const [saveValidationErrors, setSaveValidationErrors] = useState<ValidationErrors>({})
   const [activeTab, setActiveTab] = useState('markets')
 
   // ---- Sync server settings into Zustand on first load ----
@@ -183,9 +183,7 @@ export default function SettingsPage() {
   ])
 
   // ---- Validate on tab change ----
-  useEffect(() => {
-    setValidationErrors(validateCurrentTab())
-  }, [activeTab, validateCurrentTab])
+  const validationErrors = useMemo(() => validateCurrentTab(), [validateCurrentTab])
 
   // ---- Save handler: PUT to /api/settings ----
   const handleSave = async () => {
@@ -201,7 +199,7 @@ export default function SettingsPage() {
     }
 
     if (Object.keys(allErrors).length > 0) {
-      setValidationErrors(allErrors)
+      setSaveValidationErrors(allErrors)
       setSaveStatus('error')
       setErrorMessage('Please fix validation errors before saving')
       setTimeout(() => {
