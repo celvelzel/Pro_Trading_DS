@@ -3,6 +3,7 @@ Tests for ProviderPool class.
 """
 
 import pytest
+from datetime import datetime
 from unittest.mock import MagicMock, PropertyMock
 
 from src.data.provider_pool import ProviderPool, ProviderEntry
@@ -82,7 +83,9 @@ class TestProviderPool:
         pool.add_provider(self._make_provider("unavailable"), priority=2)
 
         # Trip the second provider's circuit breaker
-        pool._providers[1].circuit_breaker._state = CircuitState.OPEN
+        cb = pool._providers[1].circuit_breaker
+        cb._state = CircuitState.OPEN
+        cb._last_failure_time = datetime.now()  # prevent auto-transition
 
         available = pool.get_available_providers()
         assert len(available) == 1
@@ -109,6 +112,7 @@ class TestProviderPool:
 
         for entry in pool._providers:
             entry.circuit_breaker._state = CircuitState.OPEN
+            entry.circuit_breaker._last_failure_time = datetime.now()
 
         available = pool.get_available_providers()
         assert len(available) == 0
@@ -158,7 +162,9 @@ class TestProviderPool:
         pool.add_provider(self._make_provider("down"), priority=2)
 
         # Trip one circuit breaker
-        pool._providers[1].circuit_breaker._state = CircuitState.OPEN
+        cb = pool._providers[1].circuit_breaker
+        cb._state = CircuitState.OPEN
+        cb._last_failure_time = datetime.now()
 
         status = pool.get_provider_status()
         assert status["total_providers"] == 2

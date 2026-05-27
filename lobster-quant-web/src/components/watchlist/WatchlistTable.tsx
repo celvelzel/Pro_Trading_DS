@@ -172,17 +172,23 @@ export const WatchlistTable = memo(function WatchlistTable({
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Watchlist</span>
-            <Button variant="outline" size="sm" onClick={onAddClick}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add Stock
-            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-text-tertiary">
-            <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium mb-2">No stocks in watchlist</p>
-            <p className="text-sm">Add stocks to track their prices and signals</p>
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+              <Plus className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Your watchlist is empty</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+              Add stocks to track their performance, signals, and technical indicators
+            </p>
+            {onAddClick && (
+              <Button onClick={onAddClick} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Stock
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

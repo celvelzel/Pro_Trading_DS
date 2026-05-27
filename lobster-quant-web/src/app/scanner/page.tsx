@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useMemo } from 'react'
+import { useState, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useScanStocks, usePrefetchStock } from '@/hooks/useStock'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SignalCard } from '@/components/cards/SignalCard'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
-import { Search, BarChart3, Loader2 } from 'lucide-react'
+import { Search, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import type { Market, StockResult } from '@/lib/types'
 
