@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { BacktestForm, BacktestParams, MetricsCard } from '@/components/backtest';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { HelpTooltip } from '@/components/ui/help-tooltip';
 import { BacktestMetrics } from '@/stores/strategyStore';
 import { ErrorState } from '@/components/ui/error-state';
 
@@ -83,7 +84,10 @@ export default function BacktestPage() {
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Strategy Backtest</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold">Strategy Backtest</h1>
+          <HelpTooltip helpKey="backtest.title" />
+        </div>
         <p className="text-muted-foreground mt-2">
           Test your strategies against historical data
         </p>

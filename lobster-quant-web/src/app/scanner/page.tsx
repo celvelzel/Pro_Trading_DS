@@ -41,7 +41,10 @@ export default function ScannerPage() {
     <div className="p-6 space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-text-primary">Stock Scanner</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-text-primary">Stock Scanner</h1>
+          <HelpTooltip helpKey="scanner.title" />
+        </div>
         <p className="text-text-secondary mt-1">
           Scan stocks across multiple markets based on technical criteria
         </p>
@@ -50,7 +53,10 @@ export default function ScannerPage() {
       {/* Scan Controls */}
       <Card>
         <CardHeader>
-          <CardTitle>Scan Parameters</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle>Scan Parameters</CardTitle>
+            <HelpTooltip helpKey="scanner.scan_parameters" />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4">
@@ -120,9 +126,12 @@ export default function ScannerPage() {
       {results.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-text-primary">
-              Results ({results.length} stocks)
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-text-primary">
+                Results ({results.length} stocks)
+              </h2>
+              <HelpTooltip helpKey="scanner.results" />
+            </div>
             {shouldVirtualize && (
               <p className="text-sm text-text-tertiary">
                 Virtualized for performance

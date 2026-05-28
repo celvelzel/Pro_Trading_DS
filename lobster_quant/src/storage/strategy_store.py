@@ -25,7 +25,7 @@ class StrategyStore:
 
     def _get_strategy_class(self):
         """Lazy import to avoid triggering broken data/__init__.py."""
-        from src.data.models import Strategy
+        from ..data.models import Strategy
 
         return Strategy
 
