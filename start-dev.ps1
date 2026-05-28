@@ -98,42 +98,60 @@ if ($checks -contains $false) {
 
 Write-Host ""
 
-# ─── Environment Variables ─────────────────────────────────────────
-$env:PYTHONPATH = "$rootDir;$rootDir\lobster_quant"
-
 # ─── Launch Backend ────────────────────────────────────────────────
 Write-Color "  Launching Backend  → http://localhost:8000 (FastAPI)" Yellow
-$backendJob = Start-Job -Name "LobsterQuant-Backend" -ScriptBlock {
-    param($rootDir, $envPath)
 
-    # Restore env vars inside the job
-    $env:PYTHONPATH = $envPath
+$backendScript = @"
+Set-Location '$rootDir\backend'
+`$env:PYTHONPATH = '$rootDir;$rootDir\lobster_quant'
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+"@
 
-    Set-Location "$rootDir\backend"
-
-    # Try uvicorn module first, then fall back to python -m uvicorn
-    $uvicornCmd = Get-Command uvicorn -ErrorAction SilentlyContinue
-    if ($uvicornCmd) {
-        & uvicorn main:app --host 0.0.0.0 --port 8000 --reload 2>&1
-    }
-    else {
-        python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload 2>&1
-    }
-} -ArgumentList $rootDir, "$rootDir;$rootDir\lobster_quant"
-
-# Give backend a moment to start
-Start-Sleep -Seconds 1.5
+$backendProcess = Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", $backendScript -WindowStyle Minimized -PassThru
 
 # ─── Launch Frontend ───────────────────────────────────────────────
 Write-Color "  Launching Frontend → http://localhost:3000 (Next.js)" Yellow
-$frontendJob = Start-Job -Name "LobsterQuant-Frontend" -ScriptBlock {
-    param($rootDir)
-    Set-Location "$rootDir\lobster-quant-web"
-    npm run dev 2>&1
-} -ArgumentList $rootDir
 
-# Give frontend a moment to start
-Start-Sleep -Seconds 2
+$frontendScript = @"
+Set-Location '$rootDir\lobster-quant-web'
+npm run dev
+"@
+
+$frontendProcess = Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", $frontendScript -WindowStyle Minimized -PassThru
+
+# Give services a moment to start
+Start-Sleep -Seconds 5
+
+# ─── Verify Services ──────────────────────────────────────────────
+Write-Host ""
+Write-Color "  Verifying services..." Cyan
+
+$backendReady = $false
+$frontendReady = $false
+
+for ($i = 1; $i -le 10; $i++) {
+    $port8000 = netstat -ano 2>$null | Select-String ":8000\s.*LISTENING"
+    $port3000 = netstat -ano 2>$null | Select-String ":3000\s.*LISTENING"
+    
+    if ($port8000 -and -not $backendReady) {
+        Write-Color "  [OK] Backend is listening on port 8000" Green
+        $backendReady = $true
+    }
+    if ($port3000 -and -not $frontendReady) {
+        Write-Color "  [OK] Frontend is listening on port 3000" Green
+        $frontendReady = $true
+    }
+    if ($backendReady -and $frontendReady) { break }
+    
+    Start-Sleep -Seconds 1
+}
+
+if (-not $backendReady) {
+    Write-Color "  [WARN] Backend may still be starting..." Yellow
+}
+if (-not $frontendReady) {
+    Write-Color "  [WARN] Frontend may still be starting..." Yellow
+}
 
 Write-Host ""
 
@@ -143,25 +161,9 @@ Write-Color "  Frontend : http://localhost:3000" Green
 Write-Color "  Backend  : http://localhost:8000" Green
 Write-Color "  API Docs : http://localhost:8000/docs" Green
 Write-Host ""
-Write-Color "Press Ctrl+C to stop all services." Magenta
+Write-Color "  Backend PID  : $($backendProcess.Id)" Gray
+Write-Color "  Frontend PID : $($frontendProcess.Id)" Gray
 Write-Host ""
-
-# ─── Wait & Cleanup on Ctrl+C ──────────────────────────────────────
-try {
-    # Block until user presses Ctrl+C
-    while ($true) {
-        Start-Sleep -Seconds 1
-    }
-}
-finally {
-    Write-Host ""
-    Write-Banner "Shutting Down"
-    Write-Color "  Stopping Backend..." Yellow
-    Stop-Job -Name "LobsterQuant-Backend" -ErrorAction SilentlyContinue
-    Remove-Job -Name "LobsterQuant-Backend" -ErrorAction SilentlyContinue
-    Write-Color "  Stopping Frontend..." Yellow
-    Stop-Job -Name "LobsterQuant-Frontend" -ErrorAction SilentlyContinue
-    Remove-Job -Name "LobsterQuant-Frontend" -ErrorAction SilentlyContinue
-    Write-Color "All services stopped." Green
-    Write-Host ""
-}
+Write-Color "Close the minimized PowerShell windows to stop services." Magenta
+Write-Color "Or run: Stop-Process -Id $($backendProcess.Id),$($frontendProcess.Id) -Force" Magenta
+Write-Host ""
