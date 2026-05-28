@@ -117,3 +117,109 @@ Second round of optimization focusing on remaining style issues and code cleanup
 - Variable naming convention issues (N806) - low priority, style only
 - Performance optimization for try-except patterns in loops
 - Additional frontend optimizations (code splitting, lazy loading)
+
+---
+
+## Round 2 - 2026-05-28
+
+### Summary
+Second round focusing on fixing all remaining ruff lint errors and modernizing configuration.
+
+### Changes Made
+
+#### 1. Fixed SIM116 - Use Dict Instead of If-Elif Chain (High Priority)
+- **File**: `lobster_quant/src/core/scheduler.py`
+- **Problem**: Consecutive if-elif statements for market stock list lookup
+- **Solution**: Replaced with `_MARKET_STOCK_LISTS` dictionary and `.get()` method
+- **Result**: Cleaner, more Pythonic lookup pattern
+
+#### 2. Fixed N806 - Variable Naming Convention (16 errors)
+- **Files**:
+  - `lobster_quant/src/storage/backtest_store.py` - `BacktestResult` → `backtest_result_cls`
+  - `lobster_quant/src/storage/simulation_store.py` - `SimulatedTrade` → `simulated_trade_cls`, `DailySnapshot` → `daily_snapshot_cls`
+  - `lobster_quant/src/storage/strategy_store.py` - `Strategy` → `strategy_cls`
+  - `lobster_quant/tests/unit/test_scheduler.py` - `MockSimulator` → `mock_simulator`, `MockManager` → `mock_manager`
+- **Problem**: Class names used as local variables violate PEP 8 naming convention
+- **Solution**: Renamed to lowercase with `_cls` suffix for class references
+
+#### 3. Fixed F841 - Unused Variables (9 errors)
+- **Files**:
+  - `lobster_quant/tests/unit/test_settings.py` - Removed unused `s1` variable
+  - `lobster_quant/tests/unit/test_storage.py` - Changed `store` to `_` for initialization-only usage
+  - `lobster_quant/tests/unit/test_trade_simulator.py` - Prefixed unused mocks with `_`
+- **Problem**: Variables assigned but never used
+- **Solution**: Removed or prefixed with `_` to indicate intentional non-use
+
+#### 4. Fixed E712 - Boolean Comparison (1 error)
+- **File**: `lobster_quant/tests/unit/test_indicators.py`
+- **Problem**: `gc.iloc[0] == False` instead of `not gc.iloc[0]`
+- **Solution**: Used Pythonic boolean check
+
+#### 5. Fixed B033 - Duplicate Set Values (4 errors)
+- **File**: `lobster_quant/tests/unit/test_indicators.py`
+- **Problem**: Duplicate values in sets (e.g., `0` and `0.0`, `1` and `True`)
+- **Solution**: Auto-fixed by ruff
+
+#### 6. Modernized Ruff Configuration
+- **File**: `lobster_quant/pyproject.toml`
+- **Problem**: Deprecated top-level `[tool.ruff]` settings
+- **Solution**: Moved `select`, `ignore`, `per-file-ignores` to `[tool.ruff.lint]` section
+
+### Test Results
+- **Python Tests**: 622 passed, 3 skipped, 0 failed
+- **Ruff**: 0 errors (down from 28)
+
+### Current Status
+- **Python Tests**: 622 passing
+- **Frontend Build**: Passes successfully
+- **ESLint**: 1 warning (library compatibility - TanStack Virtual)
+- **Ruff**: 0 errors ✓
+
+---
+
+## Round 2 - 2026-05-28
+
+### Summary
+Second round focusing on fixing all remaining ruff lint errors (28 → 0) and updating deprecated configuration.
+
+### Changes Made
+
+#### 1. Fixed SIM116 - Use Dict Instead of If-Elif Chain (High Priority)
+- **File**: `lobster_quant/src/core/scheduler.py`
+- **Problem**: Consecutive if-elif statements for market stock list lookup
+- **Solution**: Replaced with `_MARKET_STOCK_LISTS` dictionary and `.get()` method
+- **Result**: Cleaner, more Pythonic code
+
+#### 2. Fixed N806 - Variable Naming Convention (16 errors) (High Priority)
+- **Files**:
+  - `lobster_quant/src/storage/backtest_store.py` - `BacktestResult` → `backtest_result_cls`
+  - `lobster_quant/src/storage/simulation_store.py` - `SimulatedTrade` → `simulated_trade_cls`, `DailySnapshot` → `daily_snapshot_cls`
+  - `lobster_quant/src/storage/strategy_store.py` - `Strategy` → `strategy_cls`
+  - `lobster_quant/tests/unit/test_scheduler.py` - `MockSimulator` → `mock_simulator`, `MockManager` → `mock_manager`
+- **Solution**: Renamed class variables in functions to lowercase convention
+- **Result**: 0 N806 errors remaining
+
+#### 3. Fixed E712 - Boolean Comparison (1 error) (Medium Priority)
+- **File**: `lobster_quant/tests/unit/test_indicators.py`
+- **Problem**: `gc.iloc[0] == False` comparison
+- **Solution**: Changed to `not gc.iloc[0]`
+- **Result**: Follows PEP 8 best practices
+
+#### 4. Fixed F841 - Unused Variables (9 errors) (Medium Priority)
+- **Files**:
+  - `lobster_quant/tests/unit/test_settings.py` - Removed unused `s1` variable
+  - `lobster_quant/tests/unit/test_storage.py` - Changed unused `store` to `_` (3 instances)
+  - `lobster_quant/tests/unit/test_trade_simulator.py` - Changed unused mocks to `_mock_*` prefix (5 instances)
+- **Result**: 0 F841 errors remaining
+
+#### 5. Updated Ruff Configuration (Medium Priority)
+- **File**: `lobster_quant/pyproject.toml`
+- **Problem**: Deprecated top-level linter settings warning
+- **Solution**: Migrated to `[tool.ruff.lint]` and `[tool.ruff.lint.per-file-ignores]` sections
+- **Result**: No more deprecation warnings
+
+### Final Status
+- **Python Tests**: 622 passed, 3 skipped
+- **Ruff**: 0 errors (was 28)
+- **ESLint**: 1 warning (library compatibility - TanStack Virtual)
+- **Frontend Build**: Passes successfully
