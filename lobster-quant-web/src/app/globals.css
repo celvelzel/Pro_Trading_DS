@@ -97,6 +97,31 @@
 }
 
 .dark {
+  /* Custom Color Variables - Dark Mode */
+  --color-primary: #8ab4f8;
+  --color-primary-dark: #669df6;
+  --color-primary-light: #aecbfa;
+  --color-primary-lighter: #c5d9f9;
+
+  /* Semantic Colors - Trading (Dark Mode) */
+  --color-success: #81c995;
+  --color-error: #f28b82;
+  --color-warning: #fdd663;
+  --color-info: #8ab4f8;
+  --color-neutral: #9aa0a6;
+
+  /* Background Colors (Dark Mode) */
+  --color-bg-surface: #202124;
+  --color-bg-card: #292a2d;
+  --color-bg-hover: #3c4043;
+  --color-bg-dark: #121212;
+
+  /* Text Colors (Dark Mode) */
+  --color-text-primary: #e8eaed;
+  --color-text-secondary: #9aa0a6;
+  --color-text-tertiary: #80868b;
+
+  /* Shadcn/UI Variables - Dark Mode */
   --background: #121212;
   --foreground: #e8eaed;
   --card: #202124;
@@ -117,17 +142,11 @@
   --input: #3c4043;
   --ring: #8ab4f8;
   --chart-1: #8ab4f8;
-
-  /* Semantic Colors - Trading (Dark Mode) */
-  --color-success: #81C995;
-  --color-error: #F28B82;
-  --color-warning: #FDD663;
-  --color-info: #8AB4F8;
   --chart-2: #81c995;
   --chart-3: #fdd663;
-  --chart-4: #f28b82;
-  --chart-5: #669df6;
-  --sidebar: #121212;
+  --chart-4: #fcad70;
+  --chart-5: #f28b82;
+  --sidebar: #202124;
   --sidebar-foreground: #e8eaed;
   --sidebar-primary: #8ab4f8;
   --sidebar-primary-foreground: #202124;

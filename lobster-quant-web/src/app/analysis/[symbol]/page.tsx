@@ -99,17 +99,17 @@ export default function AnalysisDetailPage() {
             </p>
             <div
               className={`flex items-center gap-1 ${
-                stock.change >= 0 ? 'text-success' : 'text-error'
+                (stock.change ?? 0) >= 0 ? 'text-success' : 'text-error'
               }`}
             >
-              {stock.change >= 0 ? (
+              {(stock.change ?? 0) >= 0 ? (
                 <TrendingUp className="w-4 h-4" />
               ) : (
                 <TrendingDown className="w-4 h-4" />
               )}
               <span className="font-medium">
-                {stock.change >= 0 ? '+' : ''}
-                {stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
+                {(stock.change ?? 0) >= 0 ? '+' : ''}
+                {(stock.change ?? 0).toFixed(2)} ({(stock.changePercent ?? 0).toFixed(2)}%)
               </span>
             </div>
           </div>

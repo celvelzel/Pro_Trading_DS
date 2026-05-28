@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { SignalCard } from '@/components/cards/SignalCard'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
@@ -271,11 +272,11 @@ function StockResultCard({
               </p>
               <p
                 className={`text-sm ${
-                  stock.change >= 0 ? 'text-success' : 'text-error'
+                  (stock.change ?? 0) >= 0 ? 'text-success' : 'text-error'
                 }`}
               >
-                {stock.change >= 0 ? '+' : ''}
-                {stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
+                {(stock.change ?? 0) >= 0 ? '+' : ''}
+                {(stock.change ?? 0).toFixed(2)} ({(stock.changePercent ?? 0).toFixed(2)}%)
               </p>
             </div>
           </div>

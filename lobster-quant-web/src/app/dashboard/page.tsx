@@ -9,6 +9,7 @@ import { CandlestickChart } from '@/components/charts/CandlestickChart'
 import { TimeframeSelector, type Timeframe } from '@/components/charts/TimeframeSelector'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PrefetchLink } from '@/components/ui/prefetch-link'
+import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { STOCK_LISTS } from '@/lib/constants'
 import { WatchlistTable } from '@/components/watchlist/WatchlistTable'
 import { WatchlistAddDialog } from '@/components/watchlist/WatchlistAddDialog'
@@ -38,7 +39,10 @@ export default function DashboardPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary">Dashboard</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-text-primary">Dashboard</h1>
+            <HelpTooltip helpKey="dashboard.title" />
+          </div>
           <p className="text-text-secondary mt-1">
             Market overview and quick analysis
           </p>
@@ -57,7 +61,12 @@ export default function DashboardPage() {
       {/* Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatusCard
-          title="Market Condition"
+          title={
+            <div className="flex items-center gap-2">
+              <span>Market Condition</span>
+              <HelpTooltip helpKey="dashboard.market_status" />
+            </div>
+          }
           status={risk?.statusText || 'Loading...'}
           isGood={risk?.status === 'on'}
           details={
@@ -89,7 +98,12 @@ export default function DashboardPage() {
           loading={benchmarkLoading}
         />
         <MetricCard
-          label="ON/OFF Ratio"
+          label={
+            <div className="flex items-center gap-2">
+              <span>ON/OFF Ratio</span>
+              <HelpTooltip helpKey="dashboard.risk_metrics" />
+            </div>
+          }
           value={
             risk
               ? `${risk.onPercent.toFixed(1)}% / ${risk.offPercent.toFixed(1)}%`
@@ -103,7 +117,10 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>SPY Price Chart</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>SPY Price Chart</CardTitle>
+              <HelpTooltip helpKey="analysis.charts" />
+            </div>
             <TimeframeSelector
               activeTimeframe={timeframe}
               onSelect={setTimeframe}
@@ -135,6 +152,10 @@ export default function DashboardPage() {
       )}
 
       {/* Watchlist */}
+      <div className="flex items-center gap-2 mb-4">
+        <h2 className="text-lg font-semibold">Watchlist</h2>
+        <HelpTooltip helpKey="dashboard.watchlist" />
+      </div>
       <WatchlistTable
         stocks={watchlistStocks}
         loading={watchlistLoading}
