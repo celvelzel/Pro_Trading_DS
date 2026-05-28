@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { HelpTooltip } from '@/components/ui/help-tooltip'
 import {
   Settings,
   Save,
@@ -255,6 +256,7 @@ export default function SettingsPage() {
           <h1 className="text-3xl font-bold text-text-primary flex items-center gap-2">
             <Settings className="w-8 h-8" />
             Settings
+            <HelpTooltip helpKey="settings.title" />
           </h1>
           <p className="text-text-secondary mt-1">
             Configure your trading analysis preferences

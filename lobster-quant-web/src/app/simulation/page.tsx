@@ -6,7 +6,7 @@ import { StrategySelector } from '@/components/strategy';
 import { TradeList } from '@/components/simulation/TradeList';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-
+import { HelpTooltip } from '@/components/ui/help-tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, RefreshCw, Loader2 } from 'lucide-react';
 import { ErrorState } from '@/components/ui/error-state';
@@ -151,7 +151,10 @@ export default function SimulationPage() {
     <div className="container mx-auto py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Simulation Dashboard</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold">Simulation Dashboard</h1>
+            <HelpTooltip helpKey="simulation.title" />
+          </div>
           <p className="text-muted-foreground mt-2">
             Track daily simulation results and performance
           </p>
@@ -266,7 +269,13 @@ export default function SimulationPage() {
           </CardContent>
         </Card>
       ) : selectedStrategyId ? (
-        <TradeList trades={trades} />
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-lg font-semibold">Trade History</h2>
+            <HelpTooltip helpKey="simulation.trades" />
+          </div>
+          <TradeList trades={trades} />
+        </div>
       ) : (
         <Card>
           <CardContent className="pt-6">

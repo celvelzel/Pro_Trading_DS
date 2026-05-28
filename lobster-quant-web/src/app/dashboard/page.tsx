@@ -16,15 +16,16 @@ import { WatchlistAddDialog } from '@/components/watchlist/WatchlistAddDialog'
 import { StockCompareView } from '@/components/watchlist/StockCompareView'
 import { useWatchlistStore } from '@/stores/watchlistStore'
 import { formatDistanceToNow } from 'date-fns'
+import { AlertCircle } from 'lucide-react'
 
 export default function DashboardPage() {
   // Timeframe state
   const [timeframe, setTimeframe] = useState<Timeframe>('1y')
 
   // Fetch benchmark data (SPY)
-  const { data: benchmark, isLoading: benchmarkLoading, dataUpdatedAt: benchmarkUpdatedAt } = useStockData('SPY')
-  const { data: candles, isLoading: candlesLoading } = useStockCandles('SPY', timeframe)
-  const { data: risk, isLoading: riskLoading } = useStockRisk('SPY')
+  const { data: benchmark, isLoading: benchmarkLoading, dataUpdatedAt: benchmarkUpdatedAt, error: benchmarkError } = useStockData('SPY')
+  const { data: candles, isLoading: candlesLoading, error: candlesError } = useStockCandles('SPY', timeframe)
+  const { data: risk, isLoading: riskLoading, error: riskError } = useStockRisk('SPY')
 
   // Watchlist state
   const { addSymbol } = useWatchlistStore()
@@ -33,6 +34,46 @@ export default function DashboardPage() {
 
   // Fetch real-time data for watchlist stocks
   const { stocks: watchlistStocks, isLoading: watchlistLoading, refetch: refetchWatchlist } = useWatchlistData()
+
+  // Check for errors
+  const hasError = benchmarkError || candlesError || riskError
+  const errorMessage = benchmarkError?.message || candlesError?.message || riskError?.message
+
+  // If there's an error and no data, show error state
+  if (hasError && !benchmark && !candles && !risk) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-text-primary">Dashboard</h1>
+            <p className="text-text-secondary mt-1">
+              Market overview and quick analysis
+            </p>
+          </div>
+        </div>
+        
+        <Card className="border-error">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-8 w-8 text-error" />
+              <div>
+                <h3 className="text-lg font-semibold text-text-primary">Failed to load dashboard data</h3>
+                <p className="text-text-secondary mt-1">
+                  {errorMessage || 'Unable to fetch market data. Please check your connection and try again.'}
+                </p>
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="mt-3 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -67,12 +108,14 @@ export default function DashboardPage() {
               <HelpTooltip helpKey="dashboard.market_status" />
             </div>
           }
-          status={risk?.statusText || 'Loading...'}
+          status={risk?.statusText || (riskError ? 'Error' : 'Loading...')}
           isGood={risk?.status === 'on'}
           details={
-            risk?.reasons?.length
-              ? `Reasons: ${risk.reasons.join(', ')}`
-              : undefined
+            riskError 
+              ? `Error: ${riskError.message}`
+              : risk?.reasons?.length
+                ? `Reasons: ${risk.reasons.join(', ')}`
+                : undefined
           }
           loading={riskLoading}
         />
@@ -81,19 +124,25 @@ export default function DashboardPage() {
           value={
             benchmark?.price
               ? `$${benchmark.price.toFixed(2)}`
-              : 'Loading...'
+              : benchmarkError 
+                ? 'Error'
+                : 'Loading...'
           }
           delta={
-            benchmark?.change
-              ? `${benchmark.change >= 0 ? '+' : ''}${benchmark.change.toFixed(2)} (${benchmark.changePercent?.toFixed(2)}%)`
-              : undefined
+            benchmarkError
+              ? benchmarkError.message
+              : benchmark?.change
+                ? `${benchmark.change >= 0 ? '+' : ''}${benchmark.change.toFixed(2)} (${benchmark.changePercent?.toFixed(2)}%)`
+                : undefined
           }
           deltaType={
-            benchmark?.change
-              ? benchmark.change >= 0
-                ? 'up'
-                : 'down'
-              : 'neutral'
+            benchmarkError
+              ? 'down'
+              : benchmark?.change
+                ? benchmark.change >= 0
+                  ? 'up'
+                  : 'down'
+                : 'neutral'
           }
           loading={benchmarkLoading}
         />
@@ -107,8 +156,14 @@ export default function DashboardPage() {
           value={
             risk
               ? `${risk.onPercent.toFixed(1)}% / ${risk.offPercent.toFixed(1)}%`
-              : 'Loading...'
+              : riskError 
+                ? 'Error'
+                : 'Loading...'
           }
+          delta={
+            riskError ? riskError.message : undefined
+          }
+          deltaType={riskError ? 'down' : 'neutral'}
           loading={riskLoading}
         />
       </div>
@@ -137,7 +192,11 @@ export default function DashboardPage() {
             />
           ) : (
             <div className="h-[400px] flex items-center justify-center text-text-secondary">
-              {candlesLoading ? 'Loading chart data...' : 'No chart data available'}
+              {candlesLoading 
+                ? 'Loading chart data...' 
+                : candlesError 
+                  ? `Error loading chart: ${candlesError.message}`
+                  : 'No chart data available'}
             </div>
           )}
         </CardContent>

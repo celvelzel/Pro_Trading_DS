@@ -1,10 +1,10 @@
-import { memo } from 'react'
+import { memo, type ReactNode } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { CheckCircle, XCircle } from 'lucide-react'
 
 interface StatusCardProps {
-  title: string
+  title: ReactNode
   status: string
   isGood: boolean
   details?: string

@@ -19,6 +19,7 @@ import { CandlestickChart } from '@/components/charts/CandlestickChart'
 import { ChartSkeleton } from '@/components/charts/ChartSkeleton'
 import { IndicatorToggle, type IndicatorType } from '@/components/charts/IndicatorToggle'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
+import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { TrendingUp, TrendingDown, BarChart3, Activity, Shield } from 'lucide-react'
 
 export default function AnalysisDetailPage() {
@@ -87,9 +88,12 @@ export default function AnalysisDetailPage() {
       {/* Price Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary">
-            {symbol}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-text-primary">
+              {symbol}
+            </h1>
+            <HelpTooltip helpKey="analysis.title" />
+          </div>
           <p className="text-text-secondary">{stock.name}</p>
         </div>
         <div className="flex items-center gap-4">
@@ -188,7 +192,10 @@ export default function AnalysisDetailPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Price Chart</CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle>Price Chart</CardTitle>
+                  <HelpTooltip helpKey="analysis.charts" />
+                </div>
                 <IndicatorToggle
                   activeIndicators={activeIndicators}
                   onToggle={handleIndicatorToggle}

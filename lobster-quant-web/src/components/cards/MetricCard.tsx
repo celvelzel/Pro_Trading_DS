@@ -1,10 +1,10 @@
-import { memo } from 'react'
+import { memo, type ReactNode } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 interface MetricCardProps {
-  label: string
+  label: React.ReactNode
   value: string
   delta?: string
   deltaType?: 'up' | 'down' | 'neutral'

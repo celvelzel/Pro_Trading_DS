@@ -30,22 +30,18 @@ export function HelpTooltip({
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        {children || (
-          <button
-            className={cn(
-              'inline-flex items-center justify-center',
-              'text-muted-foreground hover:text-foreground',
-              'transition-colors duration-200',
-              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-              'rounded-full',
-              className
-            )}
-            aria-label="Help"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </button>
+      <TooltipTrigger
+        className={cn(
+          'inline-flex items-center justify-center',
+          'text-muted-foreground hover:text-foreground',
+          'transition-colors duration-200',
+          'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+          'rounded-full',
+          className
         )}
+        aria-label="Help"
+      >
+        {children || <HelpCircle className="h-4 w-4" />}
       </TooltipTrigger>
       <TooltipContent
         side={side}
