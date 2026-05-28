@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useStrategyStore, Strategy, StrategyParams } from '@/stores/strategyStore';
 import { StrategyCard, StrategyForm } from '@/components/strategy';
 import { Button } from '@/components/ui/button';
+import { HelpTooltip } from '@/components/ui/help-tooltip';
 import { Plus } from 'lucide-react';
 import {
   AlertDialog,
@@ -77,7 +78,10 @@ export default function StrategyPage() {
     <div className="container mx-auto py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Strategy Management</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold">Strategy Management</h1>
+            <HelpTooltip helpKey="strategy.title" />
+          </div>
           <p className="text-muted-foreground mt-2">
             Create and manage your trading strategies
           </p>
@@ -113,7 +117,10 @@ export default function StrategyPage() {
         <>
           {/* Preset Strategies */}
           <section className="mb-10">
-            <h2 className="text-xl font-semibold mb-4">Preset Strategies</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-xl font-semibold">Preset Strategies</h2>
+              <HelpTooltip helpKey="strategy.selector" />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {presetStrategies.map(strategy => (
                 <StrategyCard
@@ -126,7 +133,10 @@ export default function StrategyPage() {
 
           {/* Custom Strategies */}
           <section>
-            <h2 className="text-xl font-semibold mb-4">Custom Strategies</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-xl font-semibold">Custom Strategies</h2>
+              <HelpTooltip helpKey="strategy.config" />
+            </div>
             {customStrategies.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 No custom strategies yet. Create one to get started.
