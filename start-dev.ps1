@@ -23,6 +23,32 @@ $rootDir = $PSScriptRoot
 # ─── Prerequisite Checks ───────────────────────────────────────────
 $checks = @()
 
+# Check for port conflicts (critical - prevents wrong backend being used)
+Write-Color "  Checking ports 3000 and 8000..." Cyan
+$port8000 = netstat -ano 2>$null | Select-String ":8000\s.*LISTENING"
+$port3000 = netstat -ano 2>$null | Select-String ":3000\s.*LISTENING"
+
+if ($port8000) {
+    $pid8000 = ($port8000 -split '\s+')[-1]
+    $proc8000 = Get-Process -Id $pid8000 -ErrorAction SilentlyContinue
+    Write-Color "  [WARN] Port 8000 is already in use by PID $pid8000 ($($proc8000.ProcessName))" Yellow
+    Write-Color "         This may be quant-trading-tool or another project." Yellow
+    Write-Color "         Killing process to free port..." Yellow
+    Stop-Process -Id $pid8000 -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+    Write-Color "  [OK] Port 8000 freed" Green
+}
+
+if ($port3000) {
+    $pid3000 = ($port3000 -split '\s+')[-1]
+    $proc3000 = Get-Process -Id $pid3000 -ErrorAction SilentlyContinue
+    Write-Color "  [WARN] Port 3000 is already in use by PID $pid3000 ($($proc3000.ProcessName))" Yellow
+    Write-Color "         Killing process to free port..." Yellow
+    Stop-Process -Id $pid3000 -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+    Write-Color "  [OK] Port 3000 freed" Green
+}
+
 # Check Node.js (for frontend)
 $nodeVersion = (node --version 2>$null)
 if ($nodeVersion) {

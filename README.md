@@ -126,6 +126,24 @@
 - **Node.js 18+**
 - **npm 9+** 或 **pnpm** 或 **yarn**
 
+### ⚠️ 端口冲突检查（重要）
+
+本项目使用以下端口：
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| 后端 (FastAPI) | **8000** | REST API 服务 |
+| 前端 (Next.js) | **3000** | Web 界面 |
+
+**启动前必须确认端口未被占用**，尤其是本机同时存在 `quant-trading-tool` 项目时，该项目也使用 8000 端口。
+
+```powershell
+# 检查端口占用
+netstat -ano | findstr "LISTENING" | findstr ":8000 :3000"
+
+# 如果端口被占用，杀掉对应进程
+taskkill /PID <进程ID> /F
+```
+
 ### 一键启动 (推荐)
 
 ```powershell
@@ -161,6 +179,9 @@ python -m venv venv
 # 安装依赖
 pip install -r requirements.txt
 
+# 设置 PYTHONPATH（必须，否则 lobster_quant 模块无法导入）
+$env:PYTHONPATH = "$PWD\..;$PWD\..\lobster_quant"
+
 # 启动服务
 python main.py
 ```
@@ -187,9 +208,47 @@ npm run dev
 - **API文档**: http://localhost:8000/docs (Swagger UI)
 - **API健康检查**: http://localhost:8000/health
 
+### 常见问题
+
+| 问题 | 原因 | 解决方案 |
+|------|------|----------|
+| 后端返回错误数据结构 | 端口 8000 被其他项目占用 | `netstat -ano \| findstr ":8000"` 查找并杀掉占用进程 |
+| `ModuleNotFoundError: lobster_quant` | PYTHONPATH 未设置 | 启动前执行 `$env:PYTHONPATH = "$PWD\..;$PWD\..\lobster_quant"` |
+| 前端 hydration 错误 | 浏览器扩展干扰 | 已在 `layout.tsx` 添加 `suppressHydrationWarning`，可忽略 |
+
 ---
 
 ## 🏗️ 项目架构
+
+### 根目录结构
+
+```
+Pro_Trading_DS/
+├── backend/                    # FastAPI 后端 API 服务
+├── lobster_quant/              # 核心量化分析引擎（Python 库）
+├── lobster-quant-web/          # Next.js 前端 Web 界面
+├── data/                       # 运行时数据（缓存、策略配置）
+├── docs/                       # 项目文档（设计文档、迁移指南）
+├── logs/                       # 应用日志文件
+├── .sisyphus/                  # AI Agent 工作计划
+├── start-dev.ps1               # 一键启动脚本（前端+后端）
+├── README.md                   # 项目说明文档
+└── *.txt                       # 构建/lint 输出日志（临时文件）
+```
+
+### 各目录详细说明
+
+| 目录 | 用途 | 技术栈 |
+|------|------|--------|
+| `backend/` | REST API 服务，提供股票数据、扫描、回测、策略管理等接口 | FastAPI, Pydantic, uvicorn |
+| `lobster_quant/` | 核心分析库，包含数据引擎、技术指标、信号生成、回测引擎 | Python, pandas, numpy, yfinance |
+| `lobster-quant-web/` | 前端 Web 应用，提供可视化分析界面 | Next.js 16, React 19, Tailwind CSS, shadcn/ui |
+| `data/cache/` | 股票数据缓存（自动生成，可删除） | JSON/Parquet |
+| `data/strategies/` | 用户自定义策略配置 | JSON |
+| `docs/` | 项目设计文档、API 文档、更新日志 | Markdown |
+| `logs/` | 后端运行日志，按日期分割 | Text |
+
+### 详细架构
 
 ```
 Pro_Trading_DS/
@@ -902,6 +961,49 @@ npm run test:e2e:ui
 ---
 
 ## 🚀 部署
+
+### 开发环境部署
+
+#### 前置检查
+
+```powershell
+# 1. 确认端口未被占用
+netstat -ano | findstr "LISTENING" | findstr ":8000 :3000"
+
+# 2. 如果端口被占用（常见：quant-trading-tool 项目占用 8000）
+taskkill /PID <进程ID> /F
+
+# 3. 或者批量杀掉所有 Python/Node 进程（谨慎使用）
+# taskkill /IM python.exe /F
+# taskkill /IM node.exe /F
+```
+
+#### 启动步骤
+
+```powershell
+# 方式一：一键启动（推荐）
+.\start-dev.ps1
+
+# 方式二：分别启动
+# 终端 1 - 后端
+cd backend
+$env:PYTHONPATH = "$PWD\..;$PWD\..\lobster_quant"
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+
+# 终端 2 - 前端
+cd lobster-quant-web
+npm run dev
+```
+
+#### 验证服务
+
+```powershell
+# 验证后端（应返回 {"title": "Lobster Quant API", ...}）
+Invoke-RestMethod http://localhost:8000/openapi.json | Select-Object -ExpandProperty info
+
+# 验证前端
+Invoke-WebRequest http://localhost:3000 -UseBasicParsing | Select-Object StatusCode
+```
 
 ### 生产构建
 
