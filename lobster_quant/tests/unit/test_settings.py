@@ -48,7 +48,7 @@ class TestGetSettings:
         assert s1 is s2
 
     def test_reload(self):
-        s1 = get_settings()
+        get_settings()  # Initialize settings
         s2 = reload_settings()
         s3 = get_settings()
         assert s3 is s2

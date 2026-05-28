@@ -95,7 +95,7 @@ class TestStrategyStore:
 
     def test_init_creates_directories(self, temp_dir):
         """Test that initialization creates required directories."""
-        store = StrategyStore(data_dir=temp_dir)
+        _ = StrategyStore(data_dir=temp_dir)
         assert Path(temp_dir, "strategies", "presets").exists()
         assert Path(temp_dir, "strategies", "custom").exists()
 
@@ -168,7 +168,7 @@ class TestBacktestStore:
 
     def test_init_creates_directories(self, temp_dir):
         """Test that initialization creates required directories."""
-        store = BacktestStore(data_dir=temp_dir)
+        _ = BacktestStore(data_dir=temp_dir)
         assert Path(temp_dir, "backtest_results").exists()
 
     def test_save_and_get_result(self, temp_dir, sample_backtest_result):
@@ -203,7 +203,7 @@ class TestSimulationStore:
 
     def test_init_creates_directories(self, temp_dir):
         """Test that initialization creates required directories."""
-        store = SimulationStore(data_dir=temp_dir)
+        _ = SimulationStore(data_dir=temp_dir)
         assert Path(temp_dir, "simulation", "trades").exists()
         assert Path(temp_dir, "simulation", "snapshots").exists()
 

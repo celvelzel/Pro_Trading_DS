@@ -13,12 +13,12 @@ from src.core.scheduler import SimulationScheduler
 def mock_scheduler():
     """Create a SimulationScheduler with mocked dependencies."""
     with (
-        patch("src.core.scheduler.TradeSimulator") as MockSimulator,
-        patch("src.core.scheduler.StrategyManager") as MockManager,
+        patch("src.core.scheduler.TradeSimulator") as mock_simulator,
+        patch("src.core.scheduler.StrategyManager") as mock_manager,
     ):
 
         scheduler = SimulationScheduler(data_dir="test_data")
-        yield scheduler, MockSimulator, MockManager
+        yield scheduler, mock_simulator, mock_manager
 
 
 class TestStockLists:
@@ -69,13 +69,13 @@ class TestRunDaily:
         assert result == {"error": "Scheduler already running"}
 
     def test_run_daily_success(self, mock_scheduler):
-        scheduler, _, MockManager = mock_scheduler
+        scheduler, _, mock_manager = mock_scheduler
 
         # Mock strategy
         strategy = MagicMock()
         strategy.id = "test-strategy"
         strategy.name = "Test Strategy"
-        MockManager.return_value.list_strategies.return_value = [strategy]
+        mock_manager.return_value.list_strategies.return_value = [strategy]
 
         # Mock simulator
         mock_snapshot = MagicMock()
@@ -93,13 +93,13 @@ class TestRunDaily:
         assert result["results"][0]["error"] is None
 
     def test_run_daily_strategy_error(self, mock_scheduler):
-        scheduler, _, MockManager = mock_scheduler
+        scheduler, _, mock_manager = mock_scheduler
 
         # Mock strategy that raises
         strategy = MagicMock()
         strategy.id = "bad-strategy"
         strategy.name = "Bad Strategy"
-        MockManager.return_value.list_strategies.return_value = [strategy]
+        mock_manager.return_value.list_strategies.return_value = [strategy]
 
         scheduler.simulator.run_daily.side_effect = RuntimeError("boom")
 
@@ -111,9 +111,9 @@ class TestRunDaily:
         assert "boom" in result["results"][0]["error"]
 
     def test_run_daily_resets_running_flag(self, mock_scheduler):
-        scheduler, _, MockManager = mock_scheduler
+        scheduler, _, mock_manager = mock_scheduler
 
-        MockManager.return_value.list_strategies.side_effect = RuntimeError("fail")
+        mock_manager.return_value.list_strategies.side_effect = RuntimeError("fail")
 
         with pytest.raises(RuntimeError):
             scheduler.run_daily()
@@ -121,7 +121,7 @@ class TestRunDaily:
         assert scheduler._running is False
 
     def test_run_daily_multiple_strategies(self, mock_scheduler):
-        scheduler, _, MockManager = mock_scheduler
+        scheduler, _, mock_manager = mock_scheduler
 
         strategies = []
         for i in range(3):
@@ -130,7 +130,7 @@ class TestRunDaily:
             s.name = f"Strategy {i}"
             strategies.append(s)
 
-        MockManager.return_value.list_strategies.return_value = strategies
+        mock_manager.return_value.list_strategies.return_value = strategies
         scheduler.simulator.run_daily.return_value = MagicMock()
 
         result = scheduler.run_daily("HK")
@@ -141,7 +141,7 @@ class TestRunDaily:
             assert r["status"] == "success"
 
     def test_run_daily_mixed_success_and_error(self, mock_scheduler):
-        scheduler, _, MockManager = mock_scheduler
+        scheduler, _, mock_manager = mock_scheduler
 
         s1 = MagicMock()
         s1.id = "good"
@@ -150,7 +150,7 @@ class TestRunDaily:
         s2.id = "bad"
         s2.name = "Bad"
 
-        MockManager.return_value.list_strategies.return_value = [s1, s2]
+        mock_manager.return_value.list_strategies.return_value = [s1, s2]
 
         mock_snapshot = MagicMock()
         scheduler.simulator.run_daily.side_effect = [mock_snapshot, RuntimeError("fail")]
@@ -165,19 +165,19 @@ class TestRunStrategy:
     """Tests for run_strategy method."""
 
     def test_run_strategy_not_found(self, mock_scheduler):
-        scheduler, _, MockManager = mock_scheduler
-        MockManager.return_value.get_strategy.return_value = None
+        scheduler, _, mock_manager = mock_scheduler
+        mock_manager.return_value.get_strategy.return_value = None
 
         result = scheduler.run_strategy("nonexistent")
 
         assert result == {"error": "Strategy nonexistent not found"}
 
     def test_run_strategy_success(self, mock_scheduler):
-        scheduler, _, MockManager = mock_scheduler
+        scheduler, _, mock_manager = mock_scheduler
 
         strategy = MagicMock()
         strategy.name = "My Strategy"
-        MockManager.return_value.get_strategy.return_value = strategy
+        mock_manager.return_value.get_strategy.return_value = strategy
 
         mock_snapshot = MagicMock()
         scheduler.simulator.run_daily.return_value = mock_snapshot
@@ -192,11 +192,11 @@ class TestRunStrategy:
         assert result["error"] is None
 
     def test_run_strategy_error(self, mock_scheduler):
-        scheduler, _, MockManager = mock_scheduler
+        scheduler, _, mock_manager = mock_scheduler
 
         strategy = MagicMock()
         strategy.name = "Fail Strategy"
-        MockManager.return_value.get_strategy.return_value = strategy
+        mock_manager.return_value.get_strategy.return_value = strategy
 
         scheduler.simulator.run_daily.side_effect = RuntimeError("kaboom")
 
@@ -208,11 +208,11 @@ class TestRunStrategy:
         assert result["market"] == "A"
 
     def test_run_strategy_default_market(self, mock_scheduler):
-        scheduler, _, MockManager = mock_scheduler
+        scheduler, _, mock_manager = mock_scheduler
 
         strategy = MagicMock()
         strategy.name = "S"
-        MockManager.return_value.get_strategy.return_value = strategy
+        mock_manager.return_value.get_strategy.return_value = strategy
         scheduler.simulator.run_daily.return_value = MagicMock()
 
         result = scheduler.run_strategy("s1")
