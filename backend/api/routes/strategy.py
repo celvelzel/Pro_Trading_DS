@@ -22,7 +22,8 @@ async def list_strategies():
     try:
         from lobster_quant.src.core.strategy_manager import StrategyManager
         
-        manager = StrategyManager()
+        # Use lobster_quant/data directory for strategy storage
+        manager = StrategyManager(data_dir="../lobster_quant/data")
         strategies = manager.list_strategies()
         
         return [
@@ -48,7 +49,7 @@ async def get_strategy(strategy_id: str):
     try:
         from lobster_quant.src.core.strategy_manager import StrategyManager
         
-        manager = StrategyManager()
+        manager = StrategyManager(data_dir="../lobster_quant/data")
         strategy = manager.get_strategy(strategy_id)
         
         if strategy is None:
@@ -77,7 +78,7 @@ async def create_strategy(request: CreateStrategyRequest):
         from lobster_quant.src.core.strategy_manager import StrategyManager
         from lobster_quant.src.data.models import StrategyParams
         
-        manager = StrategyManager()
+        manager = StrategyManager(data_dir="../lobster_quant/data")
         
         params = StrategyParams(
             holdingDays=request.params.holdingDays,
@@ -113,7 +114,7 @@ async def update_strategy(strategy_id: str, request: UpdateStrategyRequest):
         from lobster_quant.src.core.strategy_manager import StrategyManager
         from lobster_quant.src.data.models import StrategyParams
         
-        manager = StrategyManager()
+        manager = StrategyManager(data_dir="../lobster_quant/data")
         
         kwargs = {}
         if request.name is not None:
@@ -159,7 +160,7 @@ async def delete_strategy(strategy_id: str):
     try:
         from lobster_quant.src.core.strategy_manager import StrategyManager
         
-        manager = StrategyManager()
+        manager = StrategyManager(data_dir="../lobster_quant/data")
         deleted = manager.delete_strategy(strategy_id)
         
         if not deleted:
@@ -178,7 +179,7 @@ async def compare_strategies(request: CompareStrategiesRequest):
     try:
         from lobster_quant.src.core.strategy_manager import StrategyManager
         
-        manager = StrategyManager()
+        manager = StrategyManager(data_dir="../lobster_quant/data")
         result = manager.compare_strategies(
             request.strategyIds,
             request.symbol,
