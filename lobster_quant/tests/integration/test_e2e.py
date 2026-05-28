@@ -25,23 +25,23 @@ from src.data.providers.mock_provider import MockProvider
 def mock_engine(tmp_path):
     """Create a data engine with mock provider."""
     from src.data.cache import DataCache
-    from src.data.provider_pool import ProviderPool
+    from src.data.provider_pool import FallbackChain
 
     # Create engine without initializing default providers
     engine = DataEngine.__new__(DataEngine)
     engine.settings = None
-    engine.cache = DataCache(cache_dir=str(tmp_path), default_ttl=3600)
+    engine.cache = DataCache(cache_dir=str(tmp_path), default_ttl=3600, max_memory_items=500)
     engine._semaphore = None
 
     # Create mock provider
     mock = MockProvider(trend=0.001, volatility=0.02, seed=42)
 
-    # Create provider pools for all markets
-    engine.provider_pools = {}
+    # Create fallback chains for all markets
+    engine.fallback_chains = {}
     for market in ["us_stock", "hk_stock", "a_stock"]:
-        pool = ProviderPool(market)
-        pool.add_provider(mock, priority=1)
-        engine.provider_pools[market] = pool
+        chain = FallbackChain(market)
+        chain.add_provider(mock, priority=1)
+        engine.fallback_chains[market] = chain
 
     return engine
 
@@ -157,19 +157,19 @@ class TestLegacyAdapter:
     def _create_engine_with_mock(self, tmp_path, trend=0.001, volatility=0.02, seed=42):
         """Helper to create a DataEngine with mock provider."""
         from src.data.cache import DataCache
-        from src.data.provider_pool import ProviderPool
+        from src.data.provider_pool import FallbackChain
 
         engine = DataEngine.__new__(DataEngine)
         engine.settings = None
-        engine.cache = DataCache(cache_dir=str(tmp_path), default_ttl=3600)
+        engine.cache = DataCache(cache_dir=str(tmp_path), default_ttl=3600, max_memory_items=500)
         engine._semaphore = None
 
         mock = MockProvider(trend=trend, volatility=volatility, seed=seed)
-        engine.provider_pools = {}
+        engine.fallback_chains = {}
         for market in ["us_stock", "hk_stock", "a_stock"]:
-            pool = ProviderPool(market)
-            pool.add_provider(mock, priority=1)
-            engine.provider_pools[market] = pool
+            chain = FallbackChain(market)
+            chain.add_provider(mock, priority=1)
+            engine.fallback_chains[market] = chain
 
         return engine
 

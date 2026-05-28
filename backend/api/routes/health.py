@@ -20,12 +20,12 @@ async def get_data_sources_status() -> Dict[str, Any]:
     Get status of all data source pools.
 
     Returns:
-        JSON object with status of each market's provider pool
+        JSON object with status of each market's fallback chain
     """
     try:
-        from src.core.data_engine import DataEngine
+        from src.core.data_engine import get_data_engine
 
-        engine = DataEngine()
+        engine = get_data_engine()
         return engine.get_provider_status()
     except Exception as e:
         raise HTTPException(
@@ -37,18 +37,18 @@ async def get_data_sources_status() -> Dict[str, Any]:
 @router.get("/data-sources/{market}")
 async def get_market_status(market: str) -> Dict[str, Any]:
     """
-    Get status of a specific market's provider pool.
+    Get status of a specific market's fallback chain.
 
     Args:
         market: Market identifier (us_stock, hk_stock, a_stock)
 
     Returns:
-        JSON object with market's provider pool status
+        JSON object with market's fallback chain status
     """
     try:
-        from src.core.data_engine import DataEngine
+        from src.core.data_engine import get_data_engine
 
-        engine = DataEngine()
+        engine = get_data_engine()
         status = engine.get_provider_status()
 
         if market not in status:

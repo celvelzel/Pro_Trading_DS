@@ -5,14 +5,13 @@ Unified data access layer with caching and async support.
 
 import asyncio
 import time
-from datetime import datetime
 from typing import Any
 
 from ..config.settings import get_settings
 from ..data.cache import DataCache
 from ..data.circuit_breaker import CircuitBreakerConfig
 from ..data.models import StockData
-from ..data.provider_pool import ProviderPool
+from ..data.provider_pool import FallbackChain
 from ..data.providers.base import DataProvider, DataProviderFactory
 from ..utils.logging import get_logger
 
@@ -23,125 +22,154 @@ class DataEngine:
     """Unified data engine for all market data.
 
     Features:
-    - Provider abstraction (yfinance, akshare, mock)
-    - Persistent disk caching
-    - Async batch fetching
-    - Health monitoring
+        - Provider abstraction (yfinance, alpha_vantage, polygon, akshare, mock)
+        - Priority-based fallback via FallbackChain
+        - Per-provider circuit breaker protection
+        - Persistent disk caching (parquet for DataFrames)
+        - LRU memory cache with configurable size limit
+        - Async batch fetching with concurrency control
+        - Sliding-window provider metrics
     """
 
     def __init__(self, max_concurrent: int = 5):
         self.settings = get_settings()
         self.cache = DataCache(
-            cache_dir=self.settings.data_cache_dir, default_ttl=self.settings.data_cache_ttl
+            cache_dir=self.settings.data_cache_dir,
+            default_ttl=self.settings.data_cache_ttl,
+            max_memory_items=self.settings.data_cache_max_memory_items,
         )
-        self.provider_pools: dict[str, ProviderPool] = {}
+        self.fallback_chains: dict[str, FallbackChain] = {}
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._initialize_provider_pools()
 
+    # ------------------------------------------------------------------
+    # Initialization
+    # ------------------------------------------------------------------
+
     def _initialize_provider_pools(self) -> None:
-        """Initialize data provider pools based on configuration."""
+        """Initialize data provider fallback chains based on configuration."""
         circuit_config = CircuitBreakerConfig(
             failure_threshold=self.settings.circuit_breaker_failure_threshold,
             recovery_timeout=self.settings.circuit_breaker_recovery_timeout,
         )
 
-        # US stocks
         if self.settings.enable_us_stock:
-            pool = ProviderPool("us_stock")
-            sources = [s.strip() for s in self.settings.us_data_sources.split(",")]
-            for priority, source in enumerate(sources, start=1):
-                try:
-                    provider = self._create_provider(source, circuit_config)
-                    if provider:
-                        pool.add_provider(provider, priority)
-                except Exception as e:
-                    logger.warning(f"Failed to initialize US provider {source}: {e}")
-            self.provider_pools["us_stock"] = pool
-            logger.info(f"US stock provider pool: {', '.join(sources)}")
+            chain = self._init_chain(
+                "us_stock", self.settings.us_data_sources, circuit_config
+            )
+            self.fallback_chains["us_stock"] = chain
 
-        # HK stocks
         if self.settings.enable_hk_stock:
-            pool = ProviderPool("hk_stock")
-            sources = [s.strip() for s in self.settings.hk_data_sources.split(",")]
-            for priority, source in enumerate(sources, start=1):
-                try:
-                    provider = self._create_provider(source, circuit_config)
-                    if provider:
-                        pool.add_provider(provider, priority)
-                except Exception as e:
-                    logger.warning(f"Failed to initialize HK provider {source}: {e}")
-            self.provider_pools["hk_stock"] = pool
-            logger.info(f"HK stock provider pool: {', '.join(sources)}")
+            chain = self._init_chain(
+                "hk_stock", self.settings.hk_data_sources, circuit_config
+            )
+            self.fallback_chains["hk_stock"] = chain
 
-        # A-shares (single provider, no pool needed)
         if self.settings.enable_a_stock:
-            pool = ProviderPool("a_stock")
+            chain = FallbackChain("a_stock")
             try:
                 provider = DataProviderFactory.create(
-                    self.settings.a_data_provider, timeout=self.settings.data_timeout
+                    self.settings.a_data_provider, timeout=self.settings.akshare_timeout
                 )
-                pool.add_provider(provider, priority=1)
+                chain.add_provider(provider, priority=1)
             except Exception as e:
                 logger.warning(f"Failed to initialize A-share provider: {e}")
-            self.provider_pools["a_stock"] = pool
+            self.fallback_chains["a_stock"] = chain
 
-    def _create_provider(
-        self, source: str, circuit_config: CircuitBreakerConfig
-    ) -> DataProvider | None:
-        """Create a data provider by name."""
+    def _init_chain(
+        self, market: str, sources_str: str, circuit_config: CircuitBreakerConfig
+    ) -> FallbackChain:
+        """Create a FallbackChain for a market from a comma-separated source list.
+
+        Args:
+            market: Market identifier (e.g., 'us_stock')
+            sources_str: Comma-separated provider names
+            circuit_config: Circuit breaker configuration
+
+        Returns:
+            Configured FallbackChain
+        """
+        chain = FallbackChain(market)
+        sources = [s.strip() for s in sources_str.split(",")]
+        for priority, source in enumerate(sources, start=1):
+            try:
+                provider = self._create_provider(source)
+                if provider:
+                    chain.add_provider(provider, priority)
+            except Exception as e:
+                logger.warning(f"Failed to initialize {market} provider {source}: {e}")
+        logger.info(f"{market} provider chain: {', '.join(sources)}")
+        return chain
+
+    def _create_provider(self, source: str) -> DataProvider | None:
+        """Create a data provider by name using per-provider timeout settings.
+
+        Args:
+            source: Provider name
+
+        Returns:
+            DataProvider instance, or None if not available
+        """
+        s = self.settings
+
         if source == "yfinance":
-            return DataProviderFactory.create("yfinance", timeout=self.settings.data_timeout)
+            return DataProviderFactory.create("yfinance", timeout=s.yfinance_timeout)
         elif source == "alpha_vantage":
-            if not self.settings.alpha_vantage_api_key:
+            if not s.alpha_vantage_api_key:
                 logger.warning("Alpha Vantage API key not configured, skipping")
                 return None
             return DataProviderFactory.create(
                 "alpha_vantage",
-                api_key=self.settings.alpha_vantage_api_key,
-                timeout=self.settings.data_timeout,
+                api_key=s.alpha_vantage_api_key,
+                timeout=s.alpha_vantage_timeout,
             )
         elif source == "polygon":
-            if not self.settings.polygon_api_key:
+            if not s.polygon_api_key:
                 logger.warning("Polygon API key not configured, skipping")
                 return None
             return DataProviderFactory.create(
-                "polygon", api_key=self.settings.polygon_api_key, timeout=self.settings.data_timeout
+                "polygon", api_key=s.polygon_api_key, timeout=s.polygon_timeout
             )
         elif source == "mock":
-            return DataProviderFactory.create("mock", timeout=self.settings.data_timeout)
+            return DataProviderFactory.create("mock", timeout=s.data_timeout)
         else:
             logger.warning(f"Unknown provider: {source}")
             return None
 
-    def _get_market(self, symbol: str) -> str:
-        """Determine market type from symbol."""
+    # ------------------------------------------------------------------
+    # Market detection
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _get_market(symbol: str) -> str:
+        """Determine market type from symbol.
+
+        Args:
+            symbol: Stock symbol
+
+        Returns:
+            Market identifier string
+        """
         if symbol.isdigit():
             if len(symbol) == 6:
                 return "a_stock"
             elif len(symbol) == 5:
                 return "hk_stock"
 
-        if symbol.endswith(".HK") or symbol.endswith(".hk"):
+        upper = symbol.upper()
+        if upper.endswith(".HK"):
             return "hk_stock"
-
-        if symbol.endswith(".SZ") or symbol.endswith(".SH"):
+        if upper.endswith(".SZ") or upper.endswith(".SH"):
             return "a_stock"
 
         return "us_stock"
 
-    def _get_provider(self, symbol: str) -> DataProvider | None:
-        """Get appropriate provider for symbol (backward compatibility)."""
-        market = self._get_market(symbol)
-        pool = self.provider_pools.get(market)
-        if pool is None:
-            return None
-        available = pool.get_available_providers()
-        if available:
-            return available[0].provider
-        return None
+    # ------------------------------------------------------------------
+    # Data fetching
+    # ------------------------------------------------------------------
 
     def fetch_stock(self, symbol: str, years: int | None = None) -> StockData | None:
-        """Fetch complete stock data with caching and provider pool fallback.
+        """Fetch complete stock data with caching and provider chain fallback.
 
         Args:
             symbol: Stock symbol
@@ -151,7 +179,8 @@ class DataEngine:
             StockData or None if fetch fails
         """
         years = years or self.settings.data_years
-        cache_key = f"stock:{symbol}:{years}"
+        market = self._get_market(symbol)
+        cache_key = f"stock:{market}:{symbol}:{years}"
 
         # Check cache
         cached = self.cache.get(cache_key)
@@ -159,47 +188,43 @@ class DataEngine:
             logger.debug(f"Cache hit for {symbol}")
             return cached
 
-        # Get market and pool
-        market = self._get_market(symbol)
-        pool = self.provider_pools.get(market)
-
-        if not pool:
-            logger.error(f"No provider pool for market: {market}")
+        # Get fallback chain
+        chain = self.fallback_chains.get(market)
+        if not chain:
+            logger.error(f"No provider chain for market: {market}")
             return None
 
         # Try each provider in priority order
-        for entry in pool.get_available_providers():
+        for entry in chain.get_available_providers():
             try:
                 start_time = time.time()
-                result = entry.provider.fetch_daily(symbol, years)
+                stock_data = entry.provider.fetch_stock_data(symbol, years)
                 response_time = time.time() - start_time
 
-                if result is not None and not result.empty:
+                if stock_data is not None and stock_data.daily is not None and not stock_data.daily.empty:
                     # Record success
                     entry.circuit_breaker.record_success()
-                    entry.success_count += 1
-                    entry.avg_response_time = (
-                        entry.avg_response_time * (entry.success_count - 1) + response_time
-                    ) / entry.success_count
-                    entry.last_used = datetime.now()
+                    entry.record_request(success=True, response_time=response_time)
 
-                    # Build StockData
-                    stock_data = entry.provider.fetch_stock_data(symbol, years)
-                    if stock_data is not None:
-                        self.cache.set(cache_key, stock_data)
-                        logger.info(
-                            f"Fetched {symbol} from {entry.provider.name} "
-                            f"({len(result)} rows, {response_time:.2f}s)"
-                        )
-                        return stock_data
+                    self.cache.set(cache_key, stock_data)
+                    logger.info(
+                        f"Fetched {symbol} from {entry.provider.name} "
+                        f"({len(stock_data.daily)} rows, {response_time:.2f}s)"
+                    )
+                    return stock_data
+                else:
+                    # No data returned — count as failure
+                    entry.record_request(success=False, response_time=response_time)
+                    logger.warning(f"Provider {entry.provider.name} returned empty data for {symbol}")
 
             except Exception as e:
+                response_time = time.time() - start_time
                 entry.circuit_breaker.record_failure()
-                entry.failure_count += 1
+                entry.record_request(success=False, response_time=response_time)
                 logger.warning(f"Provider {entry.provider.name} failed for {symbol}: {e}")
                 continue
 
-        # All providers failed - try stale cache
+        # All providers failed — try stale cache
         stale_cached = self.cache.get(cache_key)
         if stale_cached is not None:
             logger.warning(f"All providers failed for {symbol}, using stale cache")
@@ -207,6 +232,10 @@ class DataEngine:
 
         logger.error(f"No data available for {symbol} from any provider")
         return None
+
+    # ------------------------------------------------------------------
+    # Async support
+    # ------------------------------------------------------------------
 
     async def fetch_stock_async(self, symbol: str, years: int | None = None) -> StockData | None:
         """Async version of fetch_stock with concurrency control."""
@@ -233,6 +262,10 @@ class DataEngine:
             for sym, res in zip(symbols, results, strict=False)
         }
 
+    # ------------------------------------------------------------------
+    # Benchmark
+    # ------------------------------------------------------------------
+
     def fetch_benchmark(self, symbol: str | None = None) -> StockData | None:
         """Fetch benchmark data.
 
@@ -245,6 +278,10 @@ class DataEngine:
         symbol = symbol or self.settings.benchmark_symbol
         return self.fetch_stock(symbol)
 
+    # ------------------------------------------------------------------
+    # Health & status
+    # ------------------------------------------------------------------
+
     def get_health_status(self) -> dict[str, bool]:
         """Get health status of all providers.
 
@@ -252,14 +289,18 @@ class DataEngine:
             Dictionary mapping provider name to health status
         """
         result = {}
-        for _, pool in self.provider_pools.items():
-            for entry in pool.get_available_providers():
+        for _, chain in self.fallback_chains.items():
+            for entry in chain.get_available_providers():
                 result[entry.provider.name] = entry.provider.health_check()
         return result
 
     def get_provider_status(self) -> dict[str, Any]:
-        """Get status of all provider pools."""
-        return {market: pool.get_provider_status() for market, pool in self.provider_pools.items()}
+        """Get status of all fallback chains with sliding-window metrics."""
+        return {market: chain.get_provider_status() for market, chain in self.fallback_chains.items()}
+
+    # ------------------------------------------------------------------
+    # Cache management
+    # ------------------------------------------------------------------
 
     def clear_cache(self) -> int:
         """Clear all cached data.
@@ -274,7 +315,10 @@ class DataEngine:
         return self.cache.get_stats()
 
 
-# Global data engine instance
+# ------------------------------------------------------------------
+# Global singleton
+# ------------------------------------------------------------------
+
 _data_engine: DataEngine | None = None
 
 
@@ -284,3 +328,12 @@ def get_data_engine() -> DataEngine:
     if _data_engine is None:
         _data_engine = DataEngine()
     return _data_engine
+
+
+def reset_data_engine() -> None:
+    """Reset the global data engine singleton.
+
+    Useful for testing or when configuration changes require reinitialization.
+    """
+    global _data_engine
+    _data_engine = None

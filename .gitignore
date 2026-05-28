@@ -30,8 +30,8 @@ env/
 .DS_Store
 Thumbs.db
 
-# Data cache
-data/
+# Data cache (root-level only, not source code dirs)
+/data/
 lobster_quant/data/cache/
 
 # Logs

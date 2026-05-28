@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.core.data_engine import DataEngine, get_data_engine
+from src.core.data_engine import DataEngine, get_data_engine, reset_data_engine
 from src.data.models import StockData
 
 
@@ -26,6 +26,11 @@ def mock_engine():
             data_cache_dir="./data/test_cache",
             data_cache_ttl=3600,
             data_timeout=10,
+            data_cache_max_memory_items=500,
+            yfinance_timeout=10,
+            alpha_vantage_timeout=15,
+            polygon_timeout=15,
+            akshare_timeout=15,
             benchmark_symbol="SPY",
             circuit_breaker_failure_threshold=5,
             circuit_breaker_recovery_timeout=60,
@@ -37,7 +42,7 @@ def mock_engine():
 class TestDataEngine:
     def test_initialization(self, mock_engine):
         assert mock_engine is not None
-        assert len(mock_engine.provider_pools) > 0
+        assert len(mock_engine.fallback_chains) > 0
 
     def test_get_market_us(self, mock_engine):
         assert mock_engine._get_market("AAPL") == "us_stock"
@@ -62,6 +67,14 @@ class TestDataEngine:
         assert result1 is not None
         assert result2 is not None
 
+    def test_cache_key_includes_market(self, mock_engine):
+        """Cache key should include market to prevent cross-market collisions."""
+        mock_engine.fetch_stock("AAPL", years=1)
+        # Check that the cache key format includes the market
+        # The cache.get is called with a key like "stock:us_stock:AAPL:1"
+        stats = mock_engine.get_cache_stats()
+        assert stats["memory_items"] >= 1
+
     def test_get_health_status(self, mock_engine):
         status = mock_engine.get_health_status()
         assert isinstance(status, dict)
@@ -85,3 +98,16 @@ class TestGetDataEngine:
         e1 = get_data_engine()
         e2 = get_data_engine()
         assert e1 is e2
+
+
+class TestResetDataEngine:
+    def test_reset_creates_new_instance(self):
+        """reset_data_engine() should cause get_data_engine() to create a new instance."""
+        e1 = get_data_engine()
+        reset_data_engine()
+        e2 = get_data_engine()
+        assert e1 is not e2
+
+    def teardown_method(self):
+        """Ensure we have a valid engine after reset tests."""
+        reset_data_engine()

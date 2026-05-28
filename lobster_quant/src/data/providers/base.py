@@ -3,23 +3,60 @@ Lobster Quant - Data Provider Base Class
 Abstract base for all data sources with unified interface.
 """
 
+import threading
+import time
 from abc import ABC, abstractmethod
-from typing import Optional, Any, cast
 from datetime import datetime
+from typing import Any, Optional, cast
+
 import pandas as pd
 
-from ..models import StockData, OptionsData
 from ...utils.exceptions import DataProviderError
+from ..models import OptionsData, StockData
+
+
+class RateLimiter:
+    """Sliding-window rate limiter for API providers.
+
+    Ensures a minimum interval between calls to respect API rate limits.
+    Thread-safe: multiple threads calling acquire() will be serialized.
+
+    Usage::
+
+        limiter = RateLimiter(calls_per_minute=5)  # 5 RPM = 12s between calls
+        limiter.acquire()  # blocks if called too soon
+        response = make_api_request()
+    """
+
+    def __init__(self, calls_per_minute: int = 60):
+        self._interval = 60.0 / calls_per_minute
+        self._last_call = 0.0
+        self._lock = threading.Lock()
+
+    def acquire(self) -> None:
+        """Wait if necessary to respect the rate limit."""
+        with self._lock:
+            now = time.monotonic()
+            elapsed = now - self._last_call
+            if elapsed < self._interval:
+                time.sleep(self._interval - elapsed)
+            self._last_call = time.monotonic()
 
 
 class DataProvider(ABC):
     """Abstract base class for data providers."""
 
-    def __init__(self, name: str, timeout: int = 10):
+    def __init__(
+        self,
+        name: str,
+        timeout: int = 10,
+        rate_limiter: Optional[RateLimiter] = None,
+    ):
         self._name = name
         self._timeout = timeout
         self._last_health_check: Optional[datetime] = None
         self._health_status: bool = True
+        self._rate_limiter = rate_limiter
 
     @property
     def name(self) -> str:
@@ -30,6 +67,16 @@ class DataProvider(ABC):
     def is_healthy(self) -> bool:
         """Check if provider is healthy."""
         return self._health_status
+
+    @property
+    def timeout(self) -> int:
+        """Get the provider timeout in seconds."""
+        return self._timeout
+
+    def _acquire_rate_limit(self) -> None:
+        """Acquire rate limit permit if a limiter is configured."""
+        if self._rate_limiter is not None:
+            self._rate_limiter.acquire()
 
     @abstractmethod
     def fetch_daily(self, symbol: str, years: int = 3) -> Optional[pd.DataFrame]:

@@ -36,6 +36,17 @@ class Settings(BaseSettings):
     data_cache_dir: str = Field(default="./data/cache", description="Cache directory")
     data_cache_ttl: int = Field(default=3600, ge=300, description="Cache TTL in seconds")
     data_timeout: int = Field(default=10, ge=1, le=60, description="API timeout in seconds")
+    data_cache_max_memory_items: int = Field(
+        default=500, ge=10, le=10000, description="Max items in memory cache (LRU eviction)"
+    )
+
+    # Per-provider timeouts (overrides data_timeout when set)
+    yfinance_timeout: int = Field(default=10, ge=1, le=60, description="YFinance timeout in seconds")
+    alpha_vantage_timeout: int = Field(
+        default=15, ge=1, le=60, description="Alpha Vantage timeout in seconds"
+    )
+    polygon_timeout: int = Field(default=15, ge=1, le=60, description="Polygon timeout in seconds")
+    akshare_timeout: int = Field(default=15, ge=1, le=60, description="AkShare timeout in seconds")
 
     # Data providers
     us_data_provider: Literal["yfinance", "mock"] = Field(default="yfinance")
