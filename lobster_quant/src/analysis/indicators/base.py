@@ -10,8 +10,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from src.utils.exceptions import IndicatorError
-from src.utils.logging import get_logger
+from ...utils.exceptions import IndicatorError
+from ...utils.logging import get_logger
 
 logger = get_logger()
 

@@ -8,9 +8,9 @@ from typing import Any
 
 import pandas as pd
 
-from src.config.settings import get_settings
-from src.data.models import OFFStatus
-from src.utils.logging import get_logger
+from ..config.settings import get_settings
+from ..data.models import OFFStatus
+from ..utils.logging import get_logger
 
 logger = get_logger()
 

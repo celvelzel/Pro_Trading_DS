@@ -6,8 +6,8 @@ Standalone metric calculation functions for backtest analysis.
 import numpy as np
 import pandas as pd
 
-from src.data.models import Trade
-from src.utils.logging import get_logger
+from ...data.models import Trade
+from ...utils.logging import get_logger
 
 logger = get_logger()
 

@@ -6,17 +6,17 @@ Combines signal generation, scoring, indicators, and risk assessment.
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.analysis.signals.lobster_signal import SignalGenerator
-from src.core.indicator_engine import get_indicator_engine
-from src.core.risk_engine import RiskEngine
-from src.core.scoring_engine import (
+from .lobster_signal import SignalGenerator
+from ...core.indicator_engine import get_indicator_engine
+from ...core.risk_engine import RiskEngine
+from ...core.scoring_engine import (
     get_scoring_engine,
 )
-from src.data.models import (
+from ...data.models import (
     SignalResult,
     StockData,
 )
-from src.utils.logging import get_logger
+from ...utils.logging import get_logger
 
 logger = get_logger()
 

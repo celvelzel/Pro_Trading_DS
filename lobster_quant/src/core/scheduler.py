@@ -65,6 +65,12 @@ class SimulationScheduler:
         self.strategy_manager = StrategyManager(data_dir)
         self._running = False
 
+    _MARKET_STOCK_LISTS: dict[str, list[str]] = {
+        "US": US_STOCK_LIST,
+        "HK": HK_STOCK_LIST,
+        "A": A_STOCK_LIST,
+    }
+
     def get_stock_list(self, market: str = "US") -> list[str]:
         """Get stock list for a market.
 
@@ -74,14 +80,7 @@ class SimulationScheduler:
         Returns:
             List of stock symbols for the given market.
         """
-        if market == "US":
-            return self.US_STOCK_LIST
-        elif market == "HK":
-            return self.HK_STOCK_LIST
-        elif market == "A":
-            return self.A_STOCK_LIST
-        else:
-            return self.US_STOCK_LIST
+        return self._MARKET_STOCK_LISTS.get(market, self.US_STOCK_LIST)
 
     def run_daily(self, market: str = "US") -> dict[str, Any]:
         """Run daily simulation for all active strategies.

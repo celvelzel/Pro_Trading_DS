@@ -5,7 +5,7 @@ Moving averages, slopes, and trend detection.
 
 import pandas as pd
 
-from src.utils.logging import get_logger
+from ...utils.logging import get_logger
 
 from .base import Indicator, IndicatorRegistry, IndicatorResult, rolling_slope
 

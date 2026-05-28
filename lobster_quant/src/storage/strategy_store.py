@@ -31,13 +31,13 @@ class StrategyStore:
 
     def list_strategies(self) -> list[Any]:
         """List all strategies (presets + custom)."""
-        Strategy = self._get_strategy_class()
+        strategy_cls = self._get_strategy_class()
         strategies = []
 
         # Load presets
         for file in self.presets_dir.glob("*.json"):
             try:
-                strategy = self._load_from_file(file, Strategy)
+                strategy = self._load_from_file(file, strategy_cls)
                 if strategy:
                     strategies.append(strategy)
             except Exception:
@@ -46,7 +46,7 @@ class StrategyStore:
         # Load custom strategies
         for file in self.custom_dir.glob("*.json"):
             try:
-                strategy = self._load_from_file(file, Strategy)
+                strategy = self._load_from_file(file, strategy_cls)
                 if strategy:
                     strategies.append(strategy)
             except Exception:
@@ -56,17 +56,17 @@ class StrategyStore:
 
     def get_strategy(self, strategy_id: str) -> Any | None:
         """Get strategy by ID."""
-        Strategy = self._get_strategy_class()
+        strategy_cls = self._get_strategy_class()
 
         # Check presets first
         preset_file = self.presets_dir / f"{strategy_id}.json"
         if preset_file.exists():
-            return self._load_from_file(preset_file, Strategy)
+            return self._load_from_file(preset_file, strategy_cls)
 
         # Check custom strategies
         custom_file = self.custom_dir / f"{strategy_id}.json"
         if custom_file.exists():
-            return self._load_from_file(custom_file, Strategy)
+            return self._load_from_file(custom_file, strategy_cls)
 
         return None
 

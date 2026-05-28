@@ -43,7 +43,7 @@ class BacktestStore:
 
     def get_result(self, result_id: str) -> Any | None:
         """Get backtest result by ID."""
-        BacktestResult = self._get_backtest_result_class()
+        backtest_result_cls = self._get_backtest_result_class()
 
         file_path = self.results_dir / f"{result_id}.json"
         if not file_path.exists():
@@ -52,20 +52,20 @@ class BacktestStore:
         try:
             with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
-            return BacktestResult(**data)
+            return backtest_result_cls(**data)
         except Exception:
             return None
 
     def list_results(self, strategy_id: str | None = None) -> list[Any]:
         """List backtest results, optionally filtered by strategy."""
-        BacktestResult = self._get_backtest_result_class()
+        backtest_result_cls = self._get_backtest_result_class()
         results = []
 
         for file in self.results_dir.glob("*.json"):
             try:
                 with open(file, encoding="utf-8") as f:
                     data = json.load(f)
-                result = BacktestResult(**data)
+                result = backtest_result_cls(**data)
 
                 # Filter by strategy if specified
                 if strategy_id:

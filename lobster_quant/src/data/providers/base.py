@@ -8,8 +8,8 @@ from typing import Optional, Any, cast
 from datetime import datetime
 import pandas as pd
 
-from src.data.models import StockData, OptionsData
-from src.utils.exceptions import DataProviderError
+from ..models import StockData, OptionsData
+from ...utils.exceptions import DataProviderError
 
 
 class DataProvider(ABC):

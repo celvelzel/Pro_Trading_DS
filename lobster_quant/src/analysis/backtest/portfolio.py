@@ -8,17 +8,17 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from src.analysis.backtest.engine import BacktestEngine
-from src.analysis.backtest.metrics import (
+from .engine import BacktestEngine
+from .metrics import (
     calculate_max_drawdown,
     calculate_profit_loss_ratio,
     calculate_sharpe_ratio,
     calculate_win_rate,
 )
-from src.core.data_engine import get_data_engine
-from src.core.indicator_engine import get_indicator_engine
-from src.data.models import BacktestMetrics, BacktestResult, Strategy, Trade
-from src.utils.logging import get_logger
+from ...core.data_engine import get_data_engine
+from ...core.indicator_engine import get_indicator_engine
+from ...data.models import BacktestMetrics, BacktestResult, Strategy, Trade
+from ...utils.logging import get_logger
 
 logger = get_logger()
 

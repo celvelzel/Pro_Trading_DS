@@ -7,8 +7,8 @@ from typing import Optional
 import pandas as pd
 
 from .base import DataProvider, DataProviderFactory
-from src.utils.exceptions import DataFetchError
-from src.utils.logging import get_logger
+from ...utils.exceptions import DataFetchError
+from ...utils.logging import get_logger
 
 logger = get_logger()
 

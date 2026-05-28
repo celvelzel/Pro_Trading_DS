@@ -65,7 +65,7 @@ class SimulationStore:
 
     def get_trades(self, strategy_id: str, status: str | None = None) -> list[Any]:
         """Get trades for a strategy, optionally filtered by status."""
-        SimulatedTrade, _ = self._get_model_classes()
+        simulated_trade_cls, _ = self._get_model_classes()
 
         strategy_trades_dir = self.trades_dir / strategy_id
         if not strategy_trades_dir.exists():
@@ -77,7 +77,7 @@ class SimulationStore:
                 with open(file, encoding="utf-8") as f:
                     data = json.load(f)
                 for trade_data in data:
-                    trade = SimulatedTrade(**trade_data)
+                    trade = simulated_trade_cls(**trade_data)
                     if status is None or trade.status == status:
                         trades.append(trade)
             except Exception:
@@ -103,7 +103,7 @@ class SimulationStore:
 
     def get_snapshots(self, strategy_id: str, days: int = 30) -> list[Any]:
         """Get recent snapshots for a strategy."""
-        _, DailySnapshot = self._get_model_classes()
+        _, daily_snapshot_cls = self._get_model_classes()
 
         strategy_snapshots_dir = self.snapshots_dir / strategy_id
         if not strategy_snapshots_dir.exists():
@@ -119,7 +119,7 @@ class SimulationStore:
                 if date_str >= cutoff_date:
                     with open(file, encoding="utf-8") as f:
                         data = json.load(f)
-                    snapshots.append(DailySnapshot(**data))
+                    snapshots.append(daily_snapshot_cls(**data))
             except Exception:
                 continue
 

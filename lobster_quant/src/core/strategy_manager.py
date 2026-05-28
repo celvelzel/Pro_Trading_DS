@@ -5,8 +5,8 @@ Strategy Manager - Business logic for strategy CRUD operations.
 from datetime import datetime
 from typing import Any
 
-from src.data.models import Strategy, StrategyParams
-from src.storage.strategy_store import StrategyStore
+from ..data.models import Strategy, StrategyParams
+from ..storage.strategy_store import StrategyStore
 
 
 class StrategyManager:
