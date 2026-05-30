@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Play } from 'lucide-react';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Loader2, Play, Settings2 } from 'lucide-react';
 
 interface BacktestFormProps {
   onRun: (params: BacktestParams) => Promise<void>;
@@ -95,26 +96,38 @@ export function BacktestForm({ onRun, loading }: BacktestFormProps) {
             </TabsContent>
           </Tabs>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date (optional)</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date (optional)</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          </div>
+          <Accordion className="w-full">
+            <AccordionItem value="advanced" className="border-none">
+              <AccordionTrigger className="py-2 hover:no-underline text-sm font-medium text-text-secondary">
+                <div className="flex items-center gap-2">
+                  <Settings2 className="h-4 w-4" />
+                  Advanced Parameters
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate">End Date</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
           <Button type="submit" className="w-full" disabled={loading || !strategyId}>
             {loading ? (

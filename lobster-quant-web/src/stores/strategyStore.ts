@@ -24,6 +24,13 @@ export interface Strategy {
   updatedAt?: string;
 }
 
+export interface StrategyVersion {
+  id: string;
+  name: string;
+  date: string;
+  params: StrategyParams;
+}
+
 export interface BacktestMetrics {
   totalReturn: number;
   annualizedReturn: number;
@@ -59,6 +66,8 @@ interface StrategyState {
   comparison: StrategyComparison | null;
   loading: boolean;
   error: string | null;
+  versions: StrategyVersion[];
+  versionsLoading: boolean;
   
   // Actions
   fetchStrategies: () => Promise<void>;
@@ -69,6 +78,9 @@ interface StrategyState {
   compareStrategies: (ids: string[], symbol: string, startDate: string, endDate: string) => Promise<void>;
   setSelectedStrategy: (strategy: Strategy | null) => void;
   clearError: () => void;
+  fetchVersions: (strategyId: string) => Promise<void>;
+  saveVersion: (strategyId: string, name: string) => Promise<void>;
+  restoreVersion: (strategyId: string, versionId: string) => Promise<void>;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -82,6 +94,8 @@ export const useStrategyStore = create<StrategyState>()(
       comparison: null,
       loading: false,
       error: null,
+      versions: [],
+      versionsLoading: false,
       
       // Fetch all strategies
       fetchStrategies: async () => {
@@ -191,7 +205,58 @@ export const useStrategyStore = create<StrategyState>()(
       setSelectedStrategy: (strategy) => set({ selectedStrategy: strategy }),
       
       // Clear error
-      clearError: () => set({ error: null })
+      clearError: () => set({ error: null }),
+      
+      // Fetch versions for a strategy
+      fetchVersions: async (strategyId: string) => {
+        set({ versionsLoading: true });
+        try {
+          const response = await fetch(`${API_BASE}/strategy/strategies/${strategyId}/versions`);
+          if (!response.ok) throw new Error('Failed to fetch versions');
+          const data = await response.json();
+          set({ versions: data, versionsLoading: false });
+        } catch (error) {
+          set({ error: (error as Error).message, versionsLoading: false });
+        }
+      },
+      
+      // Save current strategy as a new version
+      saveVersion: async (strategyId: string, name: string) => {
+        try {
+          const response = await fetch(`${API_BASE}/strategy/strategies/${strategyId}/version`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+          });
+          if (!response.ok) throw new Error('Failed to save version');
+          // Refresh versions list
+          const versionsResponse = await fetch(`${API_BASE}/strategy/strategies/${strategyId}/versions`);
+          if (versionsResponse.ok) {
+            const data = await versionsResponse.json();
+            set({ versions: data });
+          }
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      },
+      
+      // Restore a specific version
+      restoreVersion: async (strategyId: string, versionId: string) => {
+        try {
+          const response = await fetch(`${API_BASE}/strategy/strategies/${strategyId}/versions/${versionId}/restore`, {
+            method: 'POST'
+          });
+          if (!response.ok) throw new Error('Failed to restore version');
+          // Refresh strategy data
+          const strategyResponse = await fetch(`${API_BASE}/strategy/strategies/${strategyId}`);
+          if (strategyResponse.ok) {
+            const data = await strategyResponse.json();
+            set({ selectedStrategy: data });
+          }
+        } catch (error) {
+          set({ error: (error as Error).message });
+        }
+      }
     }),
     { name: 'strategy-store' }
   )

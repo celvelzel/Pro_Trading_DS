@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, memo, useMemo } from 'react'
 import { useTheme } from 'next-themes'
-import { createChart, IChartApi, CandlestickSeries, HistogramSeries, LineSeries, type UTCTimestamp } from 'lightweight-charts'
+import { createChart, IChartApi, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, type UTCTimestamp, type MouseEventParams } from 'lightweight-charts'
 import type { Candle } from '@/lib/types'
 import type { IndicatorType } from './IndicatorToggle'
 import { calculateSMA, calculateEMA, calculateBollingerBands, getClosePrices, formatIndicatorData } from '@/lib/indicators'
+import type { Annotation, AnnotationToolType, HorizontalLineAnnotation, TrendLineAnnotation, PriceMarkerAnnotation } from './annotations'
+import { ANNOTATION_COLORS } from './annotations'
 
 interface CandlestickChartProps {
   data: Candle[]
@@ -14,6 +16,12 @@ interface CandlestickChartProps {
   showVolume?: boolean
   activeIndicators?: IndicatorType[]
   className?: string
+  /** Current annotations to render */
+  annotations?: Annotation[]
+  /** Active annotation tool (null = no tool selected) */
+  activeAnnotationTool?: AnnotationToolType | null
+  /** Called when user clicks chart with an annotation tool active */
+  onAnnotationAdd?: (annotation: Annotation) => void
 }
 
 /**
@@ -25,9 +33,14 @@ export const CandlestickChart = memo(function CandlestickChart({
   showVolume = true,
   activeIndicators = [],
   className,
+  annotations = [],
+  activeAnnotationTool = null,
+  onAnnotationAdd,
 }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
+  const candlestickSeriesRef = useRef<ReturnType<IChartApi['addSeries']> | null>(null)
+  const pendingTrendStartRef = useRef<{ time: UTCTimestamp; price: number } | null>(null)
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
@@ -42,6 +55,13 @@ export const CandlestickChart = memo(function CandlestickChart({
     volumeUp: isDark ? 'rgba(52, 168, 83, 0.3)' : 'rgba(52, 168, 83, 0.5)',
     volumeDown: isDark ? 'rgba(234, 67, 53, 0.3)' : 'rgba(234, 67, 53, 0.5)',
   }), [isDark])
+
+  // Reset pending trend start when tool changes
+  useEffect(() => {
+    if (activeAnnotationTool !== 'trend-line') {
+      pendingTrendStartRef.current = null
+    }
+  }, [activeAnnotationTool])
 
   useEffect(() => {
     if (!chartContainerRef.current || data.length === 0) return
@@ -91,6 +111,9 @@ export const CandlestickChart = memo(function CandlestickChart({
         close: d.close,
       }))
     )
+
+    // Store series reference for annotations
+    candlestickSeriesRef.current = candlestickSeries
 
     // Add volume series if enabled
     if (showVolume) {
@@ -163,6 +186,98 @@ export const CandlestickChart = memo(function CandlestickChart({
       }
     }
 
+    // --- Render annotations ---
+    // Horizontal lines
+    const horizontalAnnotations = annotations.filter(
+      (a): a is HorizontalLineAnnotation => a.type === 'horizontal-line'
+    )
+    for (const ann of horizontalAnnotations) {
+      candlestickSeries.createPriceLine({
+        price: ann.price,
+        color: ann.color ?? ANNOTATION_COLORS['horizontal-line'],
+        lineWidth: 1,
+        lineStyle: 0,
+        axisLabelVisible: true,
+        title: '',
+      })
+    }
+
+    // Trend lines
+    const trendAnnotations = annotations.filter(
+      (a): a is TrendLineAnnotation => a.type === 'trend-line'
+    )
+    for (const ann of trendAnnotations) {
+      chart.addSeries(LineSeries, {
+        color: ann.color ?? ANNOTATION_COLORS['trend-line'],
+        lineWidth: 2,
+        lineStyle: 0,
+        crosshairMarkerVisible: false,
+        lastValueVisible: false,
+        priceLineVisible: false,
+      }).setData([
+        { time: ann.startTime, value: ann.startPrice },
+        { time: ann.endTime, value: ann.endPrice },
+      ])
+    }
+
+    // Price markers
+    const markerAnnotations = annotations.filter(
+      (a): a is PriceMarkerAnnotation => a.type === 'marker'
+    )
+    if (markerAnnotations.length > 0) {
+      const markers = markerAnnotations.map((ann) => ({
+        time: ann.time,
+        position: 'belowBar' as const,
+        color: ann.color ?? ANNOTATION_COLORS['marker'],
+        shape: 'arrowUp' as const,
+        text: ann.label ?? '',
+        id: ann.id,
+      }))
+      createSeriesMarkers(candlestickSeries, markers)
+    }
+
+    // --- Click handler for annotations ---
+    const clickHandler = (param: MouseEventParams) => {
+      if (!activeAnnotationTool || !param.time || !param.point || !onAnnotationAdd) return
+
+      const price = candlestickSeries.coordinateToPrice(param.point.y)
+      if (price === null || price === undefined) return
+
+      const time = param.time as UTCTimestamp
+
+      if (activeAnnotationTool === 'horizontal-line') {
+        onAnnotationAdd({
+          type: 'horizontal-line',
+          id: `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+          price,
+        })
+      } else if (activeAnnotationTool === 'trend-line') {
+        if (!pendingTrendStartRef.current) {
+          pendingTrendStartRef.current = { time, price }
+        } else {
+          const start = pendingTrendStartRef.current
+          pendingTrendStartRef.current = null
+          onAnnotationAdd({
+            type: 'trend-line',
+            id: `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            startTime: start.time,
+            startPrice: start.price,
+            endTime: time,
+            endPrice: price,
+          })
+        }
+      } else if (activeAnnotationTool === 'marker') {
+        onAnnotationAdd({
+          type: 'marker',
+          id: `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+          time,
+          price,
+        })
+      }
+    }
+
+    chart.subscribeClick(clickHandler)
+
     // Fit content
     chart.timeScale().fitContent()
 
@@ -182,10 +297,12 @@ export const CandlestickChart = memo(function CandlestickChart({
 
     return () => {
       window.removeEventListener('resize', handleResize)
+      chart.unsubscribeClick(clickHandler)
       chart.remove()
       chartRef.current = null
+      candlestickSeriesRef.current = null
     }
-  }, [data, height, showVolume, activeIndicators, isDark, chartColors])
+  }, [data, height, showVolume, activeIndicators, isDark, chartColors, annotations, activeAnnotationTool, onAnnotationAdd])
 
   const showRSI = activeIndicators.includes('rsi')
   const showMACD = activeIndicators.includes('macd')

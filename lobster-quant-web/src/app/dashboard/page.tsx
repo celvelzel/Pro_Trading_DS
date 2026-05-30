@@ -76,12 +76,12 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold text-text-primary">Dashboard</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Dashboard</h1>
             <HelpTooltip helpKey="dashboard.title" />
           </div>
           <p className="text-text-secondary mt-1">
@@ -91,7 +91,7 @@ export default function DashboardPage() {
         
         {/* Data Freshness Indicator */}
         {benchmarkUpdatedAt && (
-          <div className="text-right">
+          <div className="sm:text-right">
             <p className="text-xs text-muted-foreground">
               Last updated: {formatDistanceToNow(new Date(benchmarkUpdatedAt), { addSuffix: true })}
             </p>
@@ -100,7 +100,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatusCard
           title={
             <div className="flex items-center gap-2">
@@ -170,10 +170,10 @@ export default function DashboardPage() {
 
       {/* Price Chart */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <CardTitle>SPY Price Chart</CardTitle>
+              <CardTitle className="text-lg md:text-xl">SPY Price Chart</CardTitle>
               <HelpTooltip helpKey="analysis.charts" />
             </div>
             <TimeframeSelector
@@ -182,14 +182,16 @@ export default function DashboardPage() {
             />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 sm:px-6">
           {candles && candles.length > 0 ? (
-            <CandlestickChart
-              data={candles}
-              symbol="SPY"
-              height={400}
-              showVolume={true}
-            />
+            <div className="h-[300px] sm:h-[400px]">
+              <CandlestickChart
+                data={candles}
+                symbol="SPY"
+                height={undefined} // Use container height if component supports it, otherwise keep height
+                showVolume={true}
+              />
+            </div>
           ) : (
             <div className="h-[400px] flex items-center justify-center text-text-secondary">
               {candlesLoading 

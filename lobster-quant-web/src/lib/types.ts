@@ -58,6 +58,13 @@ export interface Signal {
   reasons: string[]
 }
 
+export interface SignalHistoryEntry {
+  date: string
+  score: number
+  signalType: SignalType
+  reasons: string[]
+}
+
 // ============================================================================
 // Options Analysis
 // ============================================================================
@@ -235,6 +242,50 @@ export interface ChartConfig {
   showMACD: boolean
   showMA20: boolean
   showMA200: boolean
+}
+
+// ============================================================================
+// Alert Types
+// ============================================================================
+
+export type AlertCondition = 'score_above' | 'score_below' | 'price_above' | 'price_below' | 'signal_change'
+
+export interface AlertRule {
+  id: string
+  symbol: string
+  condition: AlertCondition
+  threshold: number
+  enabled: boolean
+  createdAt: string
+  triggeredAt: string | null
+}
+
+export interface TriggeredAlert {
+  id: string
+  ruleId: string
+  symbol: string
+  condition: AlertCondition
+  threshold: number
+  currentValue: number
+  message: string
+  triggeredAt: string
+  read: boolean
+}
+
+export interface AlertRulesResponse {
+  rules: AlertRule[]
+}
+
+export interface TriggeredAlertsResponse {
+  alerts: TriggeredAlert[]
+  unreadCount: number
+}
+
+export interface CreateAlertRuleRequest {
+  symbol: string
+  condition: AlertCondition
+  threshold: number
+  enabled?: boolean
 }
 
 // ============================================================================

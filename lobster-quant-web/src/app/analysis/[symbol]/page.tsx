@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MetricCard } from '@/components/cards/MetricCard'
 import { SignalCard } from '@/components/cards/SignalCard'
 import { StatusCard } from '@/components/cards/StatusCard'
-import { CandlestickChart } from '@/components/charts/CandlestickChart'
+import { AnnotatedCandlestickChart } from '@/components/charts/AnnotatedCandlestickChart'
 import { ChartSkeleton } from '@/components/charts/ChartSkeleton'
 import { IndicatorToggle, type IndicatorType } from '@/components/charts/IndicatorToggle'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
@@ -204,7 +204,7 @@ export default function AnalysisDetailPage() {
             </CardHeader>
             <CardContent>
               {candles && candles.length > 0 ? (
-                <CandlestickChart
+                <AnnotatedCandlestickChart
                   data={candles}
                   symbol={symbol}
                   height={500}

@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Target,
   Play,
+  Bell,
 } from 'lucide-react'
 
 const navItems = [
@@ -44,6 +45,11 @@ const navItems = [
     title: 'Simulation',
     href: '/simulation',
     icon: Play,
+  },
+  {
+    title: 'Alerts',
+    href: '/alerts',
+    icon: Bell,
   },
 ]
 
