@@ -7,6 +7,7 @@ import {
   useStockCandles,
   useStockIndicators,
   useStockSignals,
+  useStockSignalHistory,
   useStockOptions,
   useStockRisk,
 } from '@/hooks/useStock'
@@ -18,9 +19,11 @@ import { StatusCard } from '@/components/cards/StatusCard'
 import { AnnotatedCandlestickChart } from '@/components/charts/AnnotatedCandlestickChart'
 import { ChartSkeleton } from '@/components/charts/ChartSkeleton'
 import { IndicatorToggle, type IndicatorType } from '@/components/charts/IndicatorToggle'
+import { SignalHistoryChart } from '@/components/charts/SignalHistoryChart'
+import { MultiTimeframeChart } from '@/components/charts/MultiTimeframeChart'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
-import { TrendingUp, TrendingDown, BarChart3, Activity, Shield } from 'lucide-react'
+import { TrendingUp, TrendingDown, BarChart3, Activity, Shield, Layers } from 'lucide-react'
 
 export default function AnalysisDetailPage() {
   const params = useParams()
@@ -45,8 +48,15 @@ export default function AnalysisDetailPage() {
   const { data: candles } = useStockCandles(symbol)
   const { data: indicators, isLoading: indicatorsLoading } = useStockIndicators(symbol)
   const { data: signals, isLoading: signalsLoading } = useStockSignals(symbol)
+  const { data: signalHistory } = useStockSignalHistory(symbol)
   const { data: options, isLoading: optionsLoading } = useStockOptions(symbol)
   const { data: risk, isLoading: riskLoading } = useStockRisk(symbol)
+
+  // Multi-timeframe candle data
+  const { data: candles1w } = useStockCandles(symbol, '1w')
+  const { data: candles1m } = useStockCandles(symbol, '1m')
+  const { data: candles3m } = useStockCandles(symbol, '3m')
+  const { data: candles6m } = useStockCandles(symbol, '6m')
 
   // Loading state
   if (stockLoading) {
@@ -164,7 +174,7 @@ export default function AnalysisDetailPage() {
 
       {/* Tabs for different analysis sections */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
             <span className="hidden md:inline">Overview</span>
@@ -184,6 +194,10 @@ export default function AnalysisDetailPage() {
           <TabsTrigger value="risk" className="flex items-center gap-2">
             <Shield className="w-4 h-4" />
             <span className="hidden md:inline">Risk</span>
+          </TabsTrigger>
+          <TabsTrigger value="multi-tf" className="flex items-center gap-2">
+            <Layers className="w-4 h-4" />
+            <span className="hidden md:inline">Multi-TF</span>
           </TabsTrigger>
         </TabsList>
 
@@ -416,6 +430,24 @@ export default function AnalysisDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CardTitle>Signal History</CardTitle>
+                <HelpTooltip helpKey="analysis.signalHistory" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {signalHistory && signalHistory.length > 0 ? (
+                <SignalHistoryChart data={signalHistory} height={350} />
+              ) : (
+                <div className="h-[350px] flex items-center justify-center text-text-secondary text-sm">
+                  No signal history available
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Risk Tab */}
@@ -454,6 +486,31 @@ export default function AnalysisDetailPage() {
               />
             </div>
           )}
+        </TabsContent>
+
+        {/* Multi-Timeframe Tab */}
+        <TabsContent value="multi-tf" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CardTitle>Multi-Timeframe Analysis</CardTitle>
+                <HelpTooltip helpKey="analysis.multiTimeframe" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <MultiTimeframeChart
+                symbol={symbol}
+                timeframes={[
+                  { label: '1 Week', period: '1w', candles: candles1w, isLoading: !candles1w },
+                  { label: '1 Month', period: '1m', candles: candles1m, isLoading: !candles1m },
+                  { label: '3 Months', period: '3m', candles: candles3m, isLoading: !candles3m },
+                  { label: '6 Months', period: '6m', candles: candles6m, isLoading: !candles6m },
+                ]}
+                activeIndicators={activeIndicators}
+                height={300}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

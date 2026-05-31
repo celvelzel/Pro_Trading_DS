@@ -9,6 +9,8 @@ import {
   useTriggeredAlerts,
   useMarkAlertsRead,
 } from '@/hooks/useAlerts'
+import { useAlertSettings } from '@/hooks/useAlertSettings'
+import { playAlertSound } from '@/lib/alert-sound'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,6 +37,9 @@ import {
   DollarSign,
   Activity,
   RefreshCw,
+  Volume2,
+  VolumeX,
+  Clock,
 } from 'lucide-react'
 import type { AlertCondition, AlertRule, TriggeredAlert } from '@/lib/types'
 
@@ -210,59 +215,122 @@ function AlertRuleItem({
   rule,
   onDelete,
   onToggle,
+  soundEnabled,
+  cooldownMinutes,
+  onToggleSound,
+  onCooldownChange,
 }: {
   rule: AlertRule
   onDelete: (id: string) => void
   onToggle: (id: string, enabled: boolean) => void
+  soundEnabled: boolean
+  cooldownMinutes: number
+  onToggleSound: (ruleId: string, enabled: boolean) => void
+  onCooldownChange: (ruleId: string, minutes: number) => void
 }) {
   const deleteMutation = useDeleteAlertRule()
   const toggleMutation = useToggleAlertRule()
   const Icon = CONDITION_ICONS[rule.condition]
+  const [showSettings, setShowSettings] = useState(false)
 
   return (
-    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${rule.enabled ? 'bg-primary/10' : 'bg-muted'}`}>
-          <Icon className={`h-4 w-4 ${rule.enabled ? 'text-primary' : 'text-muted-foreground'}`} />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{rule.symbol}</span>
-            <Badge variant="outline" className="text-xs">
-              {CONDITION_LABELS[rule.condition]}
-            </Badge>
-            <span className="text-sm text-muted-foreground">
-              {formatThreshold(rule.condition, rule.threshold)}
-            </span>
+    <div className="border rounded-lg hover:bg-muted/50 transition-colors">
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${rule.enabled ? 'bg-primary/10' : 'bg-muted'}`}>
+            <Icon className={`h-4 w-4 ${rule.enabled ? 'text-primary' : 'text-muted-foreground'}`} />
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Created {new Date(rule.createdAt).toLocaleDateString()}
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{rule.symbol}</span>
+              <Badge variant="outline" className="text-xs">
+                {CONDITION_LABELS[rule.condition]}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {formatThreshold(rule.condition, rule.threshold)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Created {new Date(rule.createdAt).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Sound toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onToggleSound(rule.id, !soundEnabled)}
+            title={soundEnabled ? 'Sound on' : 'Sound off'}
+            className={soundEnabled ? 'text-primary' : 'text-muted-foreground'}
+          >
+            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </Button>
+
+          {/* Settings toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowSettings(!showSettings)}
+            title="Cooldown settings"
+            className="text-muted-foreground"
+          >
+            <Clock className="h-4 w-4" />
+          </Button>
+
+          <Switch
+            checked={rule.enabled}
+            onCheckedChange={(checked) => {
+              toggleMutation.mutate({ ruleId: rule.id, enabled: checked })
+              onToggle(rule.id, checked)
+            }}
+            disabled={toggleMutation.isPending}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              deleteMutation.mutate(rule.id)
+              onDelete(rule.id)
+            }}
+            disabled={deleteMutation.isPending}
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Switch
-          checked={rule.enabled}
-          onCheckedChange={(checked) => {
-            toggleMutation.mutate({ ruleId: rule.id, enabled: checked })
-            onToggle(rule.id, checked)
-          }}
-          disabled={toggleMutation.isPending}
-        />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => {
-            deleteMutation.mutate(rule.id)
-            onDelete(rule.id)
-          }}
-          disabled={deleteMutation.isPending}
-          className="text-destructive hover:text-destructive"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
+      {/* Expandable cooldown settings */}
+      {showSettings && (
+        <div className="px-4 pb-4 pt-0 border-t">
+          <div className="flex items-center gap-4 pt-3">
+            <label className="text-sm text-muted-foreground flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5" />
+              Cooldown period
+            </label>
+            <Select
+              value={String(cooldownMinutes)}
+              onValueChange={(v) => { if (v) onCooldownChange(rule.id, parseInt(v, 10)) }}
+            >
+              <SelectTrigger className="w-32 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 minute</SelectItem>
+                <SelectItem value="5">5 minutes</SelectItem>
+                <SelectItem value="10">10 minutes</SelectItem>
+                <SelectItem value="30">30 minutes</SelectItem>
+                <SelectItem value="60">1 hour</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground">
+              Prevents duplicate alerts within this window
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -317,6 +385,13 @@ export default function AlertsPage() {
   const { data: rulesData, isLoading: rulesLoading, error: rulesError } = useAlertRules()
   const { data: triggeredData, isLoading: triggeredLoading } = useTriggeredAlerts()
   const markReadMutation = useMarkAlertsRead()
+  const {
+    settingsMap,
+    getRuleSettings,
+    updateRuleSettings,
+    isInCooldown,
+    markTriggered,
+  } = useAlertSettings()
 
   const rules = rulesData?.rules ?? []
   const triggeredAlerts = triggeredData?.alerts ?? []
@@ -325,23 +400,58 @@ export default function AlertsPage() {
   // Track previous unread count for browser notifications
   const [prevUnreadCount, setPrevUnreadCount] = useState(0)
 
+  // Global sound mute (persisted)
+  const [globalSoundEnabled, setGlobalSoundEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('lobster-quant-alert-sound-global') !== 'false'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('lobster-quant-alert-sound-global', String(globalSoundEnabled))
+  }, [globalSoundEnabled])
+
   // Request notification permission on mount
   useEffect(() => {
     requestNotificationPermission()
   }, [])
 
-  // Show browser notification when new alerts arrive
+  // Show browser notification + play sound when new alerts arrive
   useEffect(() => {
     if (unreadCount > prevUnreadCount && prevUnreadCount > 0) {
-      const newAlerts = triggeredAlerts.filter((a) => !a.read).slice(0, 3)
-      const body = newAlerts.map((a) => a.message).join('\n')
+      const newAlerts = triggeredAlerts.filter((a) => !a.read)
+      const body = newAlerts.slice(0, 3).map((a) => a.message).join('\n')
+
+      // Check cooldown and sound per rule before triggering
+      let shouldPlaySound = false
+
+      for (const alert of newAlerts) {
+        const ruleSettings = getRuleSettings(alert.ruleId)
+        const cooledDown = isInCooldown(alert.ruleId, ruleSettings.cooldownMinutes)
+
+        if (!cooledDown) {
+          // Mark triggered to start cooldown
+          markTriggered(alert.ruleId)
+
+          // Play sound if per-rule sound is enabled
+          if (ruleSettings.soundEnabled) {
+            shouldPlaySound = true
+          }
+        }
+      }
+
+      // Browser notification (always show for new alerts)
       showBrowserNotification(
         `${unreadCount - prevUnreadCount} New Alert(s)`,
         body
       )
+
+      // Play sound once if any rule has sound enabled and global sound is on
+      if (shouldPlaySound && globalSoundEnabled) {
+        playAlertSound()
+      }
     }
     setPrevUnreadCount(unreadCount)
-  }, [unreadCount, triggeredAlerts, prevUnreadCount])
+  }, [unreadCount, triggeredAlerts, prevUnreadCount, globalSoundEnabled, getRuleSettings, isInCooldown, markTriggered])
 
   const handleMarkAllRead = useCallback(() => {
     markReadMutation.mutate()
@@ -375,12 +485,28 @@ export default function AlertsPage() {
             Set up alerts for stock prices, scores, and signal changes
           </p>
         </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" onClick={handleMarkAllRead} disabled={markReadMutation.isPending}>
-            <Bell className="h-4 w-4 mr-2" />
-            Mark All Read
+        <div className="flex items-center gap-2">
+          {/* Global sound toggle */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setGlobalSoundEnabled(!globalSoundEnabled)}
+            title={globalSoundEnabled ? 'Alert sounds on' : 'Alert sounds muted'}
+          >
+            {globalSoundEnabled ? (
+              <Volume2 className="h-4 w-4" />
+            ) : (
+              <VolumeX className="h-4 w-4 text-muted-foreground" />
+            )}
           </Button>
-        )}
+
+          {unreadCount > 0 && (
+            <Button variant="outline" onClick={handleMarkAllRead} disabled={markReadMutation.isPending}>
+              <Bell className="h-4 w-4 mr-2" />
+              Mark All Read
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Create Alert Form */}
@@ -407,14 +533,25 @@ export default function AlertsPage() {
             />
           ) : (
             <div className="space-y-2">
-              {rules.map((rule) => (
-                <AlertRuleItem
-                  key={rule.id}
-                  rule={rule}
-                  onDelete={() => {}}
-                  onToggle={() => {}}
-                />
-              ))}
+              {rules.map((rule) => {
+                const ruleSettings = getRuleSettings(rule.id)
+                return (
+                  <AlertRuleItem
+                    key={rule.id}
+                    rule={rule}
+                    onDelete={() => {}}
+                    onToggle={() => {}}
+                    soundEnabled={ruleSettings.soundEnabled}
+                    cooldownMinutes={ruleSettings.cooldownMinutes}
+                    onToggleSound={(ruleId, enabled) =>
+                      updateRuleSettings(ruleId, { soundEnabled: enabled })
+                    }
+                    onCooldownChange={(ruleId, minutes) =>
+                      updateRuleSettings(ruleId, { cooldownMinutes: minutes })
+                    }
+                  />
+                )
+              })}
             </div>
           )}
         </CardContent>

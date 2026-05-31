@@ -1,150 +1,86 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useStrategyStore } from '@/stores/strategyStore';
 import { StrategySelector } from '@/components/strategy';
 import { TradeList } from '@/components/simulation/TradeList';
+import { TradeJournal } from '@/components/simulation/TradeJournal';
+import { SimulationEquityCurve } from '@/components/simulation/SimulationEquityCurve';
+import { PerformanceMetricsCards } from '@/components/simulation/PerformanceMetricsCards';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { HelpTooltip } from '@/components/ui/help-tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Play, RefreshCw, Loader2 } from 'lucide-react';
+import { ExportButton } from '@/components/ui/export-button';
 import { ErrorState } from '@/components/ui/error-state';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-
-interface SimulatedTrade {
-  id: string;
-  symbol: string;
-  entryDate: string;
-  entryPrice: number;
-  exitDate?: string;
-  exitPrice?: number;
-  shares: number;
-  status: 'open' | 'closed';
-  pnl?: number;
-  pnlPercent?: number;
-}
-
-interface PerformanceMetrics {
-  strategyId: string;
-  window: string;
-  totalReturn: number;
-  volatility: number;
-  sharpeRatio: number;
-  maxDrawdown: number;
-  winRate: number;
-  totalTrades: number;
-}
+import {
+  useSimulationTrades,
+  useSimulationPerformance,
+  useSimulationJournal,
+  useSimulationChart,
+  useRunSimulation,
+  useRunAllSimulations,
+} from '@/hooks/useSimulation';
+import { showToastError } from '@/hooks/useApiQuery';
 
 export default function SimulationPage() {
   const { fetchStrategies } = useStrategyStore();
   const [selectedStrategyId, setSelectedStrategyId] = useState('');
   const [market, setMarket] = useState('US');
-  const [trades, setTrades] = useState<SimulatedTrade[]>([]);
-  const [performance, setPerformance] = useState<PerformanceMetrics | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // TanStack Query hooks
+  const {
+    data: trades = [],
+    isLoading: tradesLoading,
+    error: tradesError,
+  } = useSimulationTrades(selectedStrategyId);
+
+  const {
+    data: performance,
+    error: performanceError,
+  } = useSimulationPerformance(selectedStrategyId);
+
+  const {
+    data: journalEntries = [],
+  } = useSimulationJournal(selectedStrategyId);
+
+  const {
+    data: chartData,
+    isLoading: chartLoading,
+  } = useSimulationChart(selectedStrategyId);
+
+  const runSimulationMutation = useRunSimulation();
+  const runAllSimulationsMutation = useRunAllSimulations();
+
+  const isRunning = runSimulationMutation.isPending || runAllSimulationsMutation.isPending;
+  const error = tradesError || performanceError;
 
   useEffect(() => {
     fetchStrategies();
   }, [fetchStrategies]);
 
-  const fetchTrades = useCallback(async () => {
-    if (!selectedStrategyId) return;
-    
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/simulation/simulation/trades?strategy_id=${selectedStrategyId}`);
-      if (!response.ok) throw new Error('Failed to fetch trades');
-      const data = await response.json();
-      setTrades(data);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
+  // Show toast on mutation errors
+  useEffect(() => {
+    if (runSimulationMutation.error) {
+      showToastError(runSimulationMutation.error);
     }
-  }, [selectedStrategyId]);
-
-  const fetchPerformance = useCallback(async () => {
-    if (!selectedStrategyId) return;
-    
-    try {
-      const response = await fetch(`${API_BASE}/simulation/simulation/performance?strategy_id=${selectedStrategyId}&window=1M`);
-      if (!response.ok) throw new Error('Failed to fetch performance');
-      const data = await response.json();
-      setPerformance(data);
-    } catch (err) {
-      console.error('Failed to fetch performance:', err);
-    }
-  }, [selectedStrategyId]);
+  }, [runSimulationMutation.error]);
 
   useEffect(() => {
-    if (selectedStrategyId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchTrades();
-      fetchPerformance();
+    if (runAllSimulationsMutation.error) {
+      showToastError(runAllSimulationsMutation.error);
     }
-  }, [selectedStrategyId, fetchTrades, fetchPerformance]);
+  }, [runAllSimulationsMutation.error]);
 
-  const runSimulation = async () => {
+  const runSimulation = () => {
     if (!selectedStrategyId) return;
-    
-    setRunning(true);
-    setError(null);
-    
-    try {
-      const response = await fetch(`${API_BASE}/simulation/simulation/run`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          strategyId: selectedStrategyId,
-          market: market,
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Simulation failed');
-      }
-      
-      // Refresh data after simulation
-      await fetchTrades();
-      await fetchPerformance();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setRunning(false);
-    }
+    runSimulationMutation.mutate({ strategyId: selectedStrategyId, market });
   };
 
-  const runAllSimulations = async () => {
-    setRunning(true);
-    setError(null);
-    
-    try {
-      const response = await fetch(`${API_BASE}/simulation/simulation/run-all`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ market }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Simulation failed');
-      }
-      
-      // Refresh data
-      if (selectedStrategyId) {
-        await fetchTrades();
-        await fetchPerformance();
-      }
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setRunning(false);
-    }
+  const runAllSimulations = () => {
+    runAllSimulationsMutation.mutate({ market });
   };
 
   return (
@@ -160,8 +96,8 @@ export default function SimulationPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={runAllSimulations} disabled={running} variant="outline">
-            {running ? (
+          <Button onClick={runAllSimulations} disabled={isRunning} variant="outline">
+            {isRunning ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Running...
@@ -173,8 +109,8 @@ export default function SimulationPage() {
               </>
             )}
           </Button>
-          <Button onClick={runSimulation} disabled={running || !selectedStrategyId}>
-            {running ? (
+          <Button onClick={runSimulation} disabled={isRunning || !selectedStrategyId}>
+            {isRunning ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Running...
@@ -191,11 +127,10 @@ export default function SimulationPage() {
 
       {error && (
         <ErrorState 
-          message={error} 
+          message={error.message} 
           onRetry={() => {
-            setError(null)
-            fetchTrades()
-            fetchPerformance()
+            runSimulationMutation.reset();
+            runAllSimulationsMutation.reset();
           }}
         />
       )}
@@ -221,45 +156,29 @@ export default function SimulationPage() {
       </div>
 
       {selectedStrategyId && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Total Return</p>
-              <p className={`text-2xl font-bold ${
-                (performance?.totalReturn || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {performance?.totalReturn?.toFixed(2) || '0.00'}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Win Rate</p>
-              <p className="text-2xl font-bold">
-                {performance?.winRate?.toFixed(1) || '0.0'}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Sharpe Ratio</p>
-              <p className="text-2xl font-bold">
-                {performance?.sharpeRatio?.toFixed(2) || '0.00'}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Total Trades</p>
-              <p className="text-2xl font-bold">
-                {performance?.totalTrades || 0}
-              </p>
-            </CardContent>
-          </Card>
+        <div className="mb-8">
+          <PerformanceMetricsCards data={performance} />
         </div>
       )}
 
-      {loading ? (
+      {selectedStrategyId && (
+        <div className="mb-8">
+          {chartLoading ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <span className="ml-3">Loading chart...</span>
+                </div>
+              </CardContent>
+            </Card>
+          ) : chartData ? (
+            <SimulationEquityCurve data={chartData} />
+          ) : null}
+        </div>
+      )}
+
+      {tradesLoading ? (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-center py-12">
@@ -269,13 +188,38 @@ export default function SimulationPage() {
           </CardContent>
         </Card>
       ) : selectedStrategyId ? (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-lg font-semibold">Trade History</h2>
-            <HelpTooltip helpKey="simulation.trades" />
+        <Tabs defaultValue="trades">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <TabsList>
+                <TabsTrigger value="trades">Trades</TabsTrigger>
+                <TabsTrigger value="journal">Journal</TabsTrigger>
+              </TabsList>
+              <HelpTooltip helpKey="simulation.trades" />
+            </div>
+            <ExportButton
+              data={trades}
+              columns={[
+                { key: 'symbol', header: 'Symbol' },
+                { key: 'status', header: 'Status' },
+                { key: 'entryDate', header: 'Entry Date' },
+                { key: 'entryPrice', header: 'Entry Price', format: (v: number) => `$${v?.toFixed(2) ?? ''}` },
+                { key: 'exitDate', header: 'Exit Date' },
+                { key: 'exitPrice', header: 'Exit Price', format: (v: number) => v ? `$${v.toFixed(2)}` : '-' },
+                { key: 'shares', header: 'Shares' },
+                { key: 'pnl', header: 'P&L', format: (v: number) => v != null ? `$${v.toFixed(2)}` : '-' },
+                { key: 'pnlPercent', header: 'P&L %', format: (v: number) => v != null ? `${v.toFixed(2)}%` : '-' },
+              ]}
+              filename={`simulation-${selectedStrategyId || 'trades'}`}
+            />
           </div>
-          <TradeList trades={trades} />
-        </div>
+          <TabsContent value="trades">
+            <TradeList trades={trades} />
+          </TabsContent>
+          <TabsContent value="journal">
+            <TradeJournal entries={journalEntries} />
+          </TabsContent>
+        </Tabs>
       ) : (
         <Card>
           <CardContent className="pt-6">

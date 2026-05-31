@@ -18,28 +18,20 @@ const shortcutGroups: ShortcutGroup[] = [
   {
     title: 'Navigation',
     shortcuts: [
-      { key: 'Ctrl+1', description: 'Dashboard' },
-      { key: 'Ctrl+2', description: 'Scanner' },
-      { key: 'Ctrl+3', description: 'Analysis' },
-      { key: 'Ctrl+4', description: 'Strategy' },
-      { key: 'Ctrl+5', description: 'Backtest' },
-      { key: 'Ctrl+6', description: 'Simulation' },
-      { key: 'B', description: 'Go to Backtest' },
+      { key: '1', description: 'Dashboard' },
+      { key: '2', description: 'Scanner' },
+      { key: '3', description: 'Analysis' },
+      { key: '4', description: 'Strategy' },
+      { key: '5', description: 'Backtest' },
+      { key: '6', description: 'Simulation' },
+      { key: '7', description: 'Alerts' },
     ],
   },
   {
     title: 'Actions',
     shortcuts: [
-      { key: 'Ctrl+K', description: 'Focus search' },
-      { key: 'R', description: 'Refresh data' },
-      { key: 'W', description: 'Toggle watchlist' },
-    ],
-  },
-  {
-    title: 'Help',
-    shortcuts: [
+      { key: '⌘/Ctrl+K', description: 'Focus search' },
       { key: '?', description: 'Show shortcuts' },
-      { key: 'Esc', description: 'Close modal' },
     ],
   },
 ]

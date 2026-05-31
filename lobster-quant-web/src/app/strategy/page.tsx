@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useStrategyStore, Strategy, StrategyParams } from '@/stores/strategyStore';
 import { StrategyCard, StrategyForm } from '@/components/strategy';
+import { VersionHistoryModal } from '@/components/strategy/VersionHistoryModal';
 import { Button } from '@/components/ui/button';
 import { HelpTooltip } from '@/components/ui/help-tooltip';
 import { Plus } from 'lucide-react';
@@ -32,6 +33,7 @@ export default function StrategyPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingStrategy, setEditingStrategy] = useState<Strategy | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [historyStrategy, setHistoryStrategy] = useState<Strategy | null>(null);
 
   useEffect(() => {
     fetchStrategies();
@@ -64,6 +66,10 @@ export default function StrategyPage() {
   const handleEdit = (strategy: Strategy) => {
     setEditingStrategy(strategy);
     setShowForm(true);
+  };
+
+  const handleViewHistory = (strategy: Strategy) => {
+    setHistoryStrategy(strategy);
   };
 
   const handleCancel = () => {
@@ -149,6 +155,7 @@ export default function StrategyPage() {
                     strategy={strategy}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    onViewHistory={handleViewHistory}
                   />
                 ))}
               </div>
@@ -172,6 +179,13 @@ export default function StrategyPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Version History Modal */}
+      <VersionHistoryModal
+        strategy={historyStrategy}
+        open={!!historyStrategy}
+        onOpenChange={(open) => { if (!open) setHistoryStrategy(null); }}
+      />
     </div>
   );
 }

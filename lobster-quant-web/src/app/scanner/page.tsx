@@ -18,6 +18,7 @@ import { SignalCard } from '@/components/cards/SignalCard'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { Search, Loader2 } from 'lucide-react'
+import { ExportButton } from '@/components/ui/export-button'
 import Link from 'next/link'
 import type { Market, StockResult } from '@/lib/types'
 
@@ -132,11 +133,28 @@ export default function ScannerPage() {
               </h2>
               <HelpTooltip helpKey="scanner.results" />
             </div>
-            {shouldVirtualize && (
-              <p className="text-sm text-text-tertiary">
-                Virtualized for performance
-              </p>
-            )}
+            <div className="flex items-center gap-2">
+              <ExportButton
+                data={results}
+                columns={[
+                  { key: 'symbol', header: 'Symbol' },
+                  { key: 'name', header: 'Name' },
+                  { key: 'price', header: 'Price', format: (v: number) => `$${v?.toFixed(2) ?? ''}` },
+                  { key: 'change', header: 'Change', format: (v: number) => v?.toFixed(2) ?? '' },
+                  { key: 'changePercent', header: 'Change %', format: (v: number) => `${v?.toFixed(2) ?? ''}%` },
+                  { key: 'score', header: 'Score' },
+                  { key: 'signalType', header: 'Signal' },
+                  { key: 'probability', header: 'Probability', format: (v: number) => `${(v * 100)?.toFixed(1) ?? ''}%` },
+                  { key: 'reasons', header: 'Reasons', format: (v: string[]) => v?.join('; ') ?? '' },
+                ]}
+                filename={`scanner-${market}`}
+              />
+              {shouldVirtualize && (
+                <p className="text-sm text-text-tertiary">
+                  Virtualized for performance
+                </p>
+              )}
+            </div>
           </div>
 
           {shouldVirtualize ? (

@@ -1,24 +1,13 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
 import { useTheme } from 'next-themes'
-import { Search, Moon, Sun, Menu } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { Moon, Sun, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { SearchAutocomplete } from '@/components/layout/SearchAutocomplete'
+import { DataSourceStatus } from '@/components/ui/data-source-status'
 
 export function Header() {
-  const [searchQuery, setSearchQuery] = useState('')
   const { theme, setTheme } = useTheme()
-  const router = useRouter()
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      router.push(`/analysis/${searchQuery.trim().toUpperCase()}`)
-      setSearchQuery('')
-    }
-  }
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
@@ -33,22 +22,14 @@ export function Header() {
           <span className="sr-only">Toggle menu</span>
         </Button>
 
-        {/* Search bar */}
-        <form onSubmit={handleSearch} className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search stock symbol (e.g., AAPL)..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </form>
+        {/* Search bar with autocomplete */}
+        <SearchAutocomplete />
 
         {/* Right side actions */}
         <div className="flex items-center gap-2 ml-auto">
+          {/* Data source status indicator */}
+          <DataSourceStatus />
+
           {/* Theme toggle */}
           <Button
             variant="ghost"

@@ -7,6 +7,7 @@ import type {
   StockData,
   Indicators,
   Signal,
+  SignalHistoryEntry,
   OptionsAnalysis,
   RiskAssessment,
   ScanParams,
@@ -53,6 +54,7 @@ export const stockKeys = {
   detail: (symbol: string) => [...stockKeys.all, symbol] as const,
   indicators: (symbol: string) => [...stockKeys.detail(symbol), 'indicators'] as const,
   signals: (symbol: string) => [...stockKeys.detail(symbol), 'signals'] as const,
+  signalHistory: (symbol: string) => [...stockKeys.detail(symbol), 'signal-history'] as const,
   options: (symbol: string) => [...stockKeys.detail(symbol), 'options'] as const,
   risk: (symbol: string) => [...stockKeys.detail(symbol), 'risk'] as const,
 }
@@ -156,6 +158,19 @@ export function useStockSignals(symbol: string) {
   return useQuery<Signal>({
     queryKey: stockKeys.signals(symbol),
     queryFn: () => api.get(`/api/stocks/${symbol}/signals`),
+    enabled: !!symbol,
+    ...CACHE_TIMING.SIGNALS,
+  })
+}
+
+/**
+ * Fetch signal history for a given symbol.
+ * Returns an array of historical signal entries for charting.
+ */
+export function useStockSignalHistory(symbol: string) {
+  return useQuery<SignalHistoryEntry[]>({
+    queryKey: stockKeys.signalHistory(symbol),
+    queryFn: () => api.get(`/api/stocks/${symbol}/signal-history`),
     enabled: !!symbol,
     ...CACHE_TIMING.SIGNALS,
   })

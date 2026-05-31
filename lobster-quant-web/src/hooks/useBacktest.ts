@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
+import { showToastError } from '@/hooks/useApiQuery'
 import type { BacktestMetrics } from '@/stores/strategyStore'
 
 // ============================================================================
@@ -136,7 +137,7 @@ export function useRunBacktest() {
       toast.success('Backtest completed')
     },
     onError: (error) => {
-      toast.error(`Backtest failed: ${error.message}`)
+      showToastError(error)
     },
   })
 }

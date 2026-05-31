@@ -5,6 +5,11 @@ import { useStockData, useStockRisk, useStockCandles } from '@/hooks/useStock'
 import { useWatchlistData } from '@/hooks/useWatchlistData'
 import { MetricCard } from '@/components/cards/MetricCard'
 import { StatusCard } from '@/components/cards/StatusCard'
+import { MarketOverviewCard } from '@/components/cards/MarketOverviewCard'
+import { SignalSummaryCard } from '@/components/cards/SignalSummaryCard'
+import { RecentActivityCard } from '@/components/cards/RecentActivityCard'
+import { StrategyPerformanceCard } from '@/components/cards/StrategyPerformanceCard'
+import { QuickActionsCard } from '@/components/cards/QuickActionsCard'
 import { CandlestickChart } from '@/components/charts/CandlestickChart'
 import { TimeframeSelector, type Timeframe } from '@/components/charts/TimeframeSelector'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -166,6 +171,15 @@ export default function DashboardPage() {
           deltaType={riskError ? 'down' : 'neutral'}
           loading={riskLoading}
         />
+      </div>
+
+      {/* Information Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <MarketOverviewCard />
+        <SignalSummaryCard />
+        <RecentActivityCard />
+        <StrategyPerformanceCard />
+        <QuickActionsCard />
       </div>
 
       {/* Price Chart */}

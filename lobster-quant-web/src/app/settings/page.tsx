@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useSettings, useUpdateSettings, useResetSettings } from '@/hooks/useSettings'
+import type { AppSettings } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
@@ -10,6 +11,16 @@ import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Settings,
   Save,
@@ -23,6 +34,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  Download,
+  Upload,
 } from 'lucide-react'
 
 // ============================================================================
@@ -148,6 +161,9 @@ export default function SettingsPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('markets')
+  const [importConfirmOpen, setImportConfirmOpen] = useState(false)
+  const [pendingImport, setPendingImport] = useState<AppSettings | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ---- Sync server settings into Zustand on first load ----
   useEffect(() => {
@@ -242,6 +258,65 @@ export default function SettingsPage() {
     }
   }
 
+  // ---- Export handler: download settings as JSON ----
+  const handleExport = useCallback(() => {
+    const store = useSettingsStore.getState()
+    const payload = store.toAppSettings()
+    const json = JSON.stringify(payload, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `trading-settings-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [])
+
+  // ---- Import handler: trigger file input ----
+  const handleImport = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  // ---- File change handler: parse JSON and show confirm dialog ----
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string) as AppSettings
+        // Basic structure validation
+        if (!data.markets || !data.data || !data.scoring || !data.backtest || !data.offFilter || !data.indicators) {
+          setErrorMessage('Invalid settings file: missing required sections')
+          setTimeout(() => setErrorMessage(null), 4000)
+          return
+        }
+        setPendingImport(data)
+        setImportConfirmOpen(true)
+      } catch {
+        setErrorMessage('Failed to parse settings file')
+        setTimeout(() => setErrorMessage(null), 4000)
+      }
+    }
+    reader.readAsText(file)
+    // Reset the input so the same file can be selected again
+    e.target.value = ''
+  }, [])
+
+  // ---- Confirm import handler ----
+  const handleConfirmImport = useCallback(() => {
+    if (pendingImport) {
+      fromAppSettings(pendingImport)
+      setPendingImport(null)
+      setImportConfirmOpen(false)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    }
+  }, [pendingImport, fromAppSettings])
+
   // ---- Slider helper ----
   const sliderVal = (v: number | readonly number[]) => (Array.isArray(v) ? v[0] : v)
 
@@ -284,6 +359,21 @@ export default function SettingsPage() {
           <Button variant="outline" onClick={handleReset} disabled={resetMutation.isPending}>
             <RotateCcw className="w-4 h-4 mr-2" />
             Reset
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <Button variant="outline" onClick={handleImport}>
+            <Upload className="w-4 h-4 mr-2" />
+            Import
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" />
+            Export
           </Button>
           <Button onClick={handleSave} disabled={saveStatus === 'saving' || isLoadingSettings}>
             {saveStatus === 'saving' ? (
@@ -892,6 +982,27 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Import Confirmation Dialog */}
+      <AlertDialog open={importConfirmOpen} onOpenChange={setImportConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Import Settings</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will overwrite your current settings with the imported values.
+              You can save to the server afterwards if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingImport(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmImport}>
+              Import
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

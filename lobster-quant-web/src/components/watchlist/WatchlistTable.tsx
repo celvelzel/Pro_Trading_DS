@@ -1,12 +1,24 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu'
 import { useWatchlistStore } from '@/stores/watchlistStore'
 import type { WatchlistStockData } from '@/hooks/useWatchlistData'
+import { ManageTagsDialog } from './ManageTagsDialog'
+import { ManageGroupsDialog } from './ManageGroupsDialog'
 import {
   TrendingUp,
   TrendingDown,
@@ -15,6 +27,11 @@ import {
   Plus,
   RefreshCw,
   AlertCircle,
+  MoreHorizontal,
+  FolderPlus,
+  Tag,
+  Filter,
+  FolderOpen,
 } from 'lucide-react'
 
 interface WatchlistTableProps {
@@ -73,9 +90,81 @@ function StockRowSkeleton() {
   )
 }
 
+function StockRowActions({ symbol }: { symbol: string }) {
+  const { groups, addToGroup, removeFromGroup } = useWatchlistStore()
+  const [tagsDialogOpen, setTagsDialogOpen] = useState(false)
+  const groupNames = Object.keys(groups).sort()
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button
+              className="p-1 rounded-md hover:bg-muted transition-colors"
+              aria-label={`Actions for ${symbol}`}
+            />
+          }
+        >
+          <MoreHorizontal className="w-4 h-4 text-text-tertiary" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={4}>
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+
+          {/* Group assignment submenu */}
+          {groupNames.length > 0 && (
+            <>
+              <DropdownMenuLabel inset>Add to Group</DropdownMenuLabel>
+              {groupNames.map((groupName) => {
+                const isInGroup = (groups[groupName] || []).includes(symbol)
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={groupName}
+                    checked={isInGroup}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        addToGroup(groupName, symbol)
+                      } else {
+                        removeFromGroup(groupName, symbol)
+                      }
+                    }}
+                  >
+                    {groupName}
+                  </DropdownMenuCheckboxItem>
+                )
+              })}
+              <DropdownMenuSeparator />
+            </>
+          )}
+
+          <DropdownMenuItem onClick={() => setTagsDialogOpen(true)}>
+            <Tag className="w-4 h-4 mr-2" />
+            Manage Tags
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <ManageTagsDialog
+        open={tagsDialogOpen}
+        onOpenChange={setTagsDialogOpen}
+        symbol={symbol}
+      />
+    </>
+  )
+}
+
 function StockRow({ stock }: { stock: WatchlistStockData }) {
-  const { selectedSymbols, toggleSelect } = useWatchlistStore()
+  const { selectedSymbols, toggleSelect, tags, groups } = useWatchlistStore()
   const isSelected = selectedSymbols.includes(stock.symbol)
+  const symbolTags = tags[stock.symbol] || []
+
+  // Find which groups this stock belongs to
+  const stockGroups = useMemo(() => {
+    return Object.entries(groups)
+      .filter(([_, symbols]) => symbols.includes(stock.symbol))
+      .map(([name]) => name)
+  }, [groups, stock.symbol])
 
   if (stock.isLoading) {
     return <StockRowSkeleton />
@@ -98,6 +187,29 @@ function StockRow({ stock }: { stock: WatchlistStockData }) {
       >
         {stock.symbol}
       </Link>
+
+      {/* Tags */}
+      <div className="flex items-center gap-1 flex-wrap min-w-[100px]">
+        {stockGroups.map((groupName) => (
+          <Badge
+            key={`group-${groupName}`}
+            variant="outline"
+            className="text-[10px] px-1.5 py-0"
+          >
+            <FolderOpen className="w-2.5 h-2.5 mr-0.5" />
+            {groupName}
+          </Badge>
+        ))}
+        {symbolTags.map((tag) => (
+          <Badge
+            key={`tag-${tag}`}
+            variant="secondary"
+            className="text-[10px] px-1.5 py-0"
+          >
+            {tag}
+          </Badge>
+        ))}
+      </div>
 
       <div className="flex-1" />
 
@@ -128,6 +240,9 @@ function StockRow({ stock }: { stock: WatchlistStockData }) {
           <span className="text-text-tertiary text-sm">--</span>
         )}
       </div>
+
+      {/* Actions */}
+      <StockRowActions symbol={stock.symbol} />
     </div>
   )
 }
@@ -140,10 +255,22 @@ export const WatchlistTable = memo(function WatchlistTable({
   onRefresh,
   className,
 }: WatchlistTableProps) {
-  const { selectedSymbols, selectAll, deselectAll, removeSelected } =
+  const { selectedSymbols, selectAll, deselectAll, removeSelected, groups } =
     useWatchlistStore()
 
-  const allSelected = stocks.length > 0 && selectedSymbols.length === stocks.length
+  const [groupFilter, setGroupFilter] = useState<string | null>(null)
+  const [manageGroupsOpen, setManageGroupsOpen] = useState(false)
+
+  const groupNames = Object.keys(groups).sort()
+
+  // Filter stocks by selected group
+  const filteredStocks = useMemo(() => {
+    if (!groupFilter) return stocks
+    const groupSymbols = groups[groupFilter] || []
+    return stocks.filter((stock) => groupSymbols.includes(stock.symbol))
+  }, [stocks, groupFilter, groups])
+
+  const allSelected = filteredStocks.length > 0 && selectedSymbols.length === filteredStocks.length
 
   if (loading && stocks.length === 0) {
     return (
@@ -195,72 +322,150 @@ export const WatchlistTable = memo(function WatchlistTable({
   }
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span>Watchlist</span>
-            <span className="text-sm font-normal text-text-tertiary">
-              ({stocks.length} {stocks.length === 1 ? 'stock' : 'stocks'})
-            </span>
-            {loading && (
-              <RefreshCw className="w-4 h-4 text-text-tertiary animate-spin" />
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Refresh button */}
-            {onRefresh && (
+    <>
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>Watchlist</span>
+              <span className="text-sm font-normal text-text-tertiary">
+                ({filteredStocks.length} {filteredStocks.length === 1 ? 'stock' : 'stocks'})
+                {groupFilter && (
+                  <span className="ml-1">
+                    in <span className="font-medium text-text-secondary">{groupFilter}</span>
+                  </span>
+                )}
+              </span>
+              {loading && (
+                <RefreshCw className="w-4 h-4 text-text-tertiary animate-spin" />
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Group filter */}
+              {groupNames.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <button
+                        className={cn(
+                          'flex items-center gap-1.5 px-2 py-1.5 text-sm rounded-md border transition-colors',
+                          groupFilter
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : 'border-input hover:bg-muted text-text-secondary'
+                        )}
+                      />
+                    }
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                    {groupFilter || 'All Groups'}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" sideOffset={4}>
+                    <DropdownMenuLabel>Filter by Group</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setGroupFilter(null)}>
+                      All Stocks
+                    </DropdownMenuItem>
+                    {groupNames.map((name) => (
+                      <DropdownMenuItem
+                        key={name}
+                        onClick={() => setGroupFilter(name)}
+                      >
+                        {name}
+                        <span className="ml-auto text-xs text-text-tertiary">
+                          ({(groups[name] || []).length})
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              {/* Manage Groups button */}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onRefresh}
-                disabled={loading}
-                title="Refresh data"
+                onClick={() => setManageGroupsOpen(true)}
+                title="Manage Groups"
               >
-                <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+                <FolderPlus className="w-4 h-4" />
               </Button>
-            )}
 
-            {/* Compare button */}
-            {selectedSymbols.length > 1 && onCompareClick && (
+              {/* Refresh button */}
+              {onRefresh && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRefresh}
+                  disabled={loading}
+                  title="Refresh data"
+                >
+                  <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+                </Button>
+              )}
+
+              {/* Compare button */}
+              {selectedSymbols.length > 1 && onCompareClick && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onCompareClick(selectedSymbols)}
+                >
+                  <BarChart3 className="w-4 h-4 mr-1" />
+                  Compare ({selectedSymbols.length})
+                </Button>
+              )}
+
+              {/* Select/Deselect all */}
+              <Button variant="ghost" size="sm" onClick={allSelected ? deselectAll : selectAll}>
+                {allSelected ? 'Deselect All' : 'Select All'}
+              </Button>
+
+              {/* Remove selected */}
+              {selectedSymbols.length > 0 && (
+                <Button variant="destructive" size="sm" onClick={removeSelected}>
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Remove ({selectedSymbols.length})
+                </Button>
+              )}
+
+              {/* Add button */}
+              <Button variant="outline" size="sm" onClick={onAddClick}>
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredStocks.length === 0 ? (
+            <div className="text-center py-8 text-text-tertiary">
+              <Filter className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">
+                No stocks in &ldquo;{groupFilter}&rdquo; group.
+              </p>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                onClick={() => onCompareClick(selectedSymbols)}
+                className="mt-2"
+                onClick={() => setGroupFilter(null)}
               >
-                <BarChart3 className="w-4 h-4 mr-1" />
-                Compare ({selectedSymbols.length})
+                Show all stocks
               </Button>
-            )}
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredStocks.map((stock) => (
+                <StockRow key={stock.symbol} stock={stock} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-            {/* Select/Deselect all */}
-            <Button variant="ghost" size="sm" onClick={allSelected ? deselectAll : selectAll}>
-              {allSelected ? 'Deselect All' : 'Select All'}
-            </Button>
-
-            {/* Remove selected */}
-            {selectedSymbols.length > 0 && (
-              <Button variant="destructive" size="sm" onClick={removeSelected}>
-                <Trash2 className="w-4 h-4 mr-1" />
-                Remove ({selectedSymbols.length})
-              </Button>
-            )}
-
-            {/* Add button */}
-            <Button variant="outline" size="sm" onClick={onAddClick}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add
-            </Button>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="divide-y">
-          {stocks.map((stock) => (
-            <StockRow key={stock.symbol} stock={stock} />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+      <ManageGroupsDialog
+        open={manageGroupsOpen}
+        onOpenChange={setManageGroupsOpen}
+      />
+    </>
   )
 })

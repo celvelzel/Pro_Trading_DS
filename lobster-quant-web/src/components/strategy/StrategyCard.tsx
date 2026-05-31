@@ -4,17 +4,18 @@ import { Strategy } from '@/stores/strategyStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Clock } from 'lucide-react';
 
 interface StrategyCardProps {
   strategy: Strategy;
   onEdit?: (strategy: Strategy) => void;
   onDelete?: (id: string) => void;
+  onViewHistory?: (strategy: Strategy) => void;
   onSelect?: (strategy: Strategy) => void;
   isSelected?: boolean;
 }
 
-export function StrategyCard({ strategy, onEdit, onDelete, onSelect, isSelected }: StrategyCardProps) {
+export function StrategyCard({ strategy, onEdit, onDelete, onViewHistory, onSelect, isSelected }: StrategyCardProps) {
   return (
     <Card 
       className={`cursor-pointer transition-all hover:shadow-md ${isSelected ? 'ring-2 ring-primary' : ''}`}
@@ -57,6 +58,17 @@ export function StrategyCard({ strategy, onEdit, onDelete, onSelect, isSelected 
         
         {!strategy.isPreset && (
           <div className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewHistory?.(strategy);
+              }}
+            >
+              <Clock className="h-4 w-4 mr-1" />
+              History
+            </Button>
             <Button
               variant="outline"
               size="sm"

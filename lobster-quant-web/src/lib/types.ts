@@ -289,6 +289,19 @@ export interface CreateAlertRuleRequest {
 }
 
 // ============================================================================
+// Alert Sound & Cooldown (Frontend-only extensions)
+// ============================================================================
+
+/** Per-rule frontend settings stored in localStorage. */
+export interface AlertRuleSettings {
+  soundEnabled: boolean
+  cooldownMinutes: number
+}
+
+/** Map of ruleId → frontend settings. */
+export type AlertSettingsMap = Record<string, AlertRuleSettings>
+
+// ============================================================================
 // API Response Types
 // ============================================================================
 
