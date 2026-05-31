@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   useAlertRules,
   useCreateAlertRule,
@@ -398,7 +398,7 @@ export default function AlertsPage() {
   const unreadCount = triggeredData?.unreadCount ?? 0
 
   // Track previous unread count for browser notifications
-  const [prevUnreadCount, setPrevUnreadCount] = useState(0)
+  const prevUnreadCountRef = useRef(0)
 
   // Global sound mute (persisted)
   const [globalSoundEnabled, setGlobalSoundEnabled] = useState(() => {
@@ -417,7 +417,8 @@ export default function AlertsPage() {
 
   // Show browser notification + play sound when new alerts arrive
   useEffect(() => {
-    if (unreadCount > prevUnreadCount && prevUnreadCount > 0) {
+    const prevCount = prevUnreadCountRef.current
+    if (unreadCount > prevCount && prevCount > 0) {
       const newAlerts = triggeredAlerts.filter((a) => !a.read)
       const body = newAlerts.slice(0, 3).map((a) => a.message).join('\n')
 
@@ -441,7 +442,7 @@ export default function AlertsPage() {
 
       // Browser notification (always show for new alerts)
       showBrowserNotification(
-        `${unreadCount - prevUnreadCount} New Alert(s)`,
+        `${unreadCount - prevCount} New Alert(s)`,
         body
       )
 
@@ -450,8 +451,8 @@ export default function AlertsPage() {
         playAlertSound()
       }
     }
-    setPrevUnreadCount(unreadCount)
-  }, [unreadCount, triggeredAlerts, prevUnreadCount, globalSoundEnabled, getRuleSettings, isInCooldown, markTriggered])
+    prevUnreadCountRef.current = unreadCount
+  }, [unreadCount, triggeredAlerts, globalSoundEnabled, getRuleSettings, isInCooldown, markTriggered])
 
   const handleMarkAllRead = useCallback(() => {
     markReadMutation.mutate()

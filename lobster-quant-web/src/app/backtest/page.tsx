@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { BacktestForm, BacktestParams, MetricsCard } from '@/components/backtest';
 import { BacktestHistory } from '@/components/backtest/BacktestHistory';
 import { BacktestComparison } from '@/components/backtest/BacktestComparison';
@@ -132,28 +132,18 @@ export default function BacktestPage() {
   const runBacktest = useRunBacktest();
   const [activeTab, setActiveTab] = useState('new');
   const [compareEntries, setCompareEntries] = useState<BacktestHistoryEntry[]>([]);
-  const [localHistory, setLocalHistory] = useState<BacktestHistoryEntry[]>([]);
+  const [localHistory, setLocalHistory] = useState<BacktestHistoryEntry[]>(() => loadLocalHistory());
 
-  // Load local history on mount
-  useEffect(() => {
-    setLocalHistory(loadLocalHistory());
-  }, []);
-
-  // Auto-save backtest results to localStorage
-  useEffect(() => {
-    if (runBacktest.data && !runBacktest.isPending) {
-      const entry = resultToHistoryEntry(runBacktest.data);
+  const handleRunBacktest = async (params: BacktestParams) => {
+    try {
+      const result = await runBacktest.mutateAsync(params);
+      // Persist to local history after successful backtest
+      const entry = resultToHistoryEntry(result);
       setLocalHistory((prev) => {
         const next = [entry, ...prev].slice(0, 50); // keep max 50 entries
         saveLocalHistory(next);
         return next;
       });
-    }
-  }, [runBacktest.data, runBacktest.isPending]);
-
-  const handleRunBacktest = async (params: BacktestParams) => {
-    try {
-      await runBacktest.mutateAsync(params);
     } catch (err) {
       showToastError(err);
     }

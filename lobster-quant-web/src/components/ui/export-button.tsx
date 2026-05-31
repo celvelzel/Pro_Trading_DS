@@ -39,15 +39,14 @@ export interface ColumnDef {
   key: string
   /** CSV header label */
   header: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   /** Optional formatter – receives the raw cell value and the full row */
-  format?: (value: any, row: any) => string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  format?: (...args: any[]) => string
 }
 
 interface ExportButtonProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   /** Data rows to export */
-  data: any[]
+  data: unknown[]
   /** Column definitions (keys + headers + optional formatters) */
   columns: ColumnDef[]
   /** CSV filename (without .csv extension) */
@@ -67,16 +66,17 @@ export const ExportButton = memo(function ExportButton({
 }: ExportButtonProps & Omit<ComponentProps<typeof Button>, 'children'>) {
   const handleClick = useCallback(() => {
     const headers = columns.map((c) => escapeCSV(c.header))
-    const rows = data.map((row) =>
-      columns
+    const rows = data.map((row) => {
+      const obj = row as Record<string, unknown>
+      return columns
         .map((c) => {
           const raw = c.format
-            ? c.format(row[c.key], row)
-            : String(row[c.key] ?? '')
+            ? c.format(obj[c.key], obj)
+            : String(obj[c.key] ?? '')
           return escapeCSV(raw)
         })
-        .join(','),
-    )
+        .join(',')
+    })
     const csv = [headers.join(','), ...rows].join('\r\n')
     const timestamp = new Date().toISOString().slice(0, 10)
     downloadFile(csv, `${filename}-${timestamp}.csv`)

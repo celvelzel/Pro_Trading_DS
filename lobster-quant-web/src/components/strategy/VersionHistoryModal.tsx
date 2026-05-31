@@ -26,7 +26,6 @@ export function VersionHistoryModal({ strategy, open, onOpenChange }: VersionHis
   useEffect(() => {
     if (open && strategy) {
       fetchVersions(strategy.id);
-      setVersionName('');
     }
   }, [open, strategy, fetchVersions]);
 
@@ -51,7 +50,7 @@ export function VersionHistoryModal({ strategy, open, onOpenChange }: VersionHis
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newOpen) => { if (newOpen) setVersionName(''); onOpenChange(newOpen); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Version History</DialogTitle>
