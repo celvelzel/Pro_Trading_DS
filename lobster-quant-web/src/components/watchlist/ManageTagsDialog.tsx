@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useWatchlistStore } from '@/stores/watchlistStore'
+import { useSyncWatchlist } from '@/stores/watchlistStore'
 import { Plus, X, Tag } from 'lucide-react'
 
 interface ManageTagsDialogProps {
@@ -25,7 +25,7 @@ export function ManageTagsDialog({
   onOpenChange,
   symbol,
 }: ManageTagsDialogProps) {
-  const { tags, addTag, removeTag } = useWatchlistStore()
+  const { tags, addTag, removeTag } = useSyncWatchlist()
   const [newTag, setNewTag] = useState('')
 
   const symbolTags = tags[symbol] || []

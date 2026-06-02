@@ -195,7 +195,7 @@ async def cache_stats():
 
 
 # Import and include routers
-from api.routes import stocks, scanner, backtest, settings, strategy, simulation, health, help
+from api.routes import stocks, scanner, backtest, settings, strategy, simulation, health, help, watchlist
 
 app.include_router(stocks.router, prefix="/api/stocks", tags=["stocks"])
 app.include_router(scanner.router, prefix="/api/scanner", tags=["scanner"])
@@ -205,6 +205,7 @@ app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
 app.include_router(simulation.router, prefix="/api/simulation", tags=["simulation"])
 app.include_router(health.router, prefix="/api/health", tags=["health"])
 app.include_router(help.router, prefix="/api/help", tags=["help"])
+app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
 
 
 if __name__ == "__main__":

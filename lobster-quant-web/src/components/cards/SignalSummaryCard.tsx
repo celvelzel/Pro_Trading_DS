@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useWatchlistData } from '@/hooks/useWatchlistData'
-import { useWatchlistStore } from '@/stores/watchlistStore'
+import { useSyncWatchlist } from '@/stores/watchlistStore'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react'
 
@@ -30,7 +30,7 @@ const SIGNAL_STYLES = {
 
 export const SignalSummaryCard = memo(function SignalSummaryCard() {
   const { stocks, isLoading } = useWatchlistData()
-  const { symbols } = useWatchlistStore()
+  const { symbols } = useSyncWatchlist()
 
   if (symbols.length === 0) {
     return (

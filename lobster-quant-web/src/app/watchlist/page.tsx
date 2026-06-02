@@ -8,12 +8,12 @@ import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { WatchlistTable } from '@/components/watchlist/WatchlistTable'
 import { WatchlistAddDialog } from '@/components/watchlist/WatchlistAddDialog'
 import { StockCompareView } from '@/components/watchlist/StockCompareView'
-import { useWatchlistStore } from '@/stores/watchlistStore'
+import { useSyncWatchlist } from '@/stores/watchlistStore'
 import { useWatchlistData } from '@/hooks/useWatchlistData'
 import { Plus, Search, List } from 'lucide-react'
 
 export default function WatchlistPage() {
-  const { symbols, addSymbol } = useWatchlistStore()
+  const { symbols, addSymbol } = useSyncWatchlist()
   const { stocks, isLoading, refetch } = useWatchlistData()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [compareSymbols, setCompareSymbols] = useState<string[]>([])

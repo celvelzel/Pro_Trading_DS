@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useWatchlistStore } from '@/stores/watchlistStore'
+import { useSyncWatchlist } from '@/stores/watchlistStore'
 import { Plus, X, FolderOpen, Trash2 } from 'lucide-react'
 
 interface ManageGroupsDialogProps {
@@ -24,7 +24,7 @@ export function ManageGroupsDialog({
   onOpenChange,
 }: ManageGroupsDialogProps) {
   const { groups, symbols, createGroup, deleteGroup, addToGroup, removeFromGroup } =
-    useWatchlistStore()
+    useSyncWatchlist()
   const [newGroupName, setNewGroupName] = useState('')
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
 

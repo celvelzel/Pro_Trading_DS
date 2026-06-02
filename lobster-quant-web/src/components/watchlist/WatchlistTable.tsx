@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu'
-import { useWatchlistStore } from '@/stores/watchlistStore'
+import { useSyncWatchlist } from '@/stores/watchlistStore'
 import type { WatchlistStockData } from '@/hooks/useWatchlistData'
 import { ManageTagsDialog } from './ManageTagsDialog'
 import { ManageGroupsDialog } from './ManageGroupsDialog'
@@ -91,7 +91,7 @@ function StockRowSkeleton() {
 }
 
 function StockRowActions({ symbol }: { symbol: string }) {
-  const { groups, addToGroup, removeFromGroup } = useWatchlistStore()
+  const { groups, addToGroup, removeFromGroup } = useSyncWatchlist()
   const [tagsDialogOpen, setTagsDialogOpen] = useState(false)
   const groupNames = Object.keys(groups).sort()
 
@@ -155,7 +155,7 @@ function StockRowActions({ symbol }: { symbol: string }) {
 }
 
 function StockRow({ stock }: { stock: WatchlistStockData }) {
-  const { selectedSymbols, toggleSelect, tags, groups } = useWatchlistStore()
+  const { selectedSymbols, toggleSelect, tags, groups } = useSyncWatchlist()
   const isSelected = selectedSymbols.includes(stock.symbol)
   const symbolTags = tags[stock.symbol] || []
 
@@ -256,7 +256,7 @@ export const WatchlistTable = memo(function WatchlistTable({
   className,
 }: WatchlistTableProps) {
   const { selectedSymbols, selectAll, deselectAll, removeSelected, groups } =
-    useWatchlistStore()
+    useSyncWatchlist()
 
   const [groupFilter, setGroupFilter] = useState<string | null>(null)
   const [manageGroupsOpen, setManageGroupsOpen] = useState(false)

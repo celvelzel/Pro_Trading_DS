@@ -11,7 +11,7 @@ import { STOCK_LISTS } from '@/lib/constants'
 import { WatchlistTable } from '@/components/watchlist/WatchlistTable'
 import { WatchlistAddDialog } from '@/components/watchlist/WatchlistAddDialog'
 import { StockCompareView } from '@/components/watchlist/StockCompareView'
-import { useWatchlistStore } from '@/stores/watchlistStore'
+import { useSyncWatchlist } from '@/stores/watchlistStore'
 import { formatDistanceToNow } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton'
@@ -80,7 +80,7 @@ export default function DashboardPage() {
   } = useDashboardData(timeframe)
 
   // Watchlist state
-  const { addSymbol } = useWatchlistStore()
+  const { addSymbol } = useSyncWatchlist()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [compareSymbols, setCompareSymbols] = useState<string[]>([])
 

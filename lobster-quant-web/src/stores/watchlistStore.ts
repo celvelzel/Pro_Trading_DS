@@ -1,108 +1,125 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { useWatchlistQuery, useAddWatchlistSymbol, useRemoveWatchlistSymbol, useUpdateWatchlistGroups, useUpdateWatchlistTags, useClearWatchlist } from '@/hooks/useWatchlist'
 
 interface WatchlistState {
   symbols: string[]
   selectedSymbols: string[]
   groups: Record<string, string[]>
   tags: Record<string, string[]>
-  addSymbol: (symbol: string) => void
-  removeSymbol: (symbol: string) => void
-  clearWatchlist: () => void
-  toggleSelect: (symbol: string) => void
-  selectAll: () => void
-  deselectAll: () => void
-  removeSelected: () => void
-  createGroup: (name: string) => void
-  deleteGroup: (name: string) => void
-  addToGroup: (group: string, symbol: string) => void
-  removeFromGroup: (group: string, symbol: string) => void
-  addTag: (symbol: string, tag: string) => void
-  removeTag: (symbol: string, tag: string) => void
+  setSelectedSymbols: (symbols: string[]) => void
 }
 
-export const useWatchlistStore = create<WatchlistState>()(
-  persist(
-    (set) => ({
-      symbols: [],
-      selectedSymbols: [],
-      groups: {},
-      tags: {},
-      addSymbol: (symbol) =>
-        set((state) => {
-          const upperSymbol = symbol.toUpperCase()
-          if (state.symbols.includes(upperSymbol)) {
-            return state
-          }
-          return { symbols: [...state.symbols, upperSymbol] }
-        }),
-      removeSymbol: (symbol) =>
-        set((state) => ({
-          symbols: state.symbols.filter((s) => s !== symbol),
-          selectedSymbols: state.selectedSymbols.filter((s) => s !== symbol),
-        })),
-      clearWatchlist: () => set({ symbols: [], selectedSymbols: [] }),
-      toggleSelect: (symbol) =>
-        set((state) => {
-          if (state.selectedSymbols.includes(symbol)) {
-            return {
-              selectedSymbols: state.selectedSymbols.filter((s) => s !== symbol),
-            }
-          }
-          return {
-            selectedSymbols: [...state.selectedSymbols, symbol],
-          }
-        }),
-      selectAll: () =>
-        set((state) => ({
-          selectedSymbols: [...state.symbols],
-        })),
-      deselectAll: () => set({ selectedSymbols: [] }),
-      removeSelected: () =>
-        set((state) => ({
-          symbols: state.symbols.filter((s) => !state.selectedSymbols.includes(s)),
-          selectedSymbols: [],
-        })),
-      createGroup: (name) =>
-        set((state) => ({
-          groups: { ...state.groups, [name]: [] },
-        })),
-      deleteGroup: (name) =>
-        set((state) => {
-          const { [name]: _, ...rest } = state.groups
-          return { groups: rest }
-        }),
-      addToGroup: (group, symbol) =>
-        set((state) => ({
-          groups: {
-            ...state.groups,
-            [group]: [...(state.groups[group] || []), symbol],
-          },
-        })),
-      removeFromGroup: (group, symbol) =>
-        set((state) => ({
-          groups: {
-            ...state.groups,
-            [group]: (state.groups[group] || []).filter((s) => s !== symbol),
-          },
-        })),
-      addTag: (symbol, tag) =>
-        set((state) => ({
-          tags: {
-            ...state.tags,
-            [symbol]: [...new Set([...(state.tags[symbol] || []), tag])],
-          },
-        })),
-      removeTag: (symbol, tag) =>
-        set((state) => ({
-          tags: {
-            ...state.tags,
-            [symbol]: (state.tags[symbol] || []).filter((t) => t !== tag),
-          },
-        })),
-    }),
-    {
-      name: 'watchlist-storage',
+export const useWatchlistStore = create<WatchlistState>()((set) => ({
+  symbols: [],
+  selectedSymbols: [],
+  groups: {},
+  tags: {},
+  setSelectedSymbols: (symbols) => set({ selectedSymbols: symbols }),
+}))
+
+/**
+ * Hook to sync watchlist store with backend API.
+ * This hook fetches the watchlist from backend and keeps the store in sync.
+ */
+export function useSyncWatchlist() {
+  const { data, isLoading, error } = useWatchlistQuery()
+  const addMutation = useAddWatchlistSymbol()
+  const removeMutation = useRemoveWatchlistSymbol()
+  const updateGroupsMutation = useUpdateWatchlistGroups()
+  const updateTagsMutation = useUpdateWatchlistTags()
+  const clearMutation = useClearWatchlist()
+
+  // Sync store with backend data
+  if (data) {
+    const store = useWatchlistStore.getState()
+    const needsUpdate = 
+      JSON.stringify(store.symbols) !== JSON.stringify(data.symbols) ||
+      JSON.stringify(store.groups) !== JSON.stringify(data.groups) ||
+      JSON.stringify(store.tags) !== JSON.stringify(data.tags)
+    
+    if (needsUpdate) {
+      useWatchlistStore.setState({
+        symbols: data.symbols,
+        groups: data.groups,
+        tags: data.tags,
+      })
     }
-  )
-)
+  }
+
+  return {
+    isLoading,
+    error,
+    symbols: useWatchlistStore.getState().symbols,
+    selectedSymbols: useWatchlistStore.getState().selectedSymbols,
+    groups: useWatchlistStore.getState().groups,
+    tags: useWatchlistStore.getState().tags,
+    addSymbol: (symbol: string) => addMutation.mutate(symbol),
+    removeSymbol: (symbol: string) => removeMutation.mutate(symbol),
+    updateGroups: (groups: Record<string, string[]>) => updateGroupsMutation.mutate(groups),
+    updateTags: (tags: Record<string, string[]>) => updateTagsMutation.mutate(tags),
+    clearWatchlist: () => clearMutation.mutate(),
+    toggleSelect: (symbol: string) => {
+      const store = useWatchlistStore.getState()
+      const newSelected = store.selectedSymbols.includes(symbol)
+        ? store.selectedSymbols.filter((s) => s !== symbol)
+        : [...store.selectedSymbols, symbol]
+      useWatchlistStore.setState({ selectedSymbols: newSelected })
+    },
+    selectAll: () => {
+      const store = useWatchlistStore.getState()
+      useWatchlistStore.setState({ selectedSymbols: [...store.symbols] })
+    },
+    deselectAll: () => {
+      useWatchlistStore.setState({ selectedSymbols: [] })
+    },
+    removeSelected: () => {
+      const store = useWatchlistStore.getState()
+      store.selectedSymbols.forEach((symbol) => {
+        removeMutation.mutate(symbol)
+      })
+      useWatchlistStore.setState({ selectedSymbols: [] })
+    },
+    createGroup: (name: string) => {
+      const store = useWatchlistStore.getState()
+      const newGroups = { ...store.groups, [name]: [] }
+      updateGroupsMutation.mutate(newGroups)
+    },
+    deleteGroup: (name: string) => {
+      const store = useWatchlistStore.getState()
+      const { [name]: _, ...rest } = store.groups
+      updateGroupsMutation.mutate(rest)
+    },
+    addToGroup: (group: string, symbol: string) => {
+      const store = useWatchlistStore.getState()
+      const newGroups = {
+        ...store.groups,
+        [group]: [...(store.groups[group] || []), symbol],
+      }
+      updateGroupsMutation.mutate(newGroups)
+    },
+    removeFromGroup: (group: string, symbol: string) => {
+      const store = useWatchlistStore.getState()
+      const newGroups = {
+        ...store.groups,
+        [group]: (store.groups[group] || []).filter((s) => s !== symbol),
+      }
+      updateGroupsMutation.mutate(newGroups)
+    },
+    addTag: (symbol: string, tag: string) => {
+      const store = useWatchlistStore.getState()
+      const newTags = {
+        ...store.tags,
+        [symbol]: [...(store.tags[symbol] || []), tag],
+      }
+      updateTagsMutation.mutate(newTags)
+    },
+    removeTag: (symbol: string, tag: string) => {
+      const store = useWatchlistStore.getState()
+      const newTags = {
+        ...store.tags,
+        [symbol]: (store.tags[symbol] || []).filter((t) => t !== tag),
+      }
+      updateTagsMutation.mutate(newTags)
+    },
+  }
+}
