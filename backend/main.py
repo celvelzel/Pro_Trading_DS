@@ -6,6 +6,7 @@ REST API for the quantitative trading analysis platform.
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 import logging
 import sys
@@ -38,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip compression — only compress responses > 500 bytes (ships with Starlette, no new deps)
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 
 # ---------------------------------------------------------------------------
@@ -170,6 +174,24 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+@app.get("/api/cache/stats")
+async def cache_stats():
+    """Cache performance statistics for monitoring."""
+    from api.cache import get_stats, get_hit_rate
+    stats = get_stats()
+    overall_rate = get_hit_rate()
+    return {
+        "overall_hit_rate": round(overall_rate, 4),
+        "namespaces": {
+            ns: {
+                **counts,
+                "hit_rate": round(get_hit_rate(ns), 4),
+            }
+            for ns, counts in stats.items()
+        },
+    }
 
 
 # Import and include routers

@@ -48,6 +48,26 @@ def get_stats() -> dict[str, dict[str, int]]:
     return stats
 
 
+def get_hit_rate(namespace: Optional[str] = None) -> float:
+    """Return overall or per-namespace cache hit rate (0.0 – 1.0).
+
+    Args:
+        namespace: If provided, return hit rate for this namespace only.
+                   Otherwise return the aggregate hit rate across all namespaces.
+
+    Returns:
+        Hit rate as a float between 0.0 and 1.0. Returns 0.0 when no requests.
+    """
+    if namespace:
+        h = _hits.get(namespace, 0)
+        m = _misses.get(namespace, 0)
+    else:
+        h = sum(_hits.values())
+        m = sum(_misses.values())
+    total = h + m
+    return h / total if total > 0 else 0.0
+
+
 def _namespace(namespace: str) -> OrderedDict[str, tuple[float, Any]]:
     """Get or create a cache namespace as an OrderedDict."""
     if namespace not in _store:
@@ -75,14 +95,14 @@ def cache_get(namespace: str, key: str, ttl: float) -> Optional[Any]:
             # Hit — move to end (most recently used)
             ns.move_to_end(key)
             _hits[namespace] = _hits.get(namespace, 0) + 1
-            logger.info(f"[{namespace}] Cache hit for key={key}")
+            logger.debug(f"[{namespace}] Cache hit for key={key}")
             return value
         else:
             # Expired — clean up
             del ns[key]
     # Miss
     _misses[namespace] = _misses.get(namespace, 0) + 1
-    logger.info(f"[{namespace}] Cache miss for key={key}")
+    logger.debug(f"[{namespace}] Cache miss for key={key}")
     return None
 
 
@@ -152,3 +172,44 @@ def make_params_hash(**kwargs) -> str:
     # Sort keys for deterministic hashing
     param_str = "&".join(f"{k}={v}" for k, v in sorted(kwargs.items()))
     return hashlib.md5(param_str.encode()).hexdigest()[:8]
+
+
+def make_cache_key(*parts: str) -> str:
+    """Build a deterministic cache key from string parts.
+
+    Joins parts with ':' — e.g. make_cache_key("AAPL", "1y") → "AAPL:1y".
+
+    Args:
+        *parts: Key components (symbol, period, etc.)
+
+    Returns:
+        Colon-joined cache key string
+    """
+    return ":".join(str(p) for p in parts)
+
+
+def cache_get_or_set(
+    namespace: str,
+    key: str,
+    ttl: float,
+    factory,
+) -> Any:
+    """Get from cache or compute, store, and return.
+
+    Convenience wrapper that eliminates the get-check-set pattern in route handlers.
+
+    Args:
+        namespace: Cache namespace
+        key: Cache key
+        ttl: Time-to-live in seconds
+        factory: Callable that returns the value to cache on miss
+
+    Returns:
+        Cached or freshly computed value
+    """
+    cached = cache_get(namespace, key, ttl)
+    if cached is not None:
+        return cached
+    value = factory()
+    cache_set(namespace, key, value)
+    return value

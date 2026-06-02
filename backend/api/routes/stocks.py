@@ -20,6 +20,17 @@ from api.models.stocks import (
     OptionsAnalysis,
     RiskAssessment,
 )
+from api.cache import cache_get, cache_set, make_cache_key
+
+
+# ---------------------------------------------------------------------------
+# Cache TTLs (seconds) — tuned for data freshness vs. response speed
+# ---------------------------------------------------------------------------
+_TTL_STOCK_DATA = 300       # 5 min  — OHLCV changes intraday
+_TTL_INDICATORS = 300       # 5 min  — derived from OHLCV
+_TTL_SIGNALS    = 600       # 10 min — signals are slower-moving
+_TTL_OPTIONS    = 900       # 15 min — options analysis is expensive
+_TTL_RISK       = 600       # 10 min — risk assessment
 
 
 def _map_signal_type(lobster_type: str) -> SignalType:
@@ -55,6 +66,11 @@ async def get_stock_data(symbol: str, period: str = "1y"):
     Returns:
         Stock data with OHLCV candles
     """
+    cache_key = make_cache_key(symbol, period)
+    cached = cache_get("stocks", cache_key, _TTL_STOCK_DATA)
+    if cached is not None:
+        return cached
+
     try:
         # Import existing data engine
         from lobster_quant.src.core.data_engine import get_data_engine
@@ -80,7 +96,7 @@ async def get_stock_data(symbol: str, period: str = "1y"):
         latest = stock_data.daily.iloc[-1]
         prev = stock_data.daily.iloc[-2] if len(stock_data.daily) > 1 else latest
         
-        return StockData(
+        result = StockData(
             symbol=symbol,
             name=symbol,  # lobster_quant StockData doesn't have name field
             price=float(latest['close']),
@@ -89,6 +105,10 @@ async def get_stock_data(symbol: str, period: str = "1y"):
             volume=int(latest['volume']),
             candles=candles,
         )
+        cache_set("stocks", cache_key, result)
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -104,6 +124,10 @@ async def get_indicators(symbol: str):
     Returns:
         Technical indicators (RSI, MACD, MA20, MA200, ATR)
     """
+    cached = cache_get("indicators", symbol, _TTL_INDICATORS)
+    if cached is not None:
+        return cached
+
     try:
         from lobster_quant.src.core.data_engine import get_data_engine
         from lobster_quant.src.core.indicator_engine import get_indicator_engine
@@ -118,7 +142,7 @@ async def get_indicators(symbol: str):
         df = indicator_engine.compute_all(stock_data.daily)
         latest = df.iloc[-1]
         
-        return Indicators(
+        result = Indicators(
             rsi=float(latest.get('rsi', 0)),
             macd=MACDData(
                 value=float(latest.get('macd', 0)),
@@ -130,6 +154,10 @@ async def get_indicators(symbol: str):
             atr=float(latest.get('atr', 0)),
             atrPercent=float(latest.get('atr_percent', 0)),
         )
+        cache_set("indicators", symbol, result)
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -145,6 +173,10 @@ async def get_signals(symbol: str):
     Returns:
         Trading signal with score, probability, and reasons
     """
+    cached = cache_get("signals", symbol, _TTL_SIGNALS)
+    if cached is not None:
+        return cached
+
     try:
         from lobster_quant.src.core.data_engine import get_data_engine
         from lobster_quant.src.core.indicator_engine import get_indicator_engine
@@ -162,12 +194,16 @@ async def get_signals(symbol: str):
         signal_gen = SignalGenerator()
         signal = signal_gen.generate_signal(df)
         
-        return Signal(
+        result = Signal(
             type=_map_signal_type(signal.signal_type),
             score=int(signal.score),
             probability=int(signal.probability_up),
             reasons=signal.reasons if signal.reasons else [],
         )
+        cache_set("signals", symbol, result)
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -183,6 +219,10 @@ async def get_options_analysis(symbol: str):
     Returns:
         Options analysis including Max Pain, Put/Call ratio, Support/Resistance
     """
+    cached = cache_get("options", symbol, _TTL_OPTIONS)
+    if cached is not None:
+        return cached
+
     try:
         from lobster_quant.src.core.data_engine import get_data_engine
         from lobster_quant.src.ui.pages.quant_tool_indicators import (
@@ -205,12 +245,16 @@ async def get_options_analysis(symbol: str):
         support, resistance = find_support_resistance(df)
         put_call_ratio = calc_put_call_ratio(df)
         
-        return OptionsAnalysis(
+        result = OptionsAnalysis(
             maxPain=float(max_pain) if max_pain else float(current_price),
             putCallRatio=float(put_call_ratio) if put_call_ratio else 1.0,
             support=[float(s) for s in support[:3]] if support else [],
             resistance=[float(r) for r in resistance[:3]] if resistance else [],
         )
+        cache_set("options", symbol, result)
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -226,6 +270,10 @@ async def get_risk_assessment(symbol: str):
     Returns:
         Risk assessment including OFF filter status
     """
+    cached = cache_get("risk", symbol, _TTL_RISK)
+    if cached is not None:
+        return cached
+
     try:
         from lobster_quant.src.core.data_engine import get_data_engine
         from lobster_quant.src.core.indicator_engine import get_indicator_engine
@@ -245,12 +293,16 @@ async def get_risk_assessment(symbol: str):
         off_results = risk_engine.assess(df)
         stats = risk_engine.get_stats(df, off_results)
         
-        return RiskAssessment(
+        result = RiskAssessment(
             status=latest_status.status_text.lower(),
             statusText=latest_status.status_text,
             reasons=latest_status.reasons if latest_status.reasons else [],
             onPercent=float(stats.get('on_pct', 0)),
             offPercent=float(stats.get('off_pct', 0)),
         )
+        cache_set("risk", symbol, result)
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
