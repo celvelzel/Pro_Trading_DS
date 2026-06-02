@@ -112,9 +112,9 @@ export function useStockData(symbol: string) {
 /**
  * Fetch only candle data for chart rendering.
  * Uses `select` to extract candles, preventing re-renders on unrelated changes.
- * Supports period parameter: 1d, 1w, 1m, 3m, 6m, 1y, 5y
+ * Supports period parameter: 1d, 1w, 1m, 3m, 6m, ytd, 1y, 5y
  */
-export function useStockCandles(symbol: string, period: string = '1y') {
+export function useStockCandles(symbol: string, period: string = 'ytd') {
   return useQuery<StockData, Error, Candle[]>({
     queryKey: [...stockKeys.detail(symbol), 'candles', period],
     queryFn: () => api.get(`/api/stocks/${symbol}?period=${period}`),

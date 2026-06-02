@@ -83,7 +83,7 @@ interface StrategyState {
   restoreVersion: (strategyId: string, versionId: string) => Promise<void>;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
 
 export const useStrategyStore = create<StrategyState>()(
   devtools(

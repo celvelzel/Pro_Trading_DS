@@ -28,7 +28,7 @@ const ACTIONS: QuickAction[] = [
   },
   {
     label: 'Watchlist',
-    href: '/watchlist',
+    href: '/dashboard',
     icon: List,
     description: 'Manage your stock watchlist',
   },

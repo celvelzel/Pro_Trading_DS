@@ -47,8 +47,8 @@ export const MetricCard = memo(function MetricCard({
   return (
     <Card className={cn('', className)}>
       <CardContent className="p-4">
-        <p className="text-sm text-text-secondary mb-1">{label}</p>
-        <p className="text-2xl font-semibold text-text-primary">{value}</p>
+        <div className="text-sm text-text-secondary mb-1">{label}</div>
+        <div className="text-2xl font-semibold text-text-primary">{value}</div>
         {delta && (
           <div className={cn('flex items-center gap-1 mt-1', deltaColors[deltaType])}>
             <DeltaIcon className="w-3 h-3" />

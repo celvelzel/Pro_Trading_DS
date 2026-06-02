@@ -54,14 +54,16 @@ def _map_signal_type(lobster_type: str) -> SignalType:
 router = APIRouter()
 
 
+from datetime import datetime, timedelta
+
 @router.get("/{symbol}", response_model=StockData)
-async def get_stock_data(symbol: str, period: str = "1y"):
+async def get_stock_data(symbol: str, period: str = "ytd"):
     """
     Get stock OHLCV data.
     
     Args:
         symbol: Stock symbol (e.g., AAPL, MSFT)
-        period: Time period (1d, 1w, 1m, 3m, 6m, 1y, 5y)
+        period: Time period (1d, 1w, 1m, 3m, 6m, ytd, 1y, 5y)
     
     Returns:
         Stock data with OHLCV candles
@@ -81,9 +83,35 @@ async def get_stock_data(symbol: str, period: str = "1y"):
         if stock_data is None:
             raise HTTPException(status_code=404, detail=f"Stock {symbol} not found")
         
+        # Filter data by period
+        df = stock_data.daily.copy()
+        now = datetime.now()
+        
+        if period == "1d":
+            cutoff = now - timedelta(days=1)
+        elif period == "1w":
+            cutoff = now - timedelta(weeks=1)
+        elif period == "1m":
+            cutoff = now - timedelta(days=30)
+        elif period == "3m":
+            cutoff = now - timedelta(days=90)
+        elif period == "6m":
+            cutoff = now - timedelta(days=180)
+        elif period == "ytd":
+            cutoff = datetime(now.year, 1, 1)
+        elif period == "1y":
+            cutoff = now - timedelta(days=365)
+        elif period == "5y":
+            cutoff = now - timedelta(days=365 * 5)
+        else:
+            cutoff = datetime(now.year, 1, 1)  # Default to YTD
+        
+        # Filter DataFrame by cutoff date
+        df = df[df.index >= cutoff]
+        
         # Convert to response format
         candles = []
-        for idx, row in stock_data.daily.iterrows():
+        for idx, row in df.iterrows():
             candles.append(Candle(
                 time=int(idx.timestamp()),
                 open=float(row['open']),
@@ -93,8 +121,8 @@ async def get_stock_data(symbol: str, period: str = "1y"):
                 volume=float(row['volume']),
             ))
         
-        latest = stock_data.daily.iloc[-1]
-        prev = stock_data.daily.iloc[-2] if len(stock_data.daily) > 1 else latest
+        latest = df.iloc[-1]
+        prev = df.iloc[-2] if len(df) > 1 else latest
         
         result = StockData(
             symbol=symbol,

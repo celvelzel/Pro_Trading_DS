@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // Mock the constants module to control API_BASE_URL
 vi.mock('@/lib/constants', () => ({
-  API_BASE_URL: 'http://localhost:8000',
+  API_BASE_URL: 'http://localhost:8001',
 }))
 
 // We need to mock fetch before importing the API client
@@ -33,7 +33,7 @@ describe('ApiClient integration', () => {
       const result = await api.get('/test')
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/test',
+        'http://localhost:8001/test',
         expect.objectContaining({
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -84,7 +84,7 @@ describe('ApiClient integration', () => {
       await api.post('/scan', body)
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/scan',
+        'http://localhost:8001/scan',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(body),
@@ -119,7 +119,7 @@ describe('ApiClient integration', () => {
       await api.put('/settings', { theme: 'dark' })
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/settings',
+        'http://localhost:8001/settings',
         expect.objectContaining({
           method: 'PUT',
           body: JSON.stringify({ theme: 'dark' }),
@@ -140,7 +140,7 @@ describe('ApiClient integration', () => {
       await api.delete('/items/1')
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/items/1',
+        'http://localhost:8001/items/1',
         expect.objectContaining({
           method: 'DELETE',
         })

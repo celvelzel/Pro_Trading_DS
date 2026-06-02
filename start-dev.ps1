@@ -24,19 +24,28 @@ $rootDir = $PSScriptRoot
 $checks = @()
 
 # Check for port conflicts (critical - prevents wrong backend being used)
-Write-Color "  Checking ports 3000 and 8000..." Cyan
-$port8000 = netstat -ano 2>$null | Select-String ":8000\s.*LISTENING"
+Write-Color "  Checking ports 3000 and 8001..." Cyan
+$port8001 = netstat -ano 2>$null | Select-String ":8001\s.*LISTENING"
 $port3000 = netstat -ano 2>$null | Select-String ":3000\s.*LISTENING"
 
-if ($port8000) {
-    $pid8000 = ($port8000 -split '\s+')[-1]
-    $proc8000 = Get-Process -Id $pid8000 -ErrorAction SilentlyContinue
-    Write-Color "  [WARN] Port 8000 is already in use by PID $pid8000 ($($proc8000.ProcessName))" Yellow
-    Write-Color "         This may be quant-trading-tool or another project." Yellow
+if ($port8001) {
+    $pid8001 = ($port8001 -split '\s+')[-1]
+    $proc8001 = Get-Process -Id $pid8001 -ErrorAction SilentlyContinue
+    Write-Color "  [WARN] Port 8001 is already in use by PID $pid8001 ($($proc8001.ProcessName))" Yellow
     Write-Color "         Killing process to free port..." Yellow
-    Stop-Process -Id $pid8000 -Force -ErrorAction SilentlyContinue
+    Stop-Process -Id $pid8001 -Force -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 1
-    Write-Color "  [OK] Port 8000 freed" Green
+    Write-Color "  [OK] Port 8001 freed" Green
+}
+
+if ($port3000) {
+    $pid3000 = ($port3000 -split '\s+')[-1]
+    $proc3000 = Get-Process -Id $pid3000 -ErrorAction SilentlyContinue
+    Write-Color "  [WARN] Port 3000 is already in use by PID $pid3000 ($($proc3000.ProcessName))" Yellow
+    Write-Color "         Killing process to free port..." Yellow
+    Stop-Process -Id $pid3000 -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+    Write-Color "  [OK] Port 3000 freed" Green
 }
 
 if ($port3000) {
@@ -99,12 +108,12 @@ if ($checks -contains $false) {
 Write-Host ""
 
 # ─── Launch Backend ────────────────────────────────────────────────
-Write-Color "  Launching Backend  → http://localhost:8000 (FastAPI)" Yellow
+Write-Color "  Launching Backend  → http://localhost:8001 (FastAPI)" Yellow
 
 $backendScript = @"
 Set-Location '$rootDir\backend'
 `$env:PYTHONPATH = '$rootDir;$rootDir\lobster_quant'
-python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn main:app --host 127.0.0.1 --port 8001 --reload
 "@
 
 $backendProcess = Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", $backendScript -WindowStyle Minimized -PassThru
@@ -130,11 +139,11 @@ $backendReady = $false
 $frontendReady = $false
 
 for ($i = 1; $i -le 10; $i++) {
-    $port8000 = netstat -ano 2>$null | Select-String ":8000\s.*LISTENING"
+    $port8001 = netstat -ano 2>$null | Select-String ":8001\s.*LISTENING"
     $port3000 = netstat -ano 2>$null | Select-String ":3000\s.*LISTENING"
     
-    if ($port8000 -and -not $backendReady) {
-        Write-Color "  [OK] Backend is listening on port 8000" Green
+    if ($port8001 -and -not $backendReady) {
+        Write-Color "  [OK] Backend is listening on port 8001" Green
         $backendReady = $true
     }
     if ($port3000 -and -not $frontendReady) {
@@ -158,8 +167,8 @@ Write-Host ""
 # ─── Status Summary ────────────────────────────────────────────────
 Write-Banner "Development Environment Ready"
 Write-Color "  Frontend : http://localhost:3000" Green
-Write-Color "  Backend  : http://localhost:8000" Green
-Write-Color "  API Docs : http://localhost:8000/docs" Green
+Write-Color "  Backend  : http://localhost:8001" Green
+Write-Color "  API Docs : http://localhost:8001/docs" Green
 Write-Host ""
 Write-Color "  Backend PID  : $($backendProcess.Id)" Gray
 Write-Color "  Frontend PID : $($frontendProcess.Id)" Gray

@@ -10,6 +10,7 @@ import {
   FlaskConical,
   Target,
   Play,
+  List,
 } from 'lucide-react'
 
 const navItems = [
@@ -17,6 +18,11 @@ const navItems = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
+  },
+  {
+    title: 'Watchlist',
+    href: '/watchlist',
+    icon: List,
   },
   {
     title: 'Scanner',
