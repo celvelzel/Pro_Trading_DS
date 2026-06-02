@@ -1,17 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense, lazy } from 'react'
 import { useStockData, useStockRisk, useStockCandles } from '@/hooks/useStock'
 import { useWatchlistData } from '@/hooks/useWatchlistData'
 import { MetricCard } from '@/components/cards/MetricCard'
 import { StatusCard } from '@/components/cards/StatusCard'
-import { MarketOverviewCard } from '@/components/cards/MarketOverviewCard'
-import { SignalSummaryCard } from '@/components/cards/SignalSummaryCard'
-import { RecentActivityCard } from '@/components/cards/RecentActivityCard'
-import { StrategyPerformanceCard } from '@/components/cards/StrategyPerformanceCard'
-import { QuickActionsCard } from '@/components/cards/QuickActionsCard'
-import { CandlestickChart } from '@/components/charts/CandlestickChart'
-import { TimeframeSelector, type Timeframe } from '@/components/charts/TimeframeSelector'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PrefetchLink } from '@/components/ui/prefetch-link'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
@@ -22,10 +15,37 @@ import { StockCompareView } from '@/components/watchlist/StockCompareView'
 import { useWatchlistStore } from '@/stores/watchlistStore'
 import { formatDistanceToNow } from 'date-fns'
 import { AlertCircle } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+
+// Lazy load heavy widgets
+const MarketOverviewCard = lazy(() => import('@/components/cards/MarketOverviewCard').then(m => ({ default: m.MarketOverviewCard })))
+const SignalSummaryCard = lazy(() => import('@/components/cards/SignalSummaryCard').then(m => ({ default: m.SignalSummaryCard })))
+const RecentActivityCard = lazy(() => import('@/components/cards/RecentActivityCard').then(m => ({ default: m.RecentActivityCard })))
+const StrategyPerformanceCard = lazy(() => import('@/components/cards/StrategyPerformanceCard').then(m => ({ default: m.StrategyPerformanceCard })))
+const QuickActionsCard = lazy(() => import('@/components/cards/QuickActionsCard').then(m => ({ default: m.QuickActionsCard })))
+const CandlestickChart = lazy(() => import('@/components/charts/CandlestickChart').then(m => ({ default: m.CandlestickChart })))
+const TimeframeSelector = lazy(() => import('@/components/charts/TimeframeSelector').then(m => ({ default: m.TimeframeSelector })))
+
+function WidgetSkeleton() {
+  return (
+    <Card className="animate-in fade-in duration-300">
+      <CardHeader className="pb-2">
+        <Skeleton className="h-5 w-36" />
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-4 w-4/6" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function DashboardPage() {
   // Timeframe state
-  const [timeframe, setTimeframe] = useState<Timeframe>('1y')
+  const [timeframe, setTimeframe] = useState<any>('1y')
 
   // Fetch benchmark data (SPY)
   const { data: benchmark, isLoading: benchmarkLoading, dataUpdatedAt: benchmarkUpdatedAt, error: benchmarkError } = useStockData('SPY')
@@ -175,11 +195,21 @@ export default function DashboardPage() {
 
       {/* Information Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <MarketOverviewCard />
-        <SignalSummaryCard />
-        <RecentActivityCard />
-        <StrategyPerformanceCard />
-        <QuickActionsCard />
+        <Suspense fallback={<WidgetSkeleton />}>
+          <MarketOverviewCard />
+        </Suspense>
+        <Suspense fallback={<WidgetSkeleton />}>
+          <SignalSummaryCard />
+        </Suspense>
+        <Suspense fallback={<WidgetSkeleton />}>
+          <RecentActivityCard />
+        </Suspense>
+        <Suspense fallback={<WidgetSkeleton />}>
+          <StrategyPerformanceCard />
+        </Suspense>
+        <Suspense fallback={<WidgetSkeleton />}>
+          <QuickActionsCard />
+        </Suspense>
       </div>
 
       {/* Price Chart */}
@@ -190,33 +220,38 @@ export default function DashboardPage() {
               <CardTitle className="text-lg md:text-xl">SPY Price Chart</CardTitle>
               <HelpTooltip helpKey="analysis.charts" />
             </div>
-            <TimeframeSelector
-              activeTimeframe={timeframe}
-              onSelect={setTimeframe}
-            />
+            <Suspense fallback={<Skeleton className="h-8 w-48" />}>
+              <TimeframeSelector
+                activeTimeframe={timeframe}
+                onSelect={setTimeframe}
+              />
+            </Suspense>
           </div>
         </CardHeader>
         <CardContent className="px-2 sm:px-6">
-          {candles && candles.length > 0 ? (
-            <div className="h-[300px] sm:h-[400px]">
-              <CandlestickChart
-                data={candles}
-                symbol="SPY"
-                height={undefined} // Use container height if component supports it, otherwise keep height
-                showVolume={true}
-              />
-            </div>
-          ) : (
-            <div className="h-[400px] flex items-center justify-center text-text-secondary">
-              {candlesLoading 
-                ? 'Loading chart data...' 
-                : candlesError 
-                  ? `Error loading chart: ${candlesError.message}`
-                  : 'No chart data available'}
-            </div>
-          )}
+          <Suspense fallback={<Skeleton className="h-[300px] sm:h-[400px] w-full" />}>
+            {candles ? (
+              <div className="h-[300px] sm:h-[400px]">
+                <CandlestickChart
+                  data={candles}
+                  symbol="SPY"
+                  height={undefined} // Use container height if component supports it, otherwise keep height
+                  showVolume={true}
+                />
+              </div>
+            ) : (
+              <div className="h-[400px] flex items-center justify-center text-text-secondary">
+                {candlesLoading 
+                  ? 'Loading chart data...' 
+                  : candlesError 
+                    ? `Error loading chart: ${candlesError.message}`
+                    : 'No chart data available'}
+              </div>
+            )}
+          </Suspense>
         </CardContent>
       </Card>
+
 
       {/* Stock Comparison (conditional) */}
       {compareSymbols.length > 1 && (
