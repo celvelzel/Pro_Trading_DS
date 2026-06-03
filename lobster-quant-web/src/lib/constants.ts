@@ -13,9 +13,10 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost
 // Stock Lists
 // ============================================================================
 
+// Default stock lists (users can customize via watchlist)
 export const STOCK_LISTS: Record<string, string[]> = {
   US: [
-    'AIPO', 'AMZN', 'COHR', 'GLW', 'GOOG', 'ICLN', 'LITE', 'MU',
+    'AAPL', 'AMZN', 'COHR', 'GLW', 'GOOG', 'ICLN', 'LITE', 'MU',
     'QQQ', 'SPY', 'TSLA', 'URA', 'VTI', 'XLE', 'XLU'
   ],
   HK: [

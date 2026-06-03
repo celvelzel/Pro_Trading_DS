@@ -74,6 +74,8 @@ export interface OptionsAnalysis {
   putCallRatio: number
   support: number[]
   resistance: number[]
+  estimated: boolean
+  disclaimer?: string
 }
 
 // ============================================================================
@@ -118,6 +120,15 @@ export interface ScanResponse {
   total: number
   market: Market
   minScore: number
+}
+
+/** SSE progress event from streaming scanner */
+export interface ScanProgress {
+  processed: number
+  total: number
+  symbol: string
+  status: 'processing' | 'skipped' | 'error'
+  error?: string
 }
 
 // ============================================================================

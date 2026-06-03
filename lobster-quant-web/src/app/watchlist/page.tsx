@@ -101,7 +101,6 @@ export default function WatchlistPage() {
       <WatchlistAddDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
-        onAdd={(symbol) => addSymbol(symbol)}
       />
     </div>
   )

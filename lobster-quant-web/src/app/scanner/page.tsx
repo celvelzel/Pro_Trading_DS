@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useScanStocks, usePrefetchStock } from '@/hooks/useStock'
+import { useScanStocksStream, usePrefetchStock } from '@/hooks/useStock'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -28,14 +28,13 @@ const VIRTUALIZE_THRESHOLD = 50
 export default function ScannerPage() {
   const [market, setMarket] = useState<Market>('US')
   const [minScore, setMinScore] = useState(60)
-  const scanMutation = useScanStocks()
+  const { results, progress, isScanning, error, startScan } = useScanStocksStream()
   const prefetchStock = usePrefetchStock()
 
   const handleScan = () => {
-    scanMutation.mutate({ market, minScore })
+    startScan({ market, minScore })
   }
 
-  const results = scanMutation.data?.results ?? []
   const shouldVirtualize = results.length > VIRTUALIZE_THRESHOLD
 
   return (
@@ -97,8 +96,8 @@ export default function ScannerPage() {
 
             {/* Scan Button */}
             <div className="flex items-end">
-              <Button onClick={handleScan} disabled={scanMutation.isPending}>
-                {scanMutation.isPending ? (
+              <Button onClick={handleScan} disabled={isScanning}>
+                {isScanning ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Scanning...
@@ -112,14 +111,39 @@ export default function ScannerPage() {
               </Button>
             </div>
           </div>
+
+          {/* Progress Indicator */}
+          {isScanning && progress && (
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between text-sm text-text-secondary">
+                <span>
+                  Scanning <span className="font-medium text-text-primary">{progress.symbol}</span>
+                  {progress.status === 'skipped' && ' (skipped)'}
+                  {progress.status === 'error' && ' (error)'}
+                </span>
+                <span>{progress.processed} / {progress.total}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${(progress.processed / progress.total) * 100}%` }}
+                />
+              </div>
+              {results.length > 0 && (
+                <p className="text-xs text-text-tertiary">
+                  {results.length} matching stock{results.length !== 1 ? 's' : ''} found so far
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Error State */}
-      {scanMutation.isError && (
+      {error && (
         <ErrorState 
-          message={scanMutation.error?.message || 'Failed to scan stocks'} 
-          onRetry={() => scanMutation.mutate({ market, minScore })}
+          message={error || 'Failed to scan stocks'} 
+          onRetry={handleScan}
         />
       )}
 
@@ -165,20 +189,12 @@ export default function ScannerPage() {
         </div>
       )}
 
-      {/* Empty State */}
-      {scanMutation.isSuccess && results.length === 0 && (
+      {/* Empty State — show only when scan finished with no results */}
+      {!isScanning && !error && results.length === 0 && progress && (
         <EmptyState
           icon="search"
           title="No stocks found"
           message="Try lowering the minimum score or selecting a different market."
-        />
-      )}
-
-      {/* Error State */}
-      {scanMutation.isError && (
-        <ErrorState
-          message="Failed to scan stocks. Please try again."
-          onRetry={handleScan}
         />
       )}
     </div>

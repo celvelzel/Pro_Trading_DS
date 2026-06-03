@@ -1,8 +1,10 @@
 'use client'
 
+import { useState, useCallback, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
+import { API_BASE_URL } from '@/lib/constants'
 import type {
   StockData,
   Indicators,
@@ -12,6 +14,7 @@ import type {
   RiskAssessment,
   ScanParams,
   ScanResponse,
+  ScanProgress,
   BacktestParams,
   BacktestResult,
   Candle,
@@ -217,6 +220,116 @@ export function useScanStocks() {
       toast.error(`Scan failed: ${error.message}`)
     },
   })
+}
+
+/**
+ * Stream stock scan results via SSE.
+ * Returns results incrementally as each stock is processed.
+ *
+ * Usage:
+ *   const { results, progress, isScanning, error, startScan, reset } = useScanStocksStream()
+ *   startScan({ market: 'US', minScore: 60 })
+ */
+export function useScanStocksStream() {
+  const [results, setResults] = useState<StockResult[]>([])
+  const [progress, setProgress] = useState<ScanProgress | null>(null)
+  const [isScanning, setIsScanning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  const reset = useCallback(() => {
+    setResults([])
+    setProgress(null)
+    setIsScanning(false)
+    setError(null)
+    abortRef.current?.abort()
+    abortRef.current = null
+  }, [])
+
+  const startScan = useCallback((params: ScanParams) => {
+    // Abort any in-flight scan
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    // Reset state
+    setResults([])
+    setProgress(null)
+    setIsScanning(true)
+    setError(null)
+
+    const url = `${API_BASE_URL}/api/scanner/scan/stream`
+
+    ;(async () => {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => null)
+          throw new Error(body?.detail ?? `Scan failed: ${response.status}`)
+        }
+
+        const reader = response.body!.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''  // Keep incomplete line in buffer
+
+          let eventType = ''
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              eventType = line.slice(7).trim()
+            } else if (line.startsWith('data: ') && eventType) {
+              const data = line.slice(6)
+              try {
+                const parsed = JSON.parse(data)
+
+                switch (eventType) {
+                  case 'stock':
+                    setResults((prev) => [...prev, parsed as StockResult])
+                    break
+                  case 'progress':
+                    setProgress(parsed as ScanProgress)
+                    break
+                  case 'done':
+                    setIsScanning(false)
+                    toast.success(`Scan complete: found ${results.length} stocks`)
+                    break
+                  case 'error':
+                    setError(parsed.detail ?? 'Unknown error')
+                    setIsScanning(false)
+                    break
+                }
+              } catch {
+                // Skip malformed JSON
+              }
+              eventType = ''
+            }
+          }
+        }
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        const msg = err instanceof Error ? err.message : 'Scan failed'
+        setError(msg)
+        toast.error(msg)
+      } finally {
+        setIsScanning(false)
+      }
+    })()
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps -- results captured via functional update
+
+  return { results, progress, isScanning, error, startScan, reset }
 }
 
 // ============================================================================

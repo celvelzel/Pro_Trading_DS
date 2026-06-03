@@ -78,6 +78,62 @@ export interface SweepParams {
 }
 
 // ============================================================================
+// Walk-Forward Types
+// ============================================================================
+
+/** Metrics for a single period (IS or OOS). */
+export interface WindowMetrics {
+  totalTrades: number
+  winRate: number
+  avgReturn: number
+  cumulativeReturn: number
+  maxDrawdown: number
+  sharpeRatio: number
+  sortinoRatio: number
+  profitFactor: number
+  bestTrade: number
+  worstTrade: number
+}
+
+/** Results for a single walk-forward window. */
+export interface WalkForwardWindow {
+  windowIndex: number
+  trainStart: string
+  trainEnd: string
+  testStart: string
+  testEnd: string
+  isMetrics: WindowMetrics
+  oosMetrics: WindowMetrics
+  degradation: number
+}
+
+/** Full walk-forward analysis result. */
+export interface WalkForwardResult {
+  symbol: string
+  trainMonths: number
+  testMonths: number
+  stepMonths: number
+  totalWindows: number
+  windows: WalkForwardWindow[]
+  avgIsSharpe: number
+  avgOosSharpe: number
+  avgDegradation: number
+  avgOosWinRate: number
+  avgOosReturn: number
+  consistencyRatio: number
+}
+
+/** Parameters for the walk-forward mutation. */
+export interface WalkForwardParams {
+  symbol: string
+  trainMonths?: number
+  testMonths?: number
+  stepMonths?: number
+  holdingDays?: number
+  minScore?: number
+}
+
+// ============================================================================
 // Cache Timing Constants
 // ============================================================================
 
@@ -187,6 +243,22 @@ export function useBacktestSweep() {
     mutationFn: (params) => api.post('/api/backtest/backtest/sweep', params),
     onError: (error) => {
       toast.error(`Sweep failed: ${error.message}`)
+    },
+  })
+}
+
+// ============================================================================
+// Walk-Forward Hooks
+// ============================================================================
+
+/**
+ * Run walk-forward validation analysis.
+ */
+export function useWalkForward() {
+  return useMutation<WalkForwardResult, Error, WalkForwardParams>({
+    mutationFn: (params) => api.post('/api/backtest/backtest/walk-forward', params),
+    onError: (error) => {
+      toast.error(`Walk-forward failed: ${error.message}`)
     },
   })
 }

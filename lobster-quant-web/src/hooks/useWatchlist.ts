@@ -54,6 +54,21 @@ export function useAddWatchlistSymbol() {
 }
 
 /**
+ * Add multiple symbols to watchlist.
+ */
+export function useBulkAddWatchlistSymbols() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ symbols, group }: { symbols: string[], group?: string }) => 
+      api.post('/api/watchlist/symbols/bulk', { symbols, group }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(watchlistKeys.detail(), data)
+    },
+  })
+}
+
+/**
  * Remove a symbol from watchlist.
  */
 export function useRemoveWatchlistSymbol() {

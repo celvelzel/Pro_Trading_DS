@@ -23,6 +23,7 @@ const SignalSummaryCard = lazy(() => import('@/components/cards/SignalSummaryCar
 const RecentActivityCard = lazy(() => import('@/components/cards/RecentActivityCard').then(m => ({ default: m.RecentActivityCard })))
 const StrategyPerformanceCard = lazy(() => import('@/components/cards/StrategyPerformanceCard').then(m => ({ default: m.StrategyPerformanceCard })))
 const QuickActionsCard = lazy(() => import('@/components/cards/QuickActionsCard').then(m => ({ default: m.QuickActionsCard })))
+const SignalFeedCard = lazy(() => import('@/components/cards/SignalFeedCard').then(m => ({ default: m.SignalFeedCard })))
 const CandlestickChart = lazy(() => import('@/components/charts/CandlestickChart').then(m => ({ default: m.CandlestickChart })))
 const TimeframeSelector = lazy(() => import('@/components/charts/TimeframeSelector').then(m => ({ default: m.TimeframeSelector })))
 
@@ -241,6 +242,9 @@ export default function DashboardPage() {
           <Suspense fallback={<WidgetSkeleton />}>
             <QuickActionsCard />
           </Suspense>
+          <Suspense fallback={<WidgetSkeleton />}>
+            <SignalFeedCard />
+          </Suspense>
         </div>
 
         {/* Price Chart */}
@@ -329,7 +333,6 @@ export default function DashboardPage() {
         <WatchlistAddDialog
           open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
-          onAdd={(symbol) => addSymbol(symbol)}
         />
       </div>
     </>

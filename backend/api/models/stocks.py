@@ -87,6 +87,9 @@ class OptionsAnalysis(BaseModel):
     putCallRatio: float
     support: List[float]
     resistance: List[float]
+    estimated: bool = Field(default=True, description="Whether this data is estimated from price, not real options chain")
+    estimation_method: str = Field(default="price-based-technical-derivation", description="Method used to derive the estimated values")
+    disclaimer: str = Field(default="此数据为基于价格走势的技术面估算，不代表真实期权市场数据", description="Disclaimer about data source")
 
 
 # ============================================================================

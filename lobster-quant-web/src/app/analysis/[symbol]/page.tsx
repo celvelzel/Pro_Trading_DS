@@ -21,6 +21,7 @@ import { ChartSkeleton } from '@/components/charts/ChartSkeleton'
 import { IndicatorToggle, type IndicatorType } from '@/components/charts/IndicatorToggle'
 import { SignalHistoryChart } from '@/components/charts/SignalHistoryChart'
 import { MultiTimeframeChart } from '@/components/charts/MultiTimeframeChart'
+import { ScoreRadarChart } from '@/components/charts/ScoreRadarChart'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { TrendingUp, TrendingDown, BarChart3, Activity, Shield, Layers } from 'lucide-react'
@@ -233,16 +234,27 @@ export default function AnalysisDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Signal Summary */}
-          {signals && (
-            <SignalCard
-              signalType={signals.type}
-              score={signals.score}
-              probability={signals.probability}
-              reasons={signals.reasons}
-              loading={signalsLoading}
-            />
-          )}
+          {/* Signal Summary & Score Decomposition */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              {signals && (
+                <SignalCard
+                  signalType={signals.type}
+                  score={signals.score}
+                  probability={signals.probability}
+                  reasons={signals.reasons}
+                  loading={signalsLoading}
+                  className="h-full"
+                />
+              )}
+            </div>
+            <div>
+              <ScoreRadarChart 
+                loading={signalsLoading}
+                className="h-full"
+              />
+            </div>
+          </div>
         </TabsContent>
 
         {/* Technical Tab */}
@@ -333,6 +345,11 @@ export default function AnalysisDetailPage() {
 
         {/* Options Tab */}
         <TabsContent value="options" className="space-y-4">
+          {options?.estimated && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-600 dark:text-yellow-400">
+              ⚠️ 估算值 · 基于价格走势 · 非真实期权链
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <MetricCard
               label="Max Pain"

@@ -16,11 +16,15 @@ from .metrics import (
     calculate_yearly_returns,
 )
 from .portfolio import EquityPoint, PortfolioBacktest
+from .walk_forward import WalkForwardEngine, WalkForwardResult, WalkForwardWindow
 
 __all__ = [
     "BacktestEngine",
     "PortfolioBacktest",
     "EquityPoint",
+    "WalkForwardEngine",
+    "WalkForwardResult",
+    "WalkForwardWindow",
     "calculate_sharpe_ratio",
     "calculate_sortino_ratio",
     "calculate_max_drawdown",

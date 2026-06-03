@@ -174,18 +174,19 @@ def make_params_hash(**kwargs) -> str:
     return hashlib.md5(param_str.encode()).hexdigest()[:8]
 
 
-def make_cache_key(*parts: str) -> str:
-    """Build a deterministic cache key from string parts.
-
-    Joins parts with ':' — e.g. make_cache_key("AAPL", "1y") → "AAPL:1y".
+def make_cache_key(symbol: str, period: Optional[str] = None) -> str:
+    """Build a deterministic cache key from symbol and optional period.
 
     Args:
-        *parts: Key components (symbol, period, etc.)
+        symbol: Stock symbol (e.g. "AAPL")
+        period: Time period (e.g. "1y", "5y"). If None, returns just the symbol.
 
     Returns:
-        Colon-joined cache key string
+        Colon-joined cache key string (e.g. "AAPL:1y" or "AAPL")
     """
-    return ":".join(str(p) for p in parts)
+    if period:
+        return f"{symbol}:{period}"
+    return symbol
 
 
 def cache_get_or_set(

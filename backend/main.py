@@ -3,29 +3,48 @@ Lobster Quant - FastAPI Backend
 REST API for the quantitative trading analysis platform.
 """
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
 import logging
 import sys
 import os
 import uuid
 
-# Add the parent directory to the path to import existing modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+logger = logging.getLogger("lobster_quant")
 
-# Explicitly fix for sub-module imports inside lobster_quant
-# This helps when files inside lobster_quant use "from src... import"
-lobster_quant_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lobster_quant")
-if os.path.exists(lobster_quant_path):
-    sys.path.insert(0, lobster_quant_path)
+
+@asynccontextmanager
+async def lifespan(app):
+    """Warm up engine singletons at startup to eliminate per-request lazy imports."""
+    logger.info("Warming up DataEngine/IndicatorEngine/SignalEngine...")
+    from lobster_quant.src.core.data_engine import get_data_engine
+    from lobster_quant.src.core.indicator_engine import get_indicator_engine
+    from lobster_quant.src.core.signal_engine import get_signal_engine
+
+    get_data_engine()
+    get_indicator_engine()
+    get_signal_engine()
+    logger.info("Engine warmup complete.")
+
+    # Start the background alert monitor for WebSocket push
+    from services.alert_monitor import start_alert_monitor, stop_alert_monitor
+
+    start_alert_monitor()
+
+    yield
+
+    stop_alert_monitor()
+
 
 app = FastAPI(
     title="Lobster Quant API",
     description="REST API for quantitative trading analysis",
     version="2.0.0",
+    lifespan=lifespan,
 )
 
 # CORS for Next.js dev server
@@ -47,8 +66,6 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 # ---------------------------------------------------------------------------
 # Global Exception Handlers
 # ---------------------------------------------------------------------------
-
-logger = logging.getLogger("lobster_quant")
 
 # Map common HTTP status codes to machine-readable error codes
 _HTTP_STATUS_TO_CODE: dict[int, str] = {
@@ -176,36 +193,50 @@ async def health_check():
     return {"status": "healthy"}
 
 
-@app.get("/api/cache/stats")
-async def cache_stats():
-    """Cache performance statistics for monitoring."""
-    from api.cache import get_stats, get_hit_rate
-    stats = get_stats()
-    overall_rate = get_hit_rate()
-    return {
-        "overall_hit_rate": round(overall_rate, 4),
-        "namespaces": {
-            ns: {
-                **counts,
-                "hit_rate": round(get_hit_rate(ns), 4),
-            }
-            for ns, counts in stats.items()
-        },
-    }
+# ---------------------------------------------------------------------------
+# WebSocket: Alert Notifications
+# ---------------------------------------------------------------------------
+
+
+@app.websocket("/ws/alerts")
+async def websocket_alerts(ws: WebSocket):
+    """WebSocket endpoint for real-time alert notifications.
+
+    Clients receive JSON messages of the form:
+        {"type": "alert_triggered", "alert": { ... }}
+
+    Falls back gracefully — the frontend should use polling when WS is unavailable.
+    """
+    from services.alert_monitor import register_ws_client, unregister_ws_client
+
+    await register_ws_client(ws)
+    try:
+        # Keep the connection alive; ignore incoming messages
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await unregister_ws_client(ws)
 
 
 # Import and include routers
-from api.routes import stocks, scanner, backtest, settings, strategy, simulation, health, help, watchlist
+from api.routes import stocks, scanner, backtest, settings, strategy, strategy_history, simulation, health, help, watchlist, alerts, cache, portfolio, signals_stats
 
 app.include_router(stocks.router, prefix="/api/stocks", tags=["stocks"])
 app.include_router(scanner.router, prefix="/api/scanner", tags=["scanner"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["backtest"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 app.include_router(strategy.router, prefix="/api/strategy", tags=["strategy"])
+app.include_router(strategy_history.router, prefix="/api/strategy", tags=["strategy-history"])
 app.include_router(simulation.router, prefix="/api/simulation", tags=["simulation"])
 app.include_router(health.router, prefix="/api/health", tags=["health"])
 app.include_router(help.router, prefix="/api/help", tags=["help"])
 app.include_router(watchlist.router, prefix="/api/watchlist", tags=["watchlist"])
+app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
+app.include_router(cache.router, prefix="/api/cache", tags=["cache"])
+app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
+app.include_router(signals_stats.router, prefix="/api/signals", tags=["signals-stats"])
 
 
 if __name__ == "__main__":

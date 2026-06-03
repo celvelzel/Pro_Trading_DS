@@ -5,11 +5,7 @@ Endpoints for monitoring data source health and status.
 
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
-import sys
-import os
-
-# Add parent directories to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+from api.deps import get_data_engine_dep
 
 router = APIRouter()
 
@@ -23,9 +19,7 @@ async def get_data_sources_status() -> Dict[str, Any]:
         JSON object with status of each market's fallback chain
     """
     try:
-        from src.core.data_engine import get_data_engine
-
-        engine = get_data_engine()
+        engine = get_data_engine_dep()
         return engine.get_provider_status()
     except Exception as e:
         raise HTTPException(
@@ -46,9 +40,7 @@ async def get_market_status(market: str) -> Dict[str, Any]:
         JSON object with market's fallback chain status
     """
     try:
-        from src.core.data_engine import get_data_engine
-
-        engine = get_data_engine()
+        engine = get_data_engine_dep()
         status = engine.get_provider_status()
 
         if market not in status:

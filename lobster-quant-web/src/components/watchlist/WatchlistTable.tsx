@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -341,55 +342,6 @@ export const WatchlistTable = memo(function WatchlistTable({
               )}
             </div>
             <div className="flex items-center gap-2">
-              {/* Group filter */}
-              {groupNames.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <button
-                        className={cn(
-                          'flex items-center gap-1.5 px-2 py-1.5 text-sm rounded-md border transition-colors',
-                          groupFilter
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : 'border-input hover:bg-muted text-text-secondary'
-                        )}
-                      />
-                    }
-                  >
-                    <Filter className="w-3.5 h-3.5" />
-                    {groupFilter || 'All Groups'}
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" sideOffset={4}>
-                    <DropdownMenuLabel>Filter by Group</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setGroupFilter(null)}>
-                      All Stocks
-                    </DropdownMenuItem>
-                    {groupNames.map((name) => (
-                      <DropdownMenuItem
-                        key={name}
-                        onClick={() => setGroupFilter(name)}
-                      >
-                        {name}
-                        <span className="ml-auto text-xs text-text-tertiary">
-                          ({(groups[name] || []).length})
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
-              {/* Manage Groups button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setManageGroupsOpen(true)}
-                title="Manage Groups"
-              >
-                <FolderPlus className="w-4 h-4" />
-              </Button>
-
               {/* Refresh button */}
               {onRefresh && (
                 <Button
@@ -436,7 +388,52 @@ export const WatchlistTable = memo(function WatchlistTable({
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
+          {/* Group Tabs */}
+          {groupNames.length > 0 && (
+            <Tabs
+              value={groupFilter || 'all'}
+              onValueChange={(v) => setGroupFilter(v === 'all' ? null : v)}
+              className="mb-4"
+            >
+              <div className="flex items-center justify-between border-b pb-0.5 mb-4">
+                <TabsList className="h-auto bg-transparent p-0 gap-6 rounded-none">
+                  <TabsTrigger
+                    value="all"
+                    className="relative px-1 pb-2 pt-0 rounded-none border-b-2 border-transparent bg-transparent data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none text-sm font-medium"
+                  >
+                    All Stocks
+                    <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1 font-normal bg-muted text-[10px]">
+                      {stocks.length}
+                    </Badge>
+                  </TabsTrigger>
+                  {groupNames.map((name) => (
+                    <TabsTrigger
+                      key={name}
+                      value={name}
+                      className="relative px-1 pb-2 pt-0 rounded-none border-b-2 border-transparent bg-transparent data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none text-sm font-medium"
+                    >
+                      {name}
+                      <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1 font-normal bg-muted text-[10px]">
+                        {(groups[name] || []).length}
+                      </Badge>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setManageGroupsOpen(true)}
+                  className="text-text-tertiary hover:text-text-secondary h-8 px-2"
+                >
+                  <FolderOpen className="w-4 h-4 mr-1.5" />
+                  Manage Groups
+                </Button>
+              </div>
+            </Tabs>
+          )}
+
           {filteredStocks.length === 0 ? (
             <div className="text-center py-8 text-text-tertiary">
               <Filter className="w-8 h-8 mx-auto mb-2 opacity-50" />

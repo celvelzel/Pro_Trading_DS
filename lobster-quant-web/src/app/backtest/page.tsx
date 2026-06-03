@@ -5,6 +5,7 @@ import { BacktestForm, BacktestParams, MetricsCard } from '@/components/backtest
 import { BacktestHistory } from '@/components/backtest/BacktestHistory';
 import { BacktestComparison } from '@/components/backtest/BacktestComparison';
 import { ParameterSweep } from '@/components/backtest/ParameterSweep';
+import { WalkForward } from '@/components/backtest/WalkForward';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { HelpTooltip } from '@/components/ui/help-tooltip';
@@ -13,7 +14,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { Button } from '@/components/ui/button';
 import { useRunBacktest, type BacktestHistoryEntry, type BacktestPageResult } from '@/hooks/useBacktest';
 import { showToastError } from '@/hooks/useApiQuery';
-import { History, GitCompare, SlidersHorizontal, Play } from 'lucide-react';
+import { History, GitCompare, SlidersHorizontal, Play, TrendingUp } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
 
 // ============================================================================
@@ -193,6 +194,10 @@ export default function BacktestPage() {
             <SlidersHorizontal className="h-4 w-4 mr-1.5" />
             Parameter Sweep
           </TabsTrigger>
+          <TabsTrigger value="walkforward">
+            <TrendingUp className="h-4 w-4 mr-1.5" />
+            Walk-Forward
+          </TabsTrigger>
         </TabsList>
 
         {/* ================================================================ */}
@@ -348,6 +353,13 @@ export default function BacktestPage() {
         {/* ================================================================ */}
         <TabsContent value="sweep">
           <ParameterSweep />
+        </TabsContent>
+
+        {/* ================================================================ */}
+        {/* Walk-Forward Validation Tab */}
+        {/* ================================================================ */}
+        <TabsContent value="walkforward">
+          <WalkForward />
         </TabsContent>
       </Tabs>
     </div>

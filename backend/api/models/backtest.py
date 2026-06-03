@@ -106,3 +106,79 @@ class BacktestResponse(BaseModel):
     equityCurve: List[EquityPoint] = Field(
         default_factory=list, description="Equity curve data points"
     )
+
+
+# ============================================================================
+# Walk-Forward Validation Models
+# ============================================================================
+
+
+class WalkForwardRequest(BaseModel):
+    """Request body for walk-forward validation analysis."""
+
+    symbol: str = Field(..., min_length=1, description="Stock symbol to analyze")
+    trainMonths: int = Field(
+        default=12, ge=3, le=36,
+        description="Training period length in months",
+    )
+    testMonths: int = Field(
+        default=3, ge=1, le=12,
+        description="Testing period length in months",
+    )
+    stepMonths: int = Field(
+        default=3, ge=1, le=12,
+        description="Months to advance between windows",
+    )
+    holdingDays: int = Field(
+        default=20, ge=5, le=100,
+        description="Number of days to hold each position",
+    )
+    minScore: int = Field(
+        default=60, ge=0, le=100,
+        description="Minimum signal score to enter a trade",
+    )
+
+
+class WindowMetricsResponse(BaseModel):
+    """Metrics for a single period (IS or OOS) within a walk-forward window."""
+
+    totalTrades: int = Field(..., ge=0)
+    winRate: float = Field(..., description="Win rate as fraction (0-1)")
+    avgReturn: float = Field(..., description="Average trade return as fraction")
+    cumulativeReturn: float = Field(..., description="Cumulative return as fraction")
+    maxDrawdown: float = Field(..., description="Max drawdown as fraction (0-1)")
+    sharpeRatio: float = Field(..., description="Annualized Sharpe ratio")
+    sortinoRatio: float = Field(..., description="Annualized Sortino ratio")
+    profitFactor: float = Field(..., description="Profit factor")
+    bestTrade: float = Field(..., description="Best single trade return")
+    worstTrade: float = Field(..., description="Worst single trade return")
+
+
+class WalkForwardWindowResponse(BaseModel):
+    """Results for a single walk-forward window."""
+
+    windowIndex: int = Field(..., ge=0)
+    trainStart: str = Field(..., description="Training period start date")
+    trainEnd: str = Field(..., description="Training period end date")
+    testStart: str = Field(..., description="Testing period start date")
+    testEnd: str = Field(..., description="Testing period end date")
+    isMetrics: WindowMetricsResponse = Field(..., description="In-sample metrics")
+    oosMetrics: WindowMetricsResponse = Field(..., description="Out-of-sample metrics")
+    degradation: float = Field(..., description="Sharpe degradation ratio")
+
+
+class WalkForwardResponse(BaseModel):
+    """Response body for walk-forward validation analysis."""
+
+    symbol: str
+    trainMonths: int
+    testMonths: int
+    stepMonths: int
+    totalWindows: int = Field(..., ge=0)
+    windows: List[WalkForwardWindowResponse] = Field(default_factory=list)
+    avgIsSharpe: float = Field(..., description="Average in-sample Sharpe ratio")
+    avgOosSharpe: float = Field(..., description="Average out-of-sample Sharpe ratio")
+    avgDegradation: float = Field(..., description="Average degradation ratio")
+    avgOosWinRate: float = Field(..., description="Average OOS win rate")
+    avgOosReturn: float = Field(..., description="Average OOS cumulative return")
+    consistencyRatio: float = Field(..., description="Fraction of windows with OOS Sharpe > 0")

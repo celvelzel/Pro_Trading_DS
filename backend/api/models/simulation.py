@@ -62,3 +62,10 @@ class PerformanceResponse(BaseModel):
     maxDrawdown: float
     winRate: float
     totalTrades: int
+
+
+class AddFromAlertRequest(BaseModel):
+    """Request to add a trade from a triggered alert."""
+    symbol: str
+    alert_id: str
+    side: str = Field(default="buy", pattern="^(buy|sell)$")

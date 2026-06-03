@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useStrategyStore, Strategy, StrategyParams } from '@/stores/strategyStore';
 import { StrategyCard, StrategyForm } from '@/components/strategy';
 import { VersionHistoryModal } from '@/components/strategy/VersionHistoryModal';
@@ -19,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function StrategyPage() {
+  const router = useRouter();
   const { 
     strategies, 
     loading, 
@@ -70,6 +72,10 @@ export default function StrategyPage() {
 
   const handleViewHistory = (strategy: Strategy) => {
     setHistoryStrategy(strategy);
+  };
+
+  const handleViewDetails = (strategy: Strategy) => {
+    router.push(`/strategy/${strategy.id}`);
   };
 
   const handleCancel = () => {
@@ -132,6 +138,7 @@ export default function StrategyPage() {
                 <StrategyCard
                   key={strategy.id}
                   strategy={strategy}
+                  onViewDetails={handleViewDetails}
                 />
               ))}
             </div>
@@ -156,6 +163,7 @@ export default function StrategyPage() {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onViewHistory={handleViewHistory}
+                    onViewDetails={handleViewDetails}
                   />
                 ))}
               </div>

@@ -5,10 +5,7 @@ Endpoints for managing alert rules and checking triggered alerts.
 
 from fastapi import APIRouter, HTTPException
 from typing import List
-import sys
 import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
 from api.models.alerts import (
     CreateAlertRuleRequest,
@@ -25,67 +22,46 @@ router = APIRouter()
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "..", "lobster_quant", "data")
 
 
+from api.error_handler import DataFetchError, handle_data_errors
+
+
 def _get_store():
     """Lazy import to get the alert store."""
     from lobster_quant.src.storage.alert_store import AlertStore
     return AlertStore(data_dir=DATA_DIR)
 
 
-def _get_stock_price(symbol: str) -> float:
-    """Get current stock price."""
-    try:
-        from lobster_quant.src.core.data_engine import get_data_engine
-        engine = get_data_engine()
-        stock_data = engine.fetch_stock(symbol)
-        if stock_data is None:
-            return 0.0
-        return float(stock_data.daily.iloc[-1]["close"])
-    except Exception:
-        return 0.0
+@handle_data_errors
+def _get_stock_price(symbol: str) -> dict:
+    """Get current stock price with error reporting."""
+    from api.error_handler import safe_get_price
+
+    value, error = safe_get_price(symbol)
+    if error:
+        raise DataFetchError(detail=error, source="yfinance")
+    return {"value": value, "stale": False, "error": None}
 
 
-def _get_stock_score(symbol: str) -> float:
-    """Get current stock score."""
-    try:
-        from lobster_quant.src.core.data_engine import get_data_engine
-        from lobster_quant.src.core.indicator_engine import get_indicator_engine
-        from lobster_quant.src.analysis.signals import SignalGenerator
+@handle_data_errors
+def _get_stock_score(symbol: str) -> dict:
+    """Get current stock score with error reporting."""
+    from api.error_handler import safe_get_score
 
-        data_engine = get_data_engine()
-        indicator_engine = get_indicator_engine()
-
-        stock_data = data_engine.fetch_stock(symbol)
-        if stock_data is None:
-            return 0.0
-
-        df = indicator_engine.compute_all(stock_data.daily)
-        generator = SignalGenerator()
-        signal = generator.generate(df, symbol)
-        return float(signal.score)
-    except Exception:
-        return 0.0
+    value, error = safe_get_score(symbol)
+    if error:
+        raise DataFetchError(detail=error, source="yfinance")
+    return {"value": value, "stale": False, "error": None}
 
 
-def _get_stock_signal_type(symbol: str) -> str:
-    """Get current stock signal type."""
-    try:
-        from lobster_quant.src.core.data_engine import get_data_engine
-        from lobster_quant.src.core.indicator_engine import get_indicator_engine
-        from lobster_quant.src.analysis.signals import SignalGenerator
+@handle_data_errors
+def _get_stock_signal_type(symbol: str) -> dict:
+    """Get current stock signal type with error reporting."""
+    from api.error_handler import safe_get_signal_type
 
-        data_engine = get_data_engine()
-        indicator_engine = get_indicator_engine()
-
-        stock_data = data_engine.fetch_stock(symbol)
-        if stock_data is None:
-            return "neutral"
-
-        df = indicator_engine.compute_all(stock_data.daily)
-        generator = SignalGenerator()
-        signal = generator.generate(df, symbol)
-        return str(signal.signal_type)
-    except Exception:
-        return "neutral"
+    value, error = safe_get_signal_type(symbol)
+    if error:
+        raise DataFetchError(detail=error, source="yfinance")
+    return {"value": value, "stale": False, "error": None}
 
 
 # ============================================================================
@@ -159,6 +135,8 @@ async def get_triggered_alerts():
     Check all enabled alert rules against current data and return triggered alerts.
     Also returns the history of previously triggered alerts.
     """
+    from fastapi.responses import JSONResponse
+
     try:
         store = _get_store()
         rules = store.list_rules()
@@ -177,39 +155,69 @@ async def get_triggered_alerts():
             message = ""
 
             if condition == "score_above":
-                current_value = _get_stock_score(symbol)
-                if current_value > threshold:
-                    triggered = True
-                    message = f"{symbol} score {current_value:.1f} is above threshold {threshold:.1f}"
+                result = _get_stock_score(symbol)
+                if isinstance(result, JSONResponse):
+                    return result
+                if result["error"]:
+                    message = f"{symbol}: {result['error']}"
+                else:
+                    current_value = result["value"]
+                    if current_value > threshold:
+                        triggered = True
+                        message = f"{symbol} score {current_value:.1f} is above threshold {threshold:.1f}"
 
             elif condition == "score_below":
-                current_value = _get_stock_score(symbol)
-                if current_value < threshold:
-                    triggered = True
-                    message = f"{symbol} score {current_value:.1f} is below threshold {threshold:.1f}"
+                result = _get_stock_score(symbol)
+                if isinstance(result, JSONResponse):
+                    return result
+                if result["error"]:
+                    message = f"{symbol}: {result['error']}"
+                else:
+                    current_value = result["value"]
+                    if current_value < threshold:
+                        triggered = True
+                        message = f"{symbol} score {current_value:.1f} is below threshold {threshold:.1f}"
 
             elif condition == "price_above":
-                current_value = _get_stock_price(symbol)
-                if current_value > threshold:
-                    triggered = True
-                    message = f"{symbol} price ${current_value:.2f} is above threshold ${threshold:.2f}"
+                result = _get_stock_price(symbol)
+                if isinstance(result, JSONResponse):
+                    return result
+                if result["error"]:
+                    message = f"{symbol}: {result['error']}"
+                else:
+                    current_value = result["value"]
+                    if current_value > threshold:
+                        triggered = True
+                        message = f"{symbol} price ${current_value:.2f} is above threshold ${threshold:.2f}"
 
             elif condition == "price_below":
-                current_value = _get_stock_price(symbol)
-                if current_value < threshold:
-                    triggered = True
-                    message = f"{symbol} price ${current_value:.2f} is below threshold ${threshold:.2f}"
+                result = _get_stock_price(symbol)
+                if isinstance(result, JSONResponse):
+                    return result
+                if result["error"]:
+                    message = f"{symbol}: {result['error']}"
+                else:
+                    current_value = result["value"]
+                    if current_value < threshold:
+                        triggered = True
+                        message = f"{symbol} price ${current_value:.2f} is below threshold ${threshold:.2f}"
 
             elif condition == "signal_change":
-                current_signal = _get_stock_signal_type(symbol)
-                current_value = 0.0
-                # For signal_change, threshold stores the expected signal as a number
-                # 1 = bullish, 0 = neutral, -1 = bearish
-                signal_map = {"bullish": 1, "neutral": 0, "bearish": -1}
-                current_signal_val = signal_map.get(current_signal, 0)
-                if current_signal_val != threshold:
-                    triggered = True
-                    message = f"{symbol} signal changed to {current_signal}"
+                result = _get_stock_signal_type(symbol)
+                if isinstance(result, JSONResponse):
+                    return result
+                if result["error"]:
+                    message = f"{symbol}: {result['error']}"
+                else:
+                    current_signal = result["value"]
+                    current_value = 0.0
+                    # For signal_change, threshold stores the expected signal as a number
+                    # 1 = bullish, 0 = neutral, -1 = bearish
+                    signal_map = {"bullish": 1, "neutral": 0, "bearish": -1}
+                    current_signal_val = signal_map.get(current_signal, 0)
+                    if current_signal_val != threshold:
+                        triggered = True
+                        message = f"{symbol} signal changed to {current_signal}"
 
             if triggered:
                 # Record the triggered alert

@@ -1,5 +1,13 @@
 import { create } from 'zustand'
-import { useWatchlistQuery, useAddWatchlistSymbol, useRemoveWatchlistSymbol, useUpdateWatchlistGroups, useUpdateWatchlistTags, useClearWatchlist } from '@/hooks/useWatchlist'
+import { 
+  useWatchlistQuery, 
+  useAddWatchlistSymbol, 
+  useBulkAddWatchlistSymbols,
+  useRemoveWatchlistSymbol, 
+  useUpdateWatchlistGroups, 
+  useUpdateWatchlistTags, 
+  useClearWatchlist 
+} from '@/hooks/useWatchlist'
 
 interface WatchlistState {
   symbols: string[]
@@ -24,6 +32,7 @@ export const useWatchlistStore = create<WatchlistState>()((set) => ({
 export function useSyncWatchlist() {
   const { data, isLoading, error } = useWatchlistQuery()
   const addMutation = useAddWatchlistSymbol()
+  const bulkAddMutation = useBulkAddWatchlistSymbols()
   const removeMutation = useRemoveWatchlistSymbol()
   const updateGroupsMutation = useUpdateWatchlistGroups()
   const updateTagsMutation = useUpdateWatchlistTags()
@@ -54,6 +63,8 @@ export function useSyncWatchlist() {
     groups: useWatchlistStore.getState().groups,
     tags: useWatchlistStore.getState().tags,
     addSymbol: (symbol: string) => addMutation.mutate(symbol),
+    bulkAddSymbols: (symbols: string[], group?: string) => 
+      bulkAddMutation.mutate({ symbols, group }),
     removeSymbol: (symbol: string) => removeMutation.mutate(symbol),
     updateGroups: (groups: Record<string, string[]>) => updateGroupsMutation.mutate(groups),
     updateTags: (tags: Record<string, string[]>) => updateTagsMutation.mutate(tags),

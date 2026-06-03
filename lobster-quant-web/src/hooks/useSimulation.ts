@@ -207,3 +207,37 @@ export function useRunAllSimulations() {
     },
   })
 }
+
+// ============================================================================
+// Add From Alert Hook
+// ============================================================================
+
+interface AddFromAlertParams {
+  symbol: string
+  alert_id: string
+  side?: 'buy' | 'sell'
+}
+
+/**
+ * Add a simulated trade from a triggered alert.
+ * Invalidates simulation queries on success.
+ */
+export function useAddFromAlert() {
+  const queryClient = useQueryClient()
+
+  return useMutation<SimulatedTrade, Error, AddFromAlertParams>({
+    mutationFn: (params) =>
+      api.post('/api/simulation/simulation/add-from-alert', {
+        symbol: params.symbol,
+        alert_id: params.alert_id,
+        side: params.side ?? 'buy',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: simulationKeys.all })
+      toast.success('已加入模拟仓')
+    },
+    onError: (error) => {
+      toast.error(`加入模拟仓失败: ${error.message}`)
+    },
+  })
+}

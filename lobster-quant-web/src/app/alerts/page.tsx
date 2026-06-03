@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   useAlertRules,
   useCreateAlertRule,
@@ -10,6 +11,7 @@ import {
   useMarkAlertsRead,
 } from '@/hooks/useAlerts'
 import { useAlertSettings } from '@/hooks/useAlertSettings'
+import { useAddFromAlert } from '@/hooks/useSimulation'
 import { playAlertSound } from '@/lib/alert-sound'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,6 +42,7 @@ import {
   Volume2,
   VolumeX,
   Clock,
+  ShoppingCart,
 } from 'lucide-react'
 import type { AlertCondition, AlertRule, TriggeredAlert } from '@/lib/types'
 
@@ -339,7 +342,15 @@ function AlertRuleItem({
 // Triggered Alert Item
 // ============================================================================
 
-function TriggeredAlertItem({ alert }: { alert: TriggeredAlert }) {
+function TriggeredAlertItem({
+  alert,
+  onAddToSimulation,
+  isAdding,
+}: {
+  alert: TriggeredAlert
+  onAddToSimulation: (alert: TriggeredAlert) => void
+  isAdding: boolean
+}) {
   const Icon = CONDITION_ICONS[alert.condition]
 
   return (
@@ -365,14 +376,25 @@ function TriggeredAlertItem({ alert }: { alert: TriggeredAlert }) {
         <p className="text-sm text-text-secondary mt-1">{alert.message}</p>
         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
           <span>
-            Threshold: {formatThreshold(alert.condition, alert.threshold)}
-          </span>
-          <span>
             Current: {formatCurrentValue(alert.condition, alert.currentValue)}
           </span>
           <span>{new Date(alert.triggeredAt).toLocaleString()}</span>
         </div>
       </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onAddToSimulation(alert)}
+        disabled={isAdding}
+        className="shrink-0"
+      >
+        {isAdding ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <ShoppingCart className="h-3.5 w-3.5" />
+        )}
+        <span className="ml-1.5">模拟买入</span>
+      </Button>
     </div>
   )
 }
@@ -382,9 +404,11 @@ function TriggeredAlertItem({ alert }: { alert: TriggeredAlert }) {
 // ============================================================================
 
 export default function AlertsPage() {
+  const router = useRouter()
   const { data: rulesData, isLoading: rulesLoading, error: rulesError } = useAlertRules()
   const { data: triggeredData, isLoading: triggeredLoading } = useTriggeredAlerts()
   const markReadMutation = useMarkAlertsRead()
+  const addFromAlertMutation = useAddFromAlert()
   const {
     settingsMap,
     getRuleSettings,
@@ -457,6 +481,20 @@ export default function AlertsPage() {
   const handleMarkAllRead = useCallback(() => {
     markReadMutation.mutate()
   }, [markReadMutation])
+
+  const handleAddToSimulation = useCallback(
+    (alert: TriggeredAlert) => {
+      addFromAlertMutation.mutate(
+        { symbol: alert.symbol, alert_id: alert.id },
+        {
+          onSuccess: () => {
+            router.push('/simulation')
+          },
+        }
+      )
+    },
+    [addFromAlertMutation, router]
+  )
 
   if (rulesError) {
     return (
@@ -585,7 +623,12 @@ export default function AlertsPage() {
           ) : (
             <div className="space-y-2">
               {triggeredAlerts.map((alert) => (
-                <TriggeredAlertItem key={alert.id} alert={alert} />
+                <TriggeredAlertItem
+                  key={alert.id}
+                  alert={alert}
+                  onAddToSimulation={handleAddToSimulation}
+                  isAdding={addFromAlertMutation.isPending}
+                />
               ))}
             </div>
           )}

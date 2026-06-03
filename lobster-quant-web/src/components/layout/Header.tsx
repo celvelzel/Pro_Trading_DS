@@ -1,13 +1,16 @@
 'use client'
 
+import { useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Moon, Sun, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SearchAutocomplete } from '@/components/layout/SearchAutocomplete'
 import { DataSourceStatus } from '@/components/ui/data-source-status'
+import { MobileMenuDrawer } from '@/components/layout/MobileMenuDrawer'
 
 export function Header() {
   const { theme, setTheme } = useTheme()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
@@ -17,10 +20,20 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center px-4 md:px-6">
         {/* Mobile menu button */}
-        <Button variant="ghost" size="icon" className="md:hidden mr-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden mr-2"
+          onClick={() => setMobileMenuOpen(true)}
+        >
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle menu</span>
         </Button>
+
+        <MobileMenuDrawer
+          open={mobileMenuOpen}
+          onOpenChange={setMobileMenuOpen}
+        />
 
         {/* Search bar with autocomplete */}
         <SearchAutocomplete />

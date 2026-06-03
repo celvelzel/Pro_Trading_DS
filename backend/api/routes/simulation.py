@@ -1,15 +1,13 @@
 """Simulation API Router."""
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
-import sys
-import os
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
 from api.models.simulation import (
     SimulationRequest, RunAllSimulationRequest,
     SimulatedTradeResponse, DailySnapshotResponse,
-    SimulationResultResponse, PerformanceResponse
+    SimulationResultResponse, PerformanceResponse,
+    AddFromAlertRequest
 )
 
 router = APIRouter()
@@ -179,6 +177,82 @@ async def get_performance(strategy_id: str, window: str = "1M"):
             winRate=round(win_rate, 2),
             totalTrades=len(trades)
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/add-from-alert", response_model=SimulatedTradeResponse)
+async def add_from_alert(request: AddFromAlertRequest):
+    """Add a simulated trade from a triggered alert.
+
+    Uses the first available strategy's default position size.
+    """
+    try:
+        from datetime import datetime
+        from lobster_quant.src.core.strategy_manager import StrategyManager
+        from lobster_quant.src.storage.simulation_store import SimulationStore
+        from lobster_quant.src.data.models import SimulatedTrade
+        from lobster_quant.src.core.data_engine import get_data_engine
+
+        # Get the first available strategy
+        manager = StrategyManager()
+        strategies = manager.list_strategies()
+        if not strategies:
+            raise HTTPException(status_code=400, detail="No strategies available")
+
+        strategy = strategies[0]
+
+        # Get current price
+        data_engine = get_data_engine()
+        stock_data = data_engine.fetch_stock(request.symbol)
+        if stock_data is None:
+            raise HTTPException(status_code=400, detail=f"Could not fetch data for {request.symbol}")
+
+        price = stock_data.get_latest_price()
+        if price is None or price <= 0:
+            raise HTTPException(status_code=400, detail=f"Invalid price for {request.symbol}")
+
+        # Calculate position size using strategy defaults
+        initial_capital = strategy.params.initialCapital
+        position_value = initial_capital * strategy.params.positionSize
+        shares = int(position_value / price)
+        if shares <= 0:
+            raise HTTPException(status_code=400, detail="Position too small for current price")
+
+        # Check for existing open position
+        store = SimulationStore()
+        open_trades = store.get_trades(strategy.id, status="open")
+        if any(t.symbol == request.symbol for t in open_trades):
+            raise HTTPException(status_code=400, detail=f"Already have open position for {request.symbol}")
+
+        # Create trade
+        trade = SimulatedTrade(
+            id=f"trade_{int(datetime.now().timestamp())}_{request.symbol}",
+            strategyId=strategy.id,
+            symbol=request.symbol,
+            entryDate=datetime.now().strftime("%Y-%m-%d"),
+            entryPrice=price,
+            shares=shares,
+            status="open",
+        )
+
+        store.save_trade(trade)
+
+        return SimulatedTradeResponse(
+            id=trade.id,
+            strategyId=trade.strategyId,
+            symbol=trade.symbol,
+            entryDate=trade.entryDate,
+            entryPrice=trade.entryPrice,
+            exitDate=trade.exitDate,
+            exitPrice=trade.exitPrice,
+            shares=trade.shares,
+            status=trade.status,
+            pnl=trade.pnl,
+            pnlPercent=trade.pnlPercent
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

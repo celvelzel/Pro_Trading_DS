@@ -14,6 +14,7 @@ import {
   Play,
   Bell,
   List,
+  Briefcase,
 } from 'lucide-react'
 
 const navItems = [
@@ -51,6 +52,11 @@ const navItems = [
     title: 'Simulation',
     href: '/simulation',
     icon: Play,
+  },
+  {
+    title: 'Portfolio',
+    href: '/portfolio',
+    icon: Briefcase,
   },
   {
     title: 'Alerts',

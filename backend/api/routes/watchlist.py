@@ -15,6 +15,7 @@ from api.models.watchlist import (
     RemoveSymbolRequest,
     UpdateGroupsRequest,
     UpdateTagsRequest,
+    BulkAddSymbolsRequest,
 )
 
 router = APIRouter()
@@ -52,6 +53,12 @@ def _save_watchlist(watchlist: WatchlistData):
 async def get_watchlist():
     """Get the current watchlist."""
     watchlist = _load_watchlist()
+    
+    # Migration: if symbols exist but groups are empty, create a 'Default' group
+    if watchlist.symbols and not watchlist.groups:
+        watchlist.groups = {"Default": watchlist.symbols[:]}
+        _save_watchlist(watchlist)
+        
     return WatchlistResponse(
         symbols=watchlist.symbols,
         groups=watchlist.groups,
@@ -68,6 +75,37 @@ async def add_symbol(request: AddSymbolRequest):
     if symbol not in watchlist.symbols:
         watchlist.symbols.append(symbol)
         _save_watchlist(watchlist)
+    
+    return WatchlistResponse(
+        symbols=watchlist.symbols,
+        groups=watchlist.groups,
+        tags=watchlist.tags,
+    )
+
+
+@router.post("/symbols/bulk", response_model=WatchlistResponse)
+async def bulk_add_symbols(request: BulkAddSymbolsRequest):
+    """Add multiple symbols to the watchlist and optionally a group."""
+    watchlist = _load_watchlist()
+    new_symbols = [s.upper() for s in request.symbols if s.strip()]
+    
+    # Add to master symbols list
+    for symbol in new_symbols:
+        if symbol not in watchlist.symbols:
+            watchlist.symbols.append(symbol)
+            
+    # Add to group if specified
+    if request.group:
+        group_name = request.group
+        if group_name not in watchlist.groups:
+            watchlist.groups[group_name] = []
+        
+        current_group = set(watchlist.groups[group_name])
+        for symbol in new_symbols:
+            if symbol not in current_group:
+                watchlist.groups[group_name].append(symbol)
+                
+    _save_watchlist(watchlist)
     
     return WatchlistResponse(
         symbols=watchlist.symbols,

@@ -4,12 +4,6 @@ Endpoints for stock data, indicators, signals, options, and risk assessment.
 """
 
 from fastapi import APIRouter, HTTPException
-import sys
-import os
-
-# Add the parent directory to the path to import existing modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-
 from api.models.stocks import (
     Candle,
     StockData,
@@ -21,6 +15,8 @@ from api.models.stocks import (
     RiskAssessment,
 )
 from api.cache import cache_get, cache_set, make_cache_key
+from api.deps import get_data_engine_dep, get_indicator_engine_dep
+from data.stock_name_map import lookup_name
 
 
 # ---------------------------------------------------------------------------
@@ -75,9 +71,7 @@ async def get_stock_data(symbol: str, period: str = "ytd"):
 
     try:
         # Import existing data engine
-        from lobster_quant.src.core.data_engine import get_data_engine
-        
-        engine = get_data_engine()
+        engine = get_data_engine_dep()
         stock_data = engine.fetch_stock(symbol)
         
         if stock_data is None:
@@ -126,7 +120,7 @@ async def get_stock_data(symbol: str, period: str = "ytd"):
         
         result = StockData(
             symbol=symbol,
-            name=symbol,  # lobster_quant StockData doesn't have name field
+            name=lookup_name(symbol) or symbol,
             price=float(latest['close']),
             change=float(latest['close'] - prev['close']),
             changePercent=float((latest['close'] - prev['close']) / prev['close'] * 100),
@@ -152,16 +146,14 @@ async def get_indicators(symbol: str):
     Returns:
         Technical indicators (RSI, MACD, MA20, MA200, ATR)
     """
-    cached = cache_get("indicators", symbol, _TTL_INDICATORS)
+    cache_key = make_cache_key(symbol)
+    cached = cache_get("indicators", cache_key, _TTL_INDICATORS)
     if cached is not None:
         return cached
 
     try:
-        from lobster_quant.src.core.data_engine import get_data_engine
-        from lobster_quant.src.core.indicator_engine import get_indicator_engine
-        
-        data_engine = get_data_engine()
-        indicator_engine = get_indicator_engine()
+        data_engine = get_data_engine_dep()
+        indicator_engine = get_indicator_engine_dep()
         
         stock_data = data_engine.fetch_stock(symbol)
         if stock_data is None:
@@ -182,7 +174,7 @@ async def get_indicators(symbol: str):
             atr=float(latest.get('atr', 0)),
             atrPercent=float(latest.get('atr_percent', 0)),
         )
-        cache_set("indicators", symbol, result)
+        cache_set("indicators", make_cache_key(symbol), result)
         return result
     except HTTPException:
         raise
@@ -201,17 +193,16 @@ async def get_signals(symbol: str):
     Returns:
         Trading signal with score, probability, and reasons
     """
-    cached = cache_get("signals", symbol, _TTL_SIGNALS)
+    cache_key = make_cache_key(symbol)
+    cached = cache_get("signals", cache_key, _TTL_SIGNALS)
     if cached is not None:
         return cached
 
     try:
-        from lobster_quant.src.core.data_engine import get_data_engine
-        from lobster_quant.src.core.indicator_engine import get_indicator_engine
         from lobster_quant.src.analysis.signals import SignalGenerator
         
-        data_engine = get_data_engine()
-        indicator_engine = get_indicator_engine()
+        data_engine = get_data_engine_dep()
+        indicator_engine = get_indicator_engine_dep()
         
         stock_data = data_engine.fetch_stock(symbol)
         if stock_data is None:
@@ -228,7 +219,7 @@ async def get_signals(symbol: str):
             probability=int(signal.probability_up),
             reasons=signal.reasons if signal.reasons else [],
         )
-        cache_set("signals", symbol, result)
+        cache_set("signals", make_cache_key(symbol), result)
         return result
     except HTTPException:
         raise
@@ -241,25 +232,48 @@ async def get_options_analysis(symbol: str):
     """
     Get options analysis for a stock.
     
+    Tries real options chain data from yfinance first.
+    Falls back to price-based estimation if unavailable.
+    
     Args:
         symbol: Stock symbol
     
     Returns:
         Options analysis including Max Pain, Put/Call ratio, Support/Resistance
     """
-    cached = cache_get("options", symbol, _TTL_OPTIONS)
+    cache_key = make_cache_key(symbol)
+    cached = cache_get("options", cache_key, _TTL_OPTIONS)
     if cached is not None:
         return cached
 
     try:
-        from lobster_quant.src.core.data_engine import get_data_engine
+        # --- Attempt real options data from yfinance ---
+        from lobster_quant.src.data.providers.options_provider import get_options_provider
+
+        options_provider = get_options_provider()
+        real_data = options_provider.fetch_options(symbol)
+
+        if real_data is not None:
+            result = OptionsAnalysis(
+                maxPain=real_data.max_pain,
+                putCallRatio=real_data.put_call_ratio,
+                support=real_data.support,
+                resistance=real_data.resistance,
+                estimated=False,
+                estimation_method="yfinance-option-chain",
+                disclaimer="基于真实期权链数据",
+            )
+            cache_set("options", make_cache_key(symbol), result)
+            return result
+
+        # --- Fallback: price-based estimation ---
         from lobster_quant.src.ui.pages.quant_tool_indicators import (
             calc_max_pain,
             find_support_resistance,
             calc_put_call_ratio,
         )
         
-        data_engine = get_data_engine()
+        data_engine = get_data_engine_dep()
         stock_data = data_engine.fetch_stock(symbol)
         
         if stock_data is None:
@@ -268,7 +282,7 @@ async def get_options_analysis(symbol: str):
         df = stock_data.daily
         current_price = df['close'].iloc[-1]
         
-        # Calculate options metrics
+        # Calculate options metrics from price data
         max_pain = calc_max_pain(df, current_price)
         support, resistance = find_support_resistance(df)
         put_call_ratio = calc_put_call_ratio(df)
@@ -278,8 +292,11 @@ async def get_options_analysis(symbol: str):
             putCallRatio=float(put_call_ratio) if put_call_ratio else 1.0,
             support=[float(s) for s in support[:3]] if support else [],
             resistance=[float(r) for r in resistance[:3]] if resistance else [],
+            estimated=True,
+            estimation_method="price-based-technical-derivation",
+            disclaimer="此数据为基于价格走势的技术面估算，不代表真实期权市场数据",
         )
-        cache_set("options", symbol, result)
+        cache_set("options", make_cache_key(symbol), result)
         return result
     except HTTPException:
         raise
@@ -298,17 +315,16 @@ async def get_risk_assessment(symbol: str):
     Returns:
         Risk assessment including OFF filter status
     """
-    cached = cache_get("risk", symbol, _TTL_RISK)
+    cache_key = make_cache_key(symbol)
+    cached = cache_get("risk", cache_key, _TTL_RISK)
     if cached is not None:
         return cached
 
     try:
-        from lobster_quant.src.core.data_engine import get_data_engine
-        from lobster_quant.src.core.indicator_engine import get_indicator_engine
         from lobster_quant.src.core.risk_engine import RiskEngine
         
-        data_engine = get_data_engine()
-        indicator_engine = get_indicator_engine()
+        data_engine = get_data_engine_dep()
+        indicator_engine = get_indicator_engine_dep()
         
         stock_data = data_engine.fetch_stock(symbol)
         if stock_data is None:
@@ -328,7 +344,7 @@ async def get_risk_assessment(symbol: str):
             onPercent=float(stats.get('on_pct', 0)),
             offPercent=float(stats.get('off_pct', 0)),
         )
-        cache_set("risk", symbol, result)
+        cache_set("risk", make_cache_key(symbol), result)
         return result
     except HTTPException:
         raise

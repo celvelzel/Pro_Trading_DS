@@ -4,11 +4,6 @@ Endpoints for reading and updating application settings.
 """
 
 from fastapi import APIRouter, HTTPException
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-
 from api.models.settings import (
     AppSettings,
     SettingsUpdateRequest,

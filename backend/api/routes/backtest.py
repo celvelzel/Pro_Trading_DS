@@ -5,12 +5,16 @@ Endpoints for strategy backtesting, portfolio backtesting, and result management
 
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
-import sys
-import os
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
-from api.models.backtest import BacktestRequest, BacktestTrade, EquityPoint, BacktestResponse
+from api.models.backtest import (
+    BacktestRequest,
+    BacktestTrade,
+    EquityPoint,
+    BacktestResponse,
+    WalkForwardRequest,
+)
+from api.deps import get_data_engine_dep, get_indicator_engine_dep
 
 router = APIRouter()
 
@@ -27,14 +31,12 @@ async def run_backtest(request: BacktestRequest):
         Backtest results with trades and equity curve
     """
     try:
-        from lobster_quant.src.core.data_engine import get_data_engine
-        from lobster_quant.src.core.indicator_engine import get_indicator_engine
         from lobster_quant.src.analysis.signals import SignalGenerator
         from lobster_quant.src.analysis.backtest import BacktestEngine
         import pandas as pd
 
-        data_engine = get_data_engine()
-        indicator_engine = get_indicator_engine()
+        data_engine = get_data_engine_dep()
+        indicator_engine = get_indicator_engine_dep()
 
         stock_data = data_engine.fetch_stock(request.symbol)
         if stock_data is None:
@@ -130,8 +132,6 @@ async def run_strategy_backtest(
     """
     try:
         from lobster_quant.src.core.strategy_manager import StrategyManager
-        from lobster_quant.src.core.data_engine import get_data_engine
-        from lobster_quant.src.core.indicator_engine import get_indicator_engine
         from lobster_quant.src.analysis.backtest.engine import BacktestEngine
 
         # Get strategy
@@ -141,8 +141,8 @@ async def run_strategy_backtest(
             raise HTTPException(status_code=404, detail=f"Strategy {strategy_id} not found")
 
         # Fetch and prepare data
-        data_engine = get_data_engine()
-        indicator_engine = get_indicator_engine()
+        data_engine = get_data_engine_dep()
+        indicator_engine = get_indicator_engine_dep()
 
         stock_data = data_engine.fetch_stock(symbol)
         if stock_data is None:
@@ -266,5 +266,115 @@ async def list_backtest_results(strategy_id: Optional[str] = None):
             }
             for r in results
         ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/backtest/walk-forward", response_model=dict)
+async def run_walk_forward(request: WalkForwardRequest):
+    """Run walk-forward validation analysis.
+
+    Splits historical data into rolling train/test windows and compares
+    in-sample vs out-of-sample performance to detect overfitting.
+
+    Args:
+        request: Walk-forward parameters
+
+    Returns:
+        Walk-forward results with per-window IS/OOS metrics and aggregates
+    """
+    try:
+        from lobster_quant.src.analysis.signals import SignalGenerator
+        from lobster_quant.src.analysis.backtest.walk_forward import WalkForwardEngine
+        import pandas as pd
+
+        data_engine = get_data_engine_dep()
+        indicator_engine = get_indicator_engine_dep()
+
+        stock_data = data_engine.fetch_stock(request.symbol)
+        if stock_data is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Stock {request.symbol} not found",
+            )
+
+        df = indicator_engine.compute_all(stock_data.daily)
+
+        # Generate score series
+        signal_gen = SignalGenerator()
+        score_series = pd.Series(
+            [signal_gen.calculate_score(df.iloc[:i + 1]) for i in range(len(df))],
+            index=df.index,
+        )
+
+        # Run walk-forward analysis
+        engine = WalkForwardEngine(
+            train_months=request.trainMonths,
+            test_months=request.testMonths,
+            step_months=request.stepMonths,
+        )
+
+        result = engine.run(
+            data=df,
+            score_series=score_series,
+            symbol=request.symbol,
+            engine_params={
+                "holdingDays": request.holdingDays,
+                "minScore": request.minScore,
+            },
+        )
+
+        # Convert to response format
+        windows = []
+        for w in result.windows:
+            windows.append({
+                "windowIndex": w.window_index,
+                "trainStart": w.train_start,
+                "trainEnd": w.train_end,
+                "testStart": w.test_start,
+                "testEnd": w.test_end,
+                "isMetrics": {
+                    "totalTrades": w.is_metrics.total_trades,
+                    "winRate": w.is_metrics.win_rate,
+                    "avgReturn": w.is_metrics.avg_return,
+                    "cumulativeReturn": w.is_metrics.cumulative_return,
+                    "maxDrawdown": w.is_metrics.max_drawdown,
+                    "sharpeRatio": w.is_metrics.sharpe_ratio,
+                    "sortinoRatio": w.is_metrics.sortino_ratio,
+                    "profitFactor": w.is_metrics.profit_factor,
+                    "bestTrade": w.is_metrics.best_trade,
+                    "worstTrade": w.is_metrics.worst_trade,
+                },
+                "oosMetrics": {
+                    "totalTrades": w.oos_metrics.total_trades,
+                    "winRate": w.oos_metrics.win_rate,
+                    "avgReturn": w.oos_metrics.avg_return,
+                    "cumulativeReturn": w.oos_metrics.cumulative_return,
+                    "maxDrawdown": w.oos_metrics.max_drawdown,
+                    "sharpeRatio": w.oos_metrics.sharpe_ratio,
+                    "sortinoRatio": w.oos_metrics.sortino_ratio,
+                    "profitFactor": w.oos_metrics.profit_factor,
+                    "bestTrade": w.oos_metrics.best_trade,
+                    "worstTrade": w.oos_metrics.worst_trade,
+                },
+                "degradation": w.degradation,
+            })
+
+        return {
+            "symbol": result.symbol,
+            "trainMonths": result.train_months,
+            "testMonths": result.test_months,
+            "stepMonths": result.step_months,
+            "totalWindows": result.total_windows,
+            "windows": windows,
+            "avgIsSharpe": result.avg_is_sharpe,
+            "avgOosSharpe": result.avg_oos_sharpe,
+            "avgDegradation": result.avg_degradation,
+            "avgOosWinRate": result.avg_oos_win_rate,
+            "avgOosReturn": result.avg_oos_return,
+            "consistencyRatio": result.consistency_ratio,
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
