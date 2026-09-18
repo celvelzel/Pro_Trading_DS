@@ -15,9 +15,15 @@ import {
   Bell,
   List,
   Briefcase,
+  Bot,
 } from 'lucide-react'
 
 const navItems = [
+  {
+    title: 'Copilot',
+    href: '/copilot',
+    icon: Bot,
+  },
   {
     title: 'Dashboard',
     href: '/dashboard',
