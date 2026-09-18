@@ -15,6 +15,7 @@ import type {
   ScanParams,
   ScanResponse,
   ScanProgress,
+  StockResult,
   BacktestParams,
   BacktestResult,
   Candle,

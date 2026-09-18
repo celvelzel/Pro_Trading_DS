@@ -164,7 +164,7 @@ export function useAlertWebSocket() {
   const queryClient = useQueryClient()
   const [connected, setConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const attemptRef = useRef(0)
 
   useEffect(() => {

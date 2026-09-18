@@ -166,12 +166,14 @@ export default function PortfolioPage() {
             Refresh
           </Button>
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
+            <DialogTrigger
+              render={
+                <Button size="sm">
                 <Plus className="w-4 h-4 mr-1" />
                 Add Position
-              </Button>
-            </DialogTrigger>
+                </Button>
+              }
+            />
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add Position</DialogTitle>

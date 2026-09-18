@@ -103,7 +103,7 @@ export function FieldError({ message }: { message?: string }) {
 // ============================================================================
 
 export function sliderVal(v: number | readonly number[]): number {
-  return Array.isArray(v) ? v[0] : v
+  return typeof v === 'number' ? v : Number(v[0])
 }
 
 // ============================================================================

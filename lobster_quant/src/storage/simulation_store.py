@@ -101,7 +101,7 @@ class SimulationStore:
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(snapshot.model_dump(), f, indent=2, default=str)
 
-    def get_snapshots(self, strategy_id: str, days: int = 30) -> list[Any]:
+    def get_snapshots(self, strategy_id: str, days: int | None = None) -> list[Any]:
         """Get recent snapshots for a strategy."""
         _, daily_snapshot_cls = self._get_model_classes()
 
@@ -110,13 +110,15 @@ class SimulationStore:
             return []
 
         snapshots = []
-        cutoff_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+        cutoff_date = None
+        if days is not None:
+            cutoff_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
 
         for file in strategy_snapshots_dir.glob("snapshot_*.json"):
             try:
                 # Extract date from filename
                 date_str = file.stem.replace("snapshot_", "")
-                if date_str >= cutoff_date:
+                if cutoff_date is None or date_str >= cutoff_date:
                     with open(file, encoding="utf-8") as f:
                         data = json.load(f)
                     snapshots.append(daily_snapshot_cls(**data))

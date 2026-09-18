@@ -32,13 +32,17 @@ class MockProvider(DataProvider):
         """Generate synthetic daily data."""
         days = years * 252  # Trading days per year
 
-        # Generate price series with random walk
-        returns = self.rng.normal(self.trend, self.volatility, days)
-        prices = 100 * np.exp(np.cumsum(returns))
-
-        # Generate dates
+        # Build the index first.  ``bdate_range`` can contain one fewer row
+        # than requested when the end timestamp falls on a non-business day;
+        # sizing the generated arrays from the actual index keeps the fixture
+        # deterministic across pandas versions and calendar dates.
         end_date = datetime.now()
         dates = pd.bdate_range(end=end_date, periods=days)
+        sample_count = len(dates)
+
+        # Generate price series with random walk
+        returns = self.rng.normal(self.trend, self.volatility, sample_count)
+        prices = 100 * np.exp(np.cumsum(returns))
 
         # Generate OHLCV from close prices
         df = pd.DataFrame(index=dates)
@@ -56,7 +60,7 @@ class MockProvider(DataProvider):
         df["low"] = df[["low", "open", "close"]].min(axis=1)
 
         # Generate volume
-        df["volume"] = self.rng.randint(1_000_000, 10_000_000, days)
+        df["volume"] = self.rng.randint(1_000_000, 10_000_000, sample_count)
 
         logger.debug(f"Generated {len(df)} mock daily rows for {symbol}")
         return df[["open", "high", "low", "close", "volume"]]
