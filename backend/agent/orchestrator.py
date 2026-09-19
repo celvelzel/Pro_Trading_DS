@@ -145,6 +145,8 @@ class AgentOrchestrator:
             plan = session.scalar(select(Plan).where(Plan.run_id == run_id).order_by(Plan.revision.desc()))
             steps = list(session.scalars(select(Step).where(Step.plan_id == plan.id).order_by(Step.ordinal))) if plan else []
         for step in steps:
+            if step.status == "succeeded":
+                continue
             with self.session_factory() as session:
                 run = session.get(AgentRun, run_id)
                 if run.status in {"pause_requested", "cancelling"}:
@@ -200,6 +202,18 @@ class AgentOrchestrator:
                         session.commit()
                         return
                     self._move(session, run, "begin_execution")
+                    if envelope.data and envelope.data.get("status") == "pending" and envelope.data.get("job_id"):
+                        run.checkpoint = {"job_id": envelope.data["job_id"], "step_id": step.id}
+                        self._move(session, run, "wait_job")
+                        append_event(
+                            session,
+                            run=run,
+                            event_type="run.waiting_job",
+                            request_id=str(uuid.uuid4()),
+                            payload={"job_id": envelope.data["job_id"], "step_id": step.id},
+                        )
+                        session.commit()
+                        return
                     session.commit()
             else:
                 with self.session_factory() as session:

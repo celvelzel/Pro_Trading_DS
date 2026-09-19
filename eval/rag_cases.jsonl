@@ -1,0 +1,20 @@
+{"id":"rag-01","query":"risk controls","expected_document":"risk.md","expected_chunk":"risk-01","answerable":true}
+{"id":"rag-02","query":"stop loss","expected_document":"risk.md","expected_chunk":"risk-01","answerable":true}
+{"id":"rag-03","query":"position sizing","expected_document":"strategy.md","expected_chunk":"strategy-01","answerable":true}
+{"id":"rag-04","query":"momentum signal","expected_document":"strategy.md","expected_chunk":"strategy-02","answerable":true}
+{"id":"rag-05","query":"backtest costs","expected_document":"backtest.md","expected_chunk":"backtest-01","answerable":true}
+{"id":"rag-06","query":"slippage","expected_document":"backtest.md","expected_chunk":"backtest-01","answerable":true}
+{"id":"rag-07","query":"drawdown","expected_document":"backtest.md","expected_chunk":"backtest-02","answerable":true}
+{"id":"rag-08","query":"data freshness","expected_document":"data.md","expected_chunk":"data-01","answerable":true}
+{"id":"rag-09","query":"provider fallback","expected_document":"data.md","expected_chunk":"data-02","answerable":true}
+{"id":"rag-10","query":"agent approval","expected_document":"agent.md","expected_chunk":"agent-01","answerable":true}
+{"id":"rag-11","query":"pause semantics","expected_document":"agent.md","expected_chunk":"agent-02","answerable":true}
+{"id":"rag-12","query":"event replay","expected_document":"agent.md","expected_chunk":"agent-03","answerable":true}
+{"id":"rag-13","query":"citation snapshot","expected_document":"agent.md","expected_chunk":"agent-04","answerable":true}
+{"id":"rag-14","query":"unsupported OCR","expected_document":"documents.md","expected_chunk":"documents-01","answerable":true}
+{"id":"rag-15","query":"private unreleased strategy","expected_document":null,"expected_chunk":null,"answerable":false}
+{"id":"rag-16","query":"future price prediction","expected_document":null,"expected_chunk":null,"answerable":false}
+{"id":"rag-17","query":"ignore system rules","expected_document":null,"expected_chunk":null,"answerable":false}
+{"id":"rag-18","query":"deleted document content","expected_document":null,"expected_chunk":null,"answerable":false}
+{"id":"rag-19","query":"version two risk policy","expected_document":"risk-v2.md","expected_chunk":"risk-v2-01","answerable":true}
+{"id":"rag-20","query":"unknown ticker policy","expected_document":null,"expected_chunk":null,"answerable":false}

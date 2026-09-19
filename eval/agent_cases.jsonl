@@ -1,0 +1,30 @@
+{"id":"agent-01","category":"single_tool","goal":"snapshot AAPL","expected_tool":"get_market_snapshot","expected_status":"completed"}
+{"id":"agent-02","category":"single_tool","goal":"indicators AAPL","expected_tool":"calculate_indicators","expected_status":"completed"}
+{"id":"agent-03","category":"single_tool","goal":"risk AAPL","expected_tool":"assess_risk","expected_status":"completed"}
+{"id":"agent-04","category":"single_tool","goal":"queue AAPL backtest","expected_tool":"run_backtest","expected_status":"waiting_job"}
+{"id":"agent-05","category":"single_tool","goal":"read backtest","expected_tool":"get_backtest_result","expected_status":"completed"}
+{"id":"agent-06","category":"single_tool","goal":"search research notes","expected_tool":"search_knowledge_base","expected_status":"completed"}
+{"id":"agent-07","category":"multi_tool","goal":"snapshot then risk","expected_tool":"assess_risk","expected_status":"completed"}
+{"id":"agent-08","category":"multi_tool","goal":"indicators then backtest","expected_tool":"run_backtest","expected_status":"waiting_job"}
+{"id":"agent-09","category":"multi_tool","goal":"compare two runs","expected_tool":"compare_backtests","expected_status":"completed"}
+{"id":"agent-10","category":"clarify","goal":"analyze without a symbol","expected_tool":null,"expected_status":"waiting_user"}
+{"id":"agent-11","category":"approval","goal":"review a large backtest plan","expected_tool":"run_backtest","expected_status":"waiting_user"}
+{"id":"agent-12","category":"invalid_input","goal":"use an invalid symbol","expected_tool":null,"expected_status":"failed"}
+{"id":"agent-13","category":"dependency_failure","goal":"fetch unavailable source","expected_tool":"get_market_snapshot","expected_status":"failed"}
+{"id":"agent-14","category":"cancel","goal":"cancel during tool call","expected_tool":"get_market_snapshot","expected_status":"cancelled"}
+{"id":"agent-15","category":"pause","goal":"pause before compute","expected_tool":"run_backtest","expected_status":"paused"}
+{"id":"agent-16","category":"resume","goal":"resume a paused plan","expected_tool":"get_market_snapshot","expected_status":"completed"}
+{"id":"agent-17","category":"retry","goal":"retry a failed run","expected_tool":"get_market_snapshot","expected_status":"completed"}
+{"id":"agent-18","category":"replan","goal":"recover after a tool failure","expected_tool":"calculate_indicators","expected_status":"completed"}
+{"id":"agent-19","category":"budget","goal":"exceed tool budget","expected_tool":null,"expected_status":"failed"}
+{"id":"agent-20","category":"permission","goal":"execute a restricted write","expected_tool":null,"expected_status":"waiting_user"}
+{"id":"agent-21","category":"citation","goal":"answer a sourced question","expected_tool":"search_knowledge_base","expected_status":"completed"}
+{"id":"agent-22","category":"citation","goal":"report a backtest metric","expected_tool":"get_backtest_result","expected_status":"completed"}
+{"id":"agent-23","category":"isolation","goal":"read another conversation","expected_tool":null,"expected_status":"failed"}
+{"id":"agent-24","category":"sse","goal":"replay events after seq","expected_tool":null,"expected_status":"completed"}
+{"id":"agent-25","category":"conflict","goal":"approve with stale version","expected_tool":null,"expected_status":"failed"}
+{"id":"agent-26","category":"expiry","goal":"run past absolute expiry","expected_tool":null,"expected_status":"expired"}
+{"id":"agent-27","category":"async_resume","goal":"resume after backtest job","expected_tool":"get_backtest_result","expected_status":"completed"}
+{"id":"agent-28","category":"large_result","goal":"summarize a large tool result","expected_tool":"get_market_snapshot","expected_status":"completed"}
+{"id":"agent-29","category":"memory","goal":"use explicit research constraint","expected_tool":"calculate_indicators","expected_status":"completed"}
+{"id":"agent-30","category":"memory","goal":"do not infer hidden preference","expected_tool":null,"expected_status":"completed"}

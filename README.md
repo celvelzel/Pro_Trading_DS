@@ -8,9 +8,9 @@
 ![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)
 
-**一个全功能的量化交易分析平台，支持多市场股票分析、技术指标计算、信号生成和策略回测。**
+**一个面向研究与决策支持的量化交易平台，支持多市场分析、策略回测，以及带计划审阅、异步任务和知识库引用的 Agent Copilot。**
 
-[功能特性](#功能特性) • [快速开始](#快速开始) • [项目架构](#项目架构) • [API文档](#api文档) • [配置说明](#配置说明) • [开发指南](#开发指南)
+[功能特性](#功能特性) • [快速开始](#快速开始) • [项目架构](#项目架构) • [API文档](#api文档) • [Agent Copilot](#agent-copilot) • [配置说明](#配置说明) • [开发指南](#开发指南)
 
 </div>
 
@@ -24,6 +24,7 @@
 - [项目架构](#项目架构)
 - [核心模块](#核心模块)
 - [API文档](#api文档)
+- [Agent Copilot](#agent-copilot)
 - [前端界面](#前端界面)
 - [配置说明](#配置说明)
 - [开发指南](#开发指南)
@@ -87,6 +88,14 @@
 - **暗色模式**: 完整的明暗主题切换
 - **专业图表**: TradingView Lightweight Charts
 - **实时更新**: TanStack Query 数据同步
+
+### Agent Copilot 与知识库
+- **计划驱动执行**: 任务先生成可审阅计划，再执行工具步骤
+- **异步回测任务**: Celery 队列、幂等键、任务状态和结果查询
+- **实时进度**: REST + SSE 事件流，支持断线后的序列回放
+- **显式记忆**: 用户偏好、研究约束和确认事实可审计管理
+- **文档知识库**: Markdown/PDF 解析、分块、向量检索和可追溯引用
+- **安全边界**: 不包含实盘下单与 OCR；模型和数据源需显式配置
 
 ---
 
@@ -201,6 +210,13 @@ npm run dev
 ```
 
 前端将在 http://localhost:3000 启动
+
+### Agent / 知识库入口
+
+- **Copilot**: http://localhost:3000/copilot
+- **Knowledge**: http://localhost:3000/knowledge
+- **Agent API**: `/api/agent`
+- **Documents API**: `/api/documents`
 
 ### 访问应用
 
@@ -654,6 +670,15 @@ POST /api/backtest/backtest/strategy?symbol=AAPL&strategy_id=balanced&start_date
 
 ## 🖥️ 前端界面
 
+### Agent Copilot
+- 任务模式切换（审阅后执行 / 自动执行）
+- 计划步骤、工具调用、事件时间线和失败状态展示
+- 计划审批、暂停、取消，以及 SSE 实时进度
+
+### Knowledge
+- 文档上传、解析状态、来源信息和知识库搜索
+- 搜索结果展示文档、页码/行号和引用片段
+
 ### 仪表盘 (Dashboard)
 - 市场状态概览
 - SPY基准指数实时数据
@@ -1023,11 +1048,33 @@ pip install gunicorn
 gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
 ```
 
-### Docker部署 (计划中)
+### Docker Compose 部署
 
-```bash
-docker-compose up -d
+```powershell
+$env:POSTGRES_PASSWORD="local-only-password"
+$env:DATABASE_URL="postgresql+asyncpg://pro_trading_ds:local-only-password@db:5432/pro_trading_ds"
+docker compose up --build
 ```
+
+Compose 会按数据库健康检查、Alembic 迁移、API/Worker、前端的顺序启动 PostgreSQL/pgvector、Redis、FastAPI、Celery 和 Next.js。详细运行边界见 [runtime.md](docs/architecture/runtime.md)。
+
+---
+
+## 🤖 Agent 升级交付状态（2026-09-19）
+
+| 阶段 | 交付内容 | 状态 |
+|------|----------|------|
+| W0 | 基线、Agent 合约、ADR、状态机边界 | ✅ |
+| W1 | SQLAlchemy/Alembic、Agent/任务持久化、Celery 队列 | ✅ |
+| W2 | 类型化工具注册表、超时/错误封装、异步回测工具 | ✅ |
+| W3 | Planner、状态机、显式记忆、上下文预算、Orchestrator | ✅ |
+| W4 | Agent REST、SSE 回放、Copilot 页面 | ✅ |
+| W5 | Markdown/PDF 知识库摄取、分块、Embedding、引用 | ✅ |
+| W6 | Knowledge 页面、文档 API、知识库搜索工具 | ✅ |
+| W7 | Docker Compose、PostgreSQL/pgvector、Redis、Worker | ✅ |
+| W8 | 确定性评估夹具、运行文档、README 同步 | ✅ |
+
+验证结果：量化核心 672 passed，后端 121 passed，前端 122 passed，生产构建通过；Agent 评估 30/30，通过；RAG 夹具完整性 1.0。实时模型质量、线上检索召回率和投资绩效不在本次离线验证范围内。评估说明见 [docs/evaluation/README.md](docs/evaluation/README.md)。
 
 ---
 
