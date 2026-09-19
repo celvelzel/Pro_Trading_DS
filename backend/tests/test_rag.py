@@ -58,6 +58,16 @@ def test_fake_embedding_is_deterministic_and_dimension_checked():
         validate_embeddings([[1.0]], 8)
 
 
+def test_embedding_factory_is_offline_safe_without_provider_key(monkeypatch):
+    from rag.embeddings import FakeEmbedding, get_embedding_provider
+
+    monkeypatch.delenv("AI_API_KEY", raising=False)
+    monkeypatch.setenv("AI_EMBEDDING_MODEL", "fake-384")
+    provider = get_embedding_provider()
+    assert isinstance(provider, FakeEmbedding)
+    assert provider.dimension == 384
+
+
 def test_citation_rejects_changed_source_excerpt():
     from rag.citations import document_citation
     from rag.schemas import DocumentChunkData

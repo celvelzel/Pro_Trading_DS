@@ -12,7 +12,7 @@ from sqlalchemy import select
 from db.models.rag import Document, DocumentChunk, DocumentVersion, IngestionJob
 
 from .chunking import chunk_sections
-from .embeddings import EmbeddingProvider, FakeEmbedding, validate_embeddings
+from .embeddings import EmbeddingProvider, get_embedding_provider, validate_embeddings
 from .parsers.markdown import parse_markdown
 from .parsers.pdf import parse_pdf
 from .schemas import DocumentValidationError
@@ -29,7 +29,7 @@ def ingest_document(
     session_factory: Callable,
     embedder: EmbeddingProvider | None = None,
 ) -> dict[str, str]:
-    embedder = embedder or FakeEmbedding()
+    embedder = embedder or get_embedding_provider()
     with session_factory() as session:
         document = session.get(Document, document_id)
         if document is None:
@@ -73,6 +73,11 @@ def ingest_document(
             document = session.get(Document, document_id)
             version = session.get(DocumentVersion, version.id)
             job = session.get(IngestionJob, job.id)
+            session.query(DocumentChunk).filter(DocumentChunk.document_version_id == version.id).delete(synchronize_session=False)
+            session.query(DocumentVersion).filter(
+                DocumentVersion.document_id == document.id,
+                DocumentVersion.id != version.id,
+            ).update({DocumentVersion.is_current: False}, synchronize_session=False)
             for index, (chunk, vector) in enumerate(zip(chunks, vectors, strict=True)):
                 session.add(
                     DocumentChunk(

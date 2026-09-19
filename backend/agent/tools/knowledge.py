@@ -26,10 +26,10 @@ def search_knowledge_base(payload: KnowledgeSearchInput, session_factory: Callab
         from db.session import sync_session_factory
 
         session_factory = sync_session_factory
-    from rag.embeddings import FakeEmbedding
+    from rag.embeddings import get_embedding_provider
     from rag.retriever import Retriever
 
-    results = Retriever(session_factory, FakeEmbedding()).search(payload.query, payload.top_k, payload.document_id)
+    results = Retriever(session_factory, get_embedding_provider()).search(payload.query, payload.top_k, payload.document_id)
     citations = [
         Citation(
             type="document",

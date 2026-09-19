@@ -1,0 +1,8 @@
+{"id": "recovery-01", "passed": true, "expected": "pause_requested", "observed": "pause_requested"}
+{"id": "recovery-02", "passed": true, "expected": "cancelling", "observed": "cancelling"}
+{"id": "recovery-03", "passed": true, "expected": "executing", "observed": "executing"}
+{"id": "recovery-04", "passed": true, "expected": "planning", "observed": "planning"}
+{"id": "recovery-05", "passed": true, "expected": "expired", "observed": "expired"}
+{"id": "recovery-06", "passed": true, "expected": "expired", "observed": "expired"}
+{"id": "recovery-07", "passed": true, "expected": "invalid", "observed": "invalid"}
+{"id": "recovery-08", "passed": true, "expected": "invalid", "observed": "invalid"}

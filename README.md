@@ -222,7 +222,9 @@ npm run dev
 
 - **前端界面**: http://localhost:3000
 - **API文档**: http://localhost:8000/docs (Swagger UI)
-- **API健康检查**: http://localhost:8000/health
+- **API存活探针**: http://localhost:8000/api/health/live
+- **API就绪探针**: http://localhost:8000/api/health/ready
+- **指标**: http://localhost:8000/metrics
 
 ### 常见问题
 
@@ -563,7 +565,27 @@ result = scheduler.run_strategy(strategy_id="balanced", market="US")
 | 方法 | 路径 | 描述 |
 |------|------|------|
 | GET | `/` | API根路径 |
-| GET | `/health` | 健康检查 |
+| GET | `/health` | 兼容旧客户端的基础健康检查 |
+| GET | `/api/health/live` | 进程存活探针 |
+| GET | `/api/health/ready` | 数据库就绪状态与 provider 配置状态 |
+| GET | `/metrics` | 低基数 Prometheus 文本指标 |
+
+### Agent API `/api/agent`
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| POST | `/conversations` | 创建研究会话 |
+| POST | `/runs` | 创建 Agent run（`review`/`auto`） |
+| GET | `/runs/{run_id}` | 获取 REST 权威快照 |
+| GET | `/runs/{run_id}/events` | 按 `after_seq` 或 `Last-Event-ID` 重放 GET SSE |
+| POST | `/runs/{run_id}/approve` | 批准计划 |
+| POST | `/runs/{run_id}/reject` | 提供理由并触发一次受控重规划 |
+| POST | `/runs/{run_id}/clarify` | 补充 waiting_user 输入 |
+| POST | `/runs/{run_id}/pause` / `/resume` | 协作式暂停与恢复 |
+| POST | `/runs/{run_id}/cancel` | 协作式取消 |
+| POST | `/runs/{run_id}/retry` | 为失败/取消 run 创建 child run |
+| GET/POST | `/conversations/{conversation_id}/memory` | 读取或创建显式记忆 |
+| DELETE/POST | `/memory/{memory_id}`、`/memory/{memory_id}/supersede` | 带版本校验的删除或纠正 |
 
 ### 股票数据 `/api/stocks`
 
@@ -672,8 +694,11 @@ POST /api/backtest/backtest/strategy?symbol=AAPL&strategy_id=balanced&start_date
 
 ### Agent Copilot
 - 任务模式切换（审阅后执行 / 自动执行）
-- 计划步骤、工具调用、事件时间线和失败状态展示
-- 计划审批、暂停、取消，以及 SSE 实时进度
+- 计划步骤、工具调用、异步 job 和事件时间线展示
+- 计划审批、一次受控重规划、补充信息、暂停、取消和失败 child-run 重试
+- REST 权威快照 + 可重放 GET SSE；断线按 seq 指数退避重连
+- 显式记忆的新增/删除和版本冲突提示
+- 文档、工具结果和回测结果的来源证据面板
 
 ### Knowledge
 - 文档上传、解析状态、来源信息和知识库搜索
@@ -1051,12 +1076,12 @@ gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
 ### Docker Compose 部署
 
 ```powershell
-$env:POSTGRES_PASSWORD="local-only-password"
-$env:DATABASE_URL="postgresql+asyncpg://pro_trading_ds:local-only-password@db:5432/pro_trading_ds"
+Copy-Item .env.example .env
+# 修改 .env 中的 POSTGRES_PASSWORD；不要提交 .env
 docker compose up --build
 ```
 
-Compose 会按数据库健康检查、Alembic 迁移、API/Worker、前端的顺序启动 PostgreSQL/pgvector、Redis、FastAPI、Celery 和 Next.js。详细运行边界见 [runtime.md](docs/architecture/runtime.md)。
+Compose 会按数据库健康检查、Alembic 迁移、API/Worker、前端的顺序启动 PostgreSQL/pgvector、Redis、FastAPI、Celery 和 Next.js。先验证配置可用：`docker compose --env-file .env config --quiet`。详细运行边界见 [runtime.md](docs/architecture/runtime.md)。
 
 ---
 
@@ -1068,13 +1093,15 @@ Compose 会按数据库健康检查、Alembic 迁移、API/Worker、前端的顺
 | W1 | SQLAlchemy/Alembic、Agent/任务持久化、Celery 队列 | ✅ |
 | W2 | 类型化工具注册表、超时/错误封装、异步回测工具 | ✅ |
 | W3 | Planner、状态机、显式记忆、上下文预算、Orchestrator | ✅ |
-| W4 | Agent REST、SSE 回放、Copilot 页面 | ✅ |
+| W4 | Agent REST、SSE 回放、Copilot 页面、干预操作 | ✅ |
 | W5 | Markdown/PDF 知识库摄取、分块、Embedding、引用 | ✅ |
 | W6 | Knowledge 页面、文档 API、知识库搜索工具 | ✅ |
-| W7 | Docker Compose、PostgreSQL/pgvector、Redis、Worker | ✅ |
-| W8 | 确定性评估夹具、运行文档、README 同步 | ✅ |
+| W7 | Docker Compose、PostgreSQL/pgvector、Redis、双 Worker、健康探针 | ✅（配置验证） |
+| W8 | 确定性评估夹具、恢复契约、运行文档、README 同步 | 🟡（Docker 故障注入和线上指标待环境验证） |
 
-验证结果：量化核心 672 passed，后端 121 passed，前端 122 passed，生产构建通过；Agent 评估 30/30，通过；RAG 夹具完整性 1.0。实时模型质量、线上检索召回率和投资绩效不在本次离线验证范围内。评估说明见 [docs/evaluation/README.md](docs/evaluation/README.md)。
+验证结果：量化核心 672 passed，后端 127 passed，前端 122 passed，生产构建通过；Agent 评测夹具完整性 30/30，RAG fixture 完整性 20/20，恢复契约 8/8。实时模型质量、线上检索 Recall@k/引用支持率、Docker 重启与故障注入、投资绩效不在本次离线验证范围内。评估说明见 [docs/evaluation/README.md](docs/evaluation/README.md)。
+
+本次关键提交：`222cce3`（运行时、迁移、健康与指标）、`0d5a47c`（Copilot 证据与显式记忆 UI）。Alembic 当前保持单一 head：`0003_runtime_hardening`。
 
 ---
 

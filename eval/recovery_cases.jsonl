@@ -1,0 +1,8 @@
+{"id":"recovery-01","current":"waiting_job","event":"request_pause","expected":"pause_requested"}
+{"id":"recovery-02","current":"waiting_job","event":"request_cancel","expected":"cancelling"}
+{"id":"recovery-03","current":"paused","event":"resume","expected":"executing"}
+{"id":"recovery-04","current":"waiting_user","event":"reject","expected":"planning"}
+{"id":"recovery-05","current":"created","event":"expire","expected":"expired"}
+{"id":"recovery-06","current":"queued","event":"expire","expected":"expired"}
+{"id":"recovery-07","current":"completed","event":"begin_execution","expected":"invalid"}
+{"id":"recovery-08","current":"cancelled","event":"resume","expected":"invalid"}
