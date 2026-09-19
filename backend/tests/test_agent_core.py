@@ -134,3 +134,37 @@ def test_review_run_is_waiting_user_then_completes_after_approval(core_session_f
     with core_session_factory() as session:
         events = list(session.scalars(select(AgentEvent).where(AgentEvent.run_id == run.id).order_by(AgentEvent.seq)))
         assert [event.seq for event in events] == list(range(1, len(events) + 1))
+
+
+def test_plan_rejection_replans_once_then_becomes_terminal(core_session_factory):
+    from agent.llm import ScriptedFakeModel
+    from agent.orchestrator import AgentOrchestrator
+    from agent.planner import Planner
+    from db.models.agent import Conversation, Plan
+
+    with core_session_factory() as session:
+        conversation = Conversation(title="replan")
+        session.add(conversation)
+        session.commit()
+        conversation_id = conversation.id
+
+    plan = {"kind": "plan", "payload": {"goal": "replan", "steps": [{"id": "final", "type": "final", "name": "answer"}]}}
+    provider = ScriptedFakeModel([plan, plan])
+    orchestrator = AgentOrchestrator(core_session_factory, provider, planner=Planner(set()))
+    run = orchestrator.create_run(conversation_id, "replan", mode="review")
+    waiting = asyncio.run(orchestrator.start(run.id))
+    revised = asyncio.run(orchestrator.reject(waiting.id, waiting.version, "请缩小研究范围"))
+    assert revised.status == "waiting_user"
+    assert revised.replan_count == 1
+    with core_session_factory() as session:
+        assert [row.revision for row in session.query(Plan).filter(Plan.run_id == run.id).all()] == [1, 2]
+    terminal = asyncio.run(orchestrator.reject(revised.id, revised.version, "仍然不合适"))
+    assert terminal.status == "failed"
+    assert terminal.error_code == "plan_rejected"
+
+
+def test_pause_and_cancel_are_allowed_while_waiting_for_job():
+    from agent.state_machine import transition
+
+    assert transition("waiting_job", "request_pause") == "pause_requested"
+    assert transition("waiting_job", "request_cancel") == "cancelling"

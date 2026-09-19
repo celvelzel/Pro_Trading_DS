@@ -28,6 +28,10 @@ class RunAction(BaseModel):
     retry_of_step_id: str | None = None
 
 
+class MemoryDelete(BaseModel):
+    expected_version: int = Field(default=1, ge=1)
+
+
 class MemoryCreate(BaseModel):
     kind: Literal["user_preference", "research_constraint", "confirmed_fact"]
     content: str = Field(min_length=1, max_length=4000)

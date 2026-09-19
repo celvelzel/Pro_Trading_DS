@@ -13,6 +13,10 @@ import logging
 import sys
 import os
 import uuid
+from time import monotonic
+
+from observability.logging import request_scope
+from observability.metrics import metrics, observe_request
 
 logger = logging.getLogger("lobster_quant")
 
@@ -46,6 +50,25 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def request_observability(request: Request, call_next):
+    started = monotonic()
+    with request_scope(request.headers.get("X-Request-ID")) as request_id:
+        response = await call_next(request)
+        route = request.scope.get("route")
+        route_template = getattr(route, "path", request.url.path)
+        observe_request(request.method, route_template, response.status_code, monotonic() - started)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics_endpoint():
+    from fastapi.responses import PlainTextResponse
+
+    return PlainTextResponse(metrics.render(), media_type="text/plain; version=0.0.4")
 
 # CORS for Next.js dev server
 app.add_middleware(

@@ -19,11 +19,12 @@ from api.models.agent import (
     ConversationCreate,
     ConversationResponse,
     MemoryCreate,
+    MemoryDelete,
     MemorySupersede,
     RunAction,
     RunCreate,
 )
-from db.models.agent import AgentRun, Conversation, MemoryItem, Plan, Step
+from db.models.agent import AgentRun, Conversation, MemoryItem, Plan, Step, ToolCall, ToolResult
 from db.repositories.agent import add_message, append_event, create_conversation, list_events
 from db.session import sync_session_factory
 
@@ -64,6 +65,15 @@ def _snapshot(run_id: str) -> dict[str, Any]:
                     for item in steps
                 ],
             }
+        citations: list[dict[str, Any]] = []
+        tool_rows = session.execute(
+            select(ToolResult, ToolCall)
+            .join(ToolCall, ToolCall.id == ToolResult.tool_call_id)
+            .where(ToolCall.run_id == run_id)
+            .order_by(ToolResult.created_at)
+        ).all()
+        for result, call in tool_rows:
+            citations.extend(result.citations or [])
         return {
             "id": run.id,
             "conversation_id": run.conversation_id,
@@ -76,6 +86,7 @@ def _snapshot(run_id: str) -> dict[str, Any]:
             "checkpoint": run.checkpoint,
             "final_answer": run.final_answer,
             "error_code": run.error_code,
+            "citations": citations,
             "plan": plan_data,
         }
 
@@ -130,29 +141,30 @@ async def approve_agent_run(run_id: str, payload: RunAction):
 
 @router.post("/runs/{run_id}/reject")
 async def reject_agent_run(run_id: str, payload: RunAction):
-    with sync_session_factory() as session:
-        run = session.get(AgentRun, run_id)
-        if run is None:
-            raise HTTPException(status_code=404, detail="Agent run not found")
-        if run.version != payload.expected_version:
-            raise HTTPException(status_code=409, detail="Run version conflict")
-        if run.status != "waiting_user":
-            raise HTTPException(status_code=409, detail="Only a waiting plan can be rejected")
-        from agent.state_machine import transition
+    try:
+        run = await _orchestrator().reject(run_id, payload.expected_version, payload.reason)
+    except RuntimeError as exc:
+        if str(exc) == "version_conflict":
+            raise HTTPException(status_code=409, detail="Run version conflict") from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _snapshot(run.id)
 
-        previous = run.status
-        run.status = transition(run.status, "fail")
-        run.error_code = "plan_rejected"
-        run.version += 1
-        append_event(
-            session,
-            run=run,
-            event_type="plan.rejected",
-            request_id=str(uuid.uuid4()),
-            payload={"from": previous, "to": run.status, "reason": payload.reason},
-        )
-        session.commit()
-    return _snapshot(run_id)
+
+@router.post("/runs/{run_id}/clarify")
+async def clarify_agent_run(run_id: str, payload: RunAction):
+    if not payload.reason:
+        raise HTTPException(status_code=422, detail="Clarification text is required")
+    try:
+        run = await _orchestrator().clarify(run_id, payload.expected_version, payload.reason)
+    except RuntimeError as exc:
+        if str(exc) == "version_conflict":
+            raise HTTPException(status_code=409, detail="Run version conflict") from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _snapshot(run.id)
 
 
 @router.post("/runs/{run_id}/resume")
@@ -245,7 +257,7 @@ async def _intervene(run_id: str, payload: RunAction, action: str):
 
 
 @router.get("/runs/{run_id}/events")
-async def agent_events(run_id: str, request: Request, after_seq: int = 0):
+async def agent_events(run_id: str, request: Request, after_seq: int = 0, idle_seconds: int = 30):
     with sync_session_factory() as session:
         if session.get(AgentRun, run_id) is None:
             raise HTTPException(status_code=404, detail="Agent run not found")
@@ -254,16 +266,41 @@ async def agent_events(run_id: str, request: Request, after_seq: int = 0):
             after_seq = max(after_seq, int(last_event_id))
         events = list_events(session, run_id, after_seq=after_seq)
 
-    async def stream() -> AsyncIterator[str]:
-        for event in events:
-            yield (
-                f"id: {event.seq}\n"
-                f"event: {event.event_type}\n"
-                f"data: {json.dumps({'schema_version': event.schema_version, 'event_id': event.event_id, 'seq': event.seq, 'event_type': event.event_type, 'timestamp': event.created_at.isoformat() if event.created_at else None, 'conversation_id': event.conversation_id, 'run_id': event.run_id, 'request_id': event.request_id, 'payload': event.payload}, ensure_ascii=False)}\n\n"
-            )
-        yield ": heartbeat\n\n"
+    idle_seconds = max(1, min(idle_seconds, 120))
 
-    return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+    def encode(event) -> str:
+        return (
+            f"id: {event.seq}\n"
+            f"event: {event.event_type}\n"
+            f"data: {json.dumps({'schema_version': event.schema_version, 'event_id': event.event_id, 'seq': event.seq, 'event_type': event.event_type, 'timestamp': event.created_at.isoformat() if event.created_at else None, 'conversation_id': event.conversation_id, 'run_id': event.run_id, 'request_id': event.request_id, 'payload': event.payload}, ensure_ascii=False)}\n\n"
+        )
+
+    async def stream() -> AsyncIterator[str]:
+        cursor = after_seq
+        for event in events:
+            cursor = event.seq
+            yield encode(event)
+        elapsed = 0
+        heartbeat_at = 0
+        while elapsed < idle_seconds:
+            if await request.is_disconnected():
+                return
+            await asyncio.sleep(1)
+            elapsed += 1
+            with sync_session_factory() as session:
+                fresh = list_events(session, run_id, after_seq=cursor)
+            for event in fresh:
+                cursor = event.seq
+                yield encode(event)
+            if elapsed >= heartbeat_at:
+                heartbeat_at = elapsed + 10
+                yield ": heartbeat\n\n"
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/conversations/{conversation_id}/memory")
@@ -284,15 +321,23 @@ async def create_memory(conversation_id: str, payload: MemoryCreate):
 
 
 @router.delete("/memory/{memory_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_memory(memory_id: str):
-    if not MemoryService(sync_session_factory).delete(memory_id):
+async def delete_memory(memory_id: str, payload: MemoryDelete):
+    try:
+        deleted = MemoryService(sync_session_factory).delete(memory_id, payload.expected_version)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail="Memory version conflict") from exc
+    if not deleted:
         raise HTTPException(status_code=404, detail="Memory item not found")
 
 
 @router.post("/memory/{memory_id}/supersede", status_code=status.HTTP_201_CREATED)
 async def supersede_memory(memory_id: str, payload: MemorySupersede):
     try:
-        return _memory_dump(MemoryService(sync_session_factory).supersede(memory_id, payload.content))
+        return _memory_dump(
+            MemoryService(sync_session_factory).supersede(memory_id, payload.content, payload.expected_version)
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail="Memory version conflict") from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -303,6 +348,7 @@ def _memory_dump(item: MemoryItem) -> dict[str, Any]:
         "conversation_id": item.conversation_id,
         "kind": item.kind,
         "content": item.content,
+        "version": item.version,
         "source_message_id": item.source_message_id,
         "superseded_by": item.superseded_by,
         "created_at": item.created_at.isoformat() if item.created_at else None,

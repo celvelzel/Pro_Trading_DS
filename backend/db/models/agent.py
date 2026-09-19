@@ -67,6 +67,7 @@ class MemoryItem(TimestampMixin, Base):
     conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
     kind: Mapped[str] = mapped_column(String(32))
     content: Mapped[str] = mapped_column(Text)
+    version: Mapped[int] = mapped_column(Integer, default=1)
     source_message_id: Mapped[str | None] = mapped_column(String(36))
     superseded_by: Mapped[str | None] = mapped_column(String(36))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

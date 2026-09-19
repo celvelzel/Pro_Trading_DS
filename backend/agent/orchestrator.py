@@ -77,15 +77,68 @@ class AgentOrchestrator:
         await self._execute_steps(run_id)
         return self._get_run(run_id)
 
-    async def _plan(self, run_id: str) -> None:
+    async def reject(self, run_id: str, expected_version: int, reason: str | None = None) -> AgentRun:
+        """Reject once for a bounded replan; a second rejection is terminal."""
+
+        with self.session_factory() as session:
+            run = self._checked_run(session, run_id, expected_version)
+            if run.status != "waiting_user":
+                raise ValueError("Only a waiting plan can be rejected")
+            if run.replan_count >= self.planner.max_replans:
+                self._move(session, run, "fail")
+                run.error_code = "plan_rejected"
+                append_event(
+                    session,
+                    run=run,
+                    event_type="plan.rejected",
+                    request_id=str(uuid.uuid4()),
+                    payload={"from": "waiting_user", "to": run.status, "reason": reason, "terminal": True},
+                )
+                session.commit()
+                return self._get_run(run_id)
+            self._move(session, run, "reject")
+            run.replan_count += 1
+            run.checkpoint = {"replan_reason": reason or "User requested a safer or more precise plan."}
+            append_event(
+                session,
+                run=run,
+                event_type="plan.rejected",
+                request_id=str(uuid.uuid4()),
+                payload={"from": "waiting_user", "to": "planning", "reason": reason, "terminal": False},
+            )
+            session.commit()
+            revision = run.replan_count + 1
+        await self._plan(run_id, revision=revision, feedback=reason)
+        return self._get_run(run_id)
+
+    async def clarify(self, run_id: str, expected_version: int, text: str) -> AgentRun:
+        with self.session_factory() as session:
+            run = self._checked_run(session, run_id, expected_version)
+            if run.status != "waiting_user":
+                raise ValueError("Run is not waiting for user input")
+            from db.repositories.agent import add_message
+
+            add_message(session, run.conversation_id, "user", text)
+            self._move(session, run, "clarify")
+            run.checkpoint = {"clarification": text, "resume_state": "planning"}
+            current_plan = session.scalar(select(Plan).where(Plan.run_id == run_id).order_by(Plan.revision.desc()))
+            revision = (current_plan.revision + 1) if current_plan else 1
+            session.commit()
+        await self._plan(run_id, revision=revision, feedback=text)
+        return self._get_run(run_id)
+
+    async def _plan(self, run_id: str, *, revision: int | None = None, feedback: str | None = None) -> None:
         run = self._get_run(run_id)
         context = self.context_builder.build(
             system_policy="Return JSON with kind=plan and a bounded plan. Never invent financial values.",
             memories=[],
-            messages=[{"role": "user", "content": run.goal}],
+            messages=[
+                {"role": "user", "content": run.goal},
+                *([{"role": "user", "content": f"User feedback: {feedback}"}] if feedback else []),
+            ],
         )
         try:
-            plan = await self.planner.create(self.provider, context)
+            plan = await self.planner.create(self.provider, context, revision=revision or 1)
         except (ModelProviderError, ValueError) as exc:
             with self.session_factory() as session:
                 current = session.get(AgentRun, run_id)
@@ -232,11 +285,32 @@ class AgentOrchestrator:
 
     async def resume_job(self, run_id: str, job_id: str) -> AgentRun:
         with self.session_factory() as session:
+            from db.models.jobs import Job
+
             run = session.get(AgentRun, run_id)
-            if not run or run.status != "waiting_job":
+            if not run:
+                raise ValueError("Run does not exist")
+            if run.status in {"completed", "failed", "cancelled", "expired"}:
+                return self._get_run(run_id)
+            if run.status == "cancelling":
+                self._move(session, run, "cancel")
+                session.commit()
+                return self._get_run(run_id)
+            if run.status == "pause_requested":
+                self._move(session, run, "pause")
+                session.commit()
+                return self._get_run(run_id)
+            if run.status != "waiting_job":
                 raise ValueError("Run is not waiting for a job")
             if run.checkpoint.get("job_id") != job_id:
                 raise ValueError("Job does not match run checkpoint")
+            job = session.get(Job, job_id)
+            if job is not None and job.status == "failed":
+                self._move(session, run, "begin_execution")
+                self._move(session, run, "fail")
+                run.error_code = job.error_code or "business_error"
+                session.commit()
+                return self._get_run(run_id)
             self._move(session, run, "begin_execution")
             session.commit()
         await self._execute_steps(run_id)

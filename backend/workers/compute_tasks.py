@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from celery.exceptions import MaxRetriesExceededError
 from sqlalchemy import select
 
 from db.models.jobs import BacktestRun, Job
@@ -60,6 +59,7 @@ def run_backtest_job(self, job_id: str) -> dict:
             session.commit()
             return {"status": "failed", "job_id": job.id, "error_code": job.error_code}
         if job.status == "completed" and backtest.status == "completed":
+            _dispatch_agent_resumes(job.id)
             return {"status": "completed", "job_id": job.id, "backtest_run_id": backtest.id}
 
         job.status = "running"
@@ -82,6 +82,7 @@ def run_backtest_job(self, job_id: str) -> dict:
                 backtest.status = "failed"
                 backtest.error_code = "business_error"
                 session.commit()
+        _dispatch_agent_resumes(job_id)
         return {"status": "failed", "job_id": job_id, "error_code": "business_error"}
 
     with sync_session_factory() as session:
@@ -95,4 +96,25 @@ def run_backtest_job(self, job_id: str) -> dict:
         job.status = "completed"
         job.result_ref = backtest.id
         session.commit()
+        _dispatch_agent_resumes(job.id)
         return {"status": "completed", "job_id": job.id, "backtest_run_id": backtest.id}
+
+
+def _dispatch_agent_resumes(job_id: str) -> None:
+    """Queue one resume task per run waiting on this job.
+
+    The task itself re-checks the checkpoint and run status, so duplicate
+    delivery from Celery is harmless.
+    """
+
+    from db.models.agent import AgentRun
+    from workers.agent_tasks import resume_agent_job
+
+    with sync_session_factory() as session:
+        waiting = [
+            run
+            for run in session.query(AgentRun).filter(AgentRun.status == "waiting_job").all()
+            if run.checkpoint.get("job_id") == job_id
+        ]
+    for run in waiting:
+        resume_agent_job.delay(run.id, job_id)

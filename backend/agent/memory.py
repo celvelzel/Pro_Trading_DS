@@ -42,22 +42,27 @@ class MemoryService:
                 )
             )
 
-    def delete(self, memory_id: str) -> bool:
+    def delete(self, memory_id: str, expected_version: int | None = None) -> bool:
         from datetime import datetime
 
         with self.session_factory() as session:
             item = session.get(MemoryItem, memory_id)
             if not item:
                 return False
+            if expected_version is not None and item.version != expected_version:
+                raise RuntimeError("version_conflict")
             item.deleted_at = datetime.now()
+            item.version += 1
             session.commit()
             return True
 
-    def supersede(self, memory_id: str, content: str) -> MemoryItem:
+    def supersede(self, memory_id: str, content: str, expected_version: int | None = None) -> MemoryItem:
         with self.session_factory() as session:
             previous = session.get(MemoryItem, memory_id)
             if not previous or previous.deleted_at is not None:
                 raise ValueError("Memory item does not exist or is deleted")
+            if expected_version is not None and previous.version != expected_version:
+                raise RuntimeError("version_conflict")
             replacement = MemoryItem(
                 conversation_id=previous.conversation_id,
                 kind=previous.kind,
@@ -67,6 +72,7 @@ class MemoryService:
             session.add(replacement)
             session.flush()
             previous.superseded_by = replacement.id
+            previous.version += 1
             session.commit()
             session.refresh(replacement)
             return replacement
