@@ -128,6 +128,85 @@ async def approve_agent_run(run_id: str, payload: RunAction):
     return _snapshot(run.id)
 
 
+@router.post("/runs/{run_id}/reject")
+async def reject_agent_run(run_id: str, payload: RunAction):
+    with sync_session_factory() as session:
+        run = session.get(AgentRun, run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail="Agent run not found")
+        if run.version != payload.expected_version:
+            raise HTTPException(status_code=409, detail="Run version conflict")
+        if run.status != "waiting_user":
+            raise HTTPException(status_code=409, detail="Only a waiting plan can be rejected")
+        from agent.state_machine import transition
+
+        previous = run.status
+        run.status = transition(run.status, "fail")
+        run.error_code = "plan_rejected"
+        run.version += 1
+        append_event(
+            session,
+            run=run,
+            event_type="plan.rejected",
+            request_id=str(uuid.uuid4()),
+            payload={"from": previous, "to": run.status, "reason": payload.reason},
+        )
+        session.commit()
+    return _snapshot(run_id)
+
+
+@router.post("/runs/{run_id}/resume")
+async def resume_agent_run(run_id: str, payload: RunAction):
+    try:
+        with sync_session_factory() as session:
+            run = session.get(AgentRun, run_id)
+            if run is None:
+                raise ValueError("Run does not exist")
+            if run.version != payload.expected_version:
+                raise RuntimeError("version_conflict")
+            from agent.state_machine import transition
+
+            run.status = transition(run.status, "resume")
+            run.version += 1
+            append_event(session, run=run, event_type="run.resumed", request_id=str(uuid.uuid4()), payload={})
+            session.commit()
+        await _orchestrator()._execute_steps(run_id)
+    except RuntimeError as exc:
+        if str(exc) == "version_conflict":
+            raise HTTPException(status_code=409, detail="Run version conflict") from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _snapshot(run_id)
+
+
+@router.post("/runs/{run_id}/retry", status_code=status.HTTP_202_ACCEPTED)
+async def retry_agent_run(run_id: str, payload: RunAction):
+    with sync_session_factory() as session:
+        parent = session.get(AgentRun, run_id)
+        if parent is None:
+            raise HTTPException(status_code=404, detail="Agent run not found")
+        if parent.version != payload.expected_version:
+            raise HTTPException(status_code=409, detail="Run version conflict")
+        if parent.status not in {"failed", "cancelled"}:
+            raise HTTPException(status_code=409, detail="Only a failed or cancelled run can be retried")
+        child = _orchestrator().create_run(parent.conversation_id, parent.goal, parent.mode)
+        child_id = child.id
+        child = session.get(AgentRun, child_id)
+        child.parent_run_id = parent.id
+        child.retry_of_step_id = payload.retry_of_step_id
+        append_event(
+            session,
+            run=parent,
+            event_type="run.child_created",
+            request_id=str(uuid.uuid4()),
+            payload={"child_run_id": child_id, "retry_of_step_id": payload.retry_of_step_id},
+        )
+        session.commit()
+    _dispatch(child_id)
+    return _snapshot(child_id)
+
+
 @router.post("/runs/{run_id}/pause")
 async def pause_agent_run(run_id: str, payload: RunAction):
     return await _intervene(run_id, payload, "pause")
@@ -208,6 +287,14 @@ async def create_memory(conversation_id: str, payload: MemoryCreate):
 async def delete_memory(memory_id: str):
     if not MemoryService(sync_session_factory).delete(memory_id):
         raise HTTPException(status_code=404, detail="Memory item not found")
+
+
+@router.post("/memory/{memory_id}/supersede", status_code=status.HTTP_201_CREATED)
+async def supersede_memory(memory_id: str, payload: MemorySupersede):
+    try:
+        return _memory_dump(MemoryService(sync_session_factory).supersede(memory_id, payload.content))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 def _memory_dump(item: MemoryItem) -> dict[str, Any]:

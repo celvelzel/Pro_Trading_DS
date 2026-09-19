@@ -42,6 +42,15 @@ export const agentApi = {
   approve: (runId: string, expectedVersion: number) => request<AgentRunSnapshot>(`/runs/${runId}/approve`, {
     method: 'POST', body: JSON.stringify({ expected_version: expectedVersion }),
   }),
+  reject: (runId: string, expectedVersion: number) => request<AgentRunSnapshot>(`/runs/${runId}/reject`, {
+    method: 'POST', body: JSON.stringify({ expected_version: expectedVersion }),
+  }),
+  resume: (runId: string, expectedVersion: number) => request<AgentRunSnapshot>(`/runs/${runId}/resume`, {
+    method: 'POST', body: JSON.stringify({ expected_version: expectedVersion }),
+  }),
+  retry: (runId: string, expectedVersion: number) => request<AgentRunSnapshot>(`/runs/${runId}/retry`, {
+    method: 'POST', body: JSON.stringify({ expected_version: expectedVersion }),
+  }),
   pause: (runId: string, expectedVersion: number) => request<AgentRunSnapshot>(`/runs/${runId}/pause`, {
     method: 'POST', body: JSON.stringify({ expected_version: expectedVersion }),
   }),

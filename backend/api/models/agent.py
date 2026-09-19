@@ -25,6 +25,7 @@ class RunCreate(BaseModel):
 class RunAction(BaseModel):
     expected_version: int = Field(ge=1)
     reason: str | None = Field(default=None, max_length=2000)
+    retry_of_step_id: str | None = None
 
 
 class MemoryCreate(BaseModel):

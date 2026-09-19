@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useCallback, useState } from 'react'
-import { Bot, Pause, Play, RefreshCw, Send, Square, Sparkles } from 'lucide-react'
+import { Ban, Bot, Pause, Play, RefreshCw, RotateCcw, Send, Square, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -35,12 +35,12 @@ export default function CopilotPage() {
     } finally { setSubmitting(false) }
   }
 
-  async function action(name: 'approve' | 'pause' | 'cancel') {
+  async function action(name: 'approve' | 'reject' | 'pause' | 'resume' | 'cancel' | 'retry') {
     if (!run) return
     setActionError(null)
     try {
       const next = await agentApi[name](run.id, run.version)
-      setRun(next)
+      setRun(next); if (name === 'retry') setRunId(next.id)
     } catch (cause) {
       setActionError(cause instanceof AgentRequestError ? cause.message : '操作失败，请刷新后重试')
       void refresh()
@@ -84,8 +84,10 @@ export default function CopilotPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3"><span className="size-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,.7)]" /><span className="font-mono text-sm">{run?.status ?? 'idle'}</span></div>
               {run && <p className="font-mono text-xs text-slate-400">{run.id.slice(0, 8)} · v{run.version} · {events.length} events</p>}
-              {run?.status === 'waiting_user' && <Button onClick={() => void action('approve')} className="min-h-10 w-full gap-2 bg-emerald-500 text-slate-950 hover:bg-emerald-400"><Play className="size-4" />批准计划</Button>}
+              {run?.status === 'waiting_user' && <div className="flex gap-2"><Button onClick={() => void action('approve')} className="min-h-10 flex-1 gap-2 bg-emerald-500 text-slate-950 hover:bg-emerald-400"><Play className="size-4" />批准计划</Button><Button variant="outline" onClick={() => void action('reject')} className="min-h-10 gap-2 border-slate-700 bg-transparent text-slate-100 hover:bg-slate-800"><Ban className="size-4" />拒绝</Button></div>}
               {run && ['executing', 'waiting_tool', 'waiting_job'].includes(run.status) && <div className="flex gap-2"><Button variant="outline" onClick={() => void action('pause')} className="min-h-10 flex-1 border-slate-700 bg-transparent text-slate-100 hover:bg-slate-800"><Pause className="size-4" />暂停</Button><Button variant="destructive" onClick={() => void action('cancel')} className="min-h-10 flex-1"><Square className="size-4" />取消</Button></div>}
+              {run?.status === 'paused' && <Button onClick={() => void action('resume')} className="min-h-10 w-full gap-2"><Play className="size-4" />恢复执行</Button>}
+              {run?.status === 'failed' && <Button onClick={() => void action('retry')} className="min-h-10 w-full gap-2"><RotateCcw className="size-4" />创建重试任务</Button>}
               {run?.status === 'pause_requested' && <p className="text-xs text-amber-300">暂停会在当前原子步骤结束后生效。</p>}
               {displayError && <p role="alert" className="rounded-lg border border-red-400/30 bg-red-950/50 p-3 text-xs text-red-200">{displayError}</p>}
             </CardContent>
