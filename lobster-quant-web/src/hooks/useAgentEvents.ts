@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useReducer } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
 import type { AgentEvent } from '@/lib/agent-types'
 import { agentEventsUrl } from '@/lib/agent-api'
 
@@ -33,16 +33,43 @@ const EVENT_TYPES = [
 export function useAgentEvents(runId: string | null, onGap?: () => void) {
   const [{ events, lastSeq, gapDetected }, dispatch] = useReducer(agentEventReducer, { events: [], lastSeq: 0, gapDetected: false })
 
+  const cursorRef = useRef(0)
   useEffect(() => {
+    dispatch({ type: 'reset' })
+    cursorRef.current = 0
     if (!runId) return
-    const source = new EventSource(agentEventsUrl(runId, lastSeq))
-    const handle = (message: MessageEvent<string>) => {
-      try { dispatch({ type: 'event', event: JSON.parse(message.data) as AgentEvent }) } catch { /* malformed events are ignored */ }
+    let closed = false
+    let source: EventSource | null = null
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+    let delay = 1000
+
+    const connect = () => {
+      if (closed) return
+      source = new EventSource(agentEventsUrl(runId, cursorRef.current))
+      const handle = (message: MessageEvent<string>) => {
+        try {
+          const next = JSON.parse(message.data) as AgentEvent
+          cursorRef.current = Math.max(cursorRef.current, next.seq)
+          dispatch({ type: 'event', event: next })
+          delay = 1000
+        } catch { /* malformed events are ignored */ }
+      }
+      EVENT_TYPES.forEach((type) => source?.addEventListener(type, handle))
+      source.onerror = () => {
+        source?.close()
+        if (!closed) {
+          reconnectTimer = setTimeout(connect, delay)
+          delay = Math.min(delay * 2, 10000)
+        }
+      }
     }
-    EVENT_TYPES.forEach((type) => source.addEventListener(type, handle))
-    source.onerror = () => source.close()
-    return () => source.close()
-  }, [runId, lastSeq])
+    connect()
+    return () => {
+      closed = true
+      if (reconnectTimer) clearTimeout(reconnectTimer)
+      source?.close()
+    }
+  }, [runId])
 
   useEffect(() => { if (gapDetected) onGap?.() }, [gapDetected, onGap])
 

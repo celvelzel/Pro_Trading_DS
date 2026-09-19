@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './constants'
-import type { AgentApiError, AgentRunSnapshot } from './agent-types'
+import type { AgentApiError, AgentMemoryItem, AgentRunSnapshot } from './agent-types'
 
 export class AgentRequestError extends Error {
   readonly details: AgentApiError
@@ -19,12 +19,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
   })
   if (!response.ok) {
-    const body = await response.json().catch(() => ({})) as Partial<AgentApiError> & { detail?: string }
+    const body = await response.json().catch(() => ({})) as Partial<AgentApiError> & { detail?: string; error?: AgentApiError }
+    const details = body.error ?? body
     throw new AgentRequestError(response.status, {
-      code: body.code ?? `HTTP_${response.status}`,
-      message: body.message ?? body.detail ?? 'Agent request failed',
-      request_id: body.request_id,
-      retryable: body.retryable,
+      code: details.code ?? `HTTP_${response.status}`,
+      message: details.message ?? body.detail ?? 'Agent request failed',
+      request_id: details.request_id,
+      retryable: details.retryable,
     })
   }
   if (response.status === 204) return undefined as T
@@ -42,8 +43,11 @@ export const agentApi = {
   approve: (runId: string, expectedVersion: number) => request<AgentRunSnapshot>(`/runs/${runId}/approve`, {
     method: 'POST', body: JSON.stringify({ expected_version: expectedVersion }),
   }),
-  reject: (runId: string, expectedVersion: number) => request<AgentRunSnapshot>(`/runs/${runId}/reject`, {
-    method: 'POST', body: JSON.stringify({ expected_version: expectedVersion }),
+  reject: (runId: string, expectedVersion: number, reason?: string) => request<AgentRunSnapshot>(`/runs/${runId}/reject`, {
+    method: 'POST', body: JSON.stringify({ expected_version: expectedVersion, reason }),
+  }),
+  clarify: (runId: string, expectedVersion: number, reason: string) => request<AgentRunSnapshot>(`/runs/${runId}/clarify`, {
+    method: 'POST', body: JSON.stringify({ expected_version: expectedVersion, reason }),
   }),
   resume: (runId: string, expectedVersion: number) => request<AgentRunSnapshot>(`/runs/${runId}/resume`, {
     method: 'POST', body: JSON.stringify({ expected_version: expectedVersion }),
@@ -57,8 +61,18 @@ export const agentApi = {
   cancel: (runId: string, expectedVersion: number) => request<AgentRunSnapshot>(`/runs/${runId}/cancel`, {
     method: 'POST', body: JSON.stringify({ expected_version: expectedVersion }),
   }),
+  listMemory: (conversationId: string) => request<AgentMemoryItem[]>(`/conversations/${conversationId}/memory`),
+  createMemory: (conversationId: string, kind: AgentMemoryItem['kind'], content: string) => request<AgentMemoryItem>(`/conversations/${conversationId}/memory`, {
+    method: 'POST', body: JSON.stringify({ kind, content }),
+  }),
+  deleteMemory: (memoryId: string, expectedVersion: number) => request<void>(`/memory/${memoryId}`, {
+    method: 'DELETE', body: JSON.stringify({ expected_version: expectedVersion }),
+  }),
+  supersedeMemory: (memoryId: string, expectedVersion: number, content: string) => request<AgentMemoryItem>(`/memory/${memoryId}/supersede`, {
+    method: 'POST', body: JSON.stringify({ expected_version: expectedVersion, content }),
+  }),
 }
 
 export function agentEventsUrl(runId: string, afterSeq: number) {
-  return `${API_BASE_URL}/api/agent/runs/${runId}/events?after_seq=${afterSeq}`
+  return `${API_BASE_URL}/api/agent/runs/${runId}/events?after_seq=${afterSeq}&idle_seconds=30`
 }

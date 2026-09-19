@@ -37,7 +37,29 @@ export interface AgentRunSnapshot {
   checkpoint: Record<string, unknown>
   final_answer?: string | null
   error_code?: string | null
+  citations: AgentCitation[]
   plan?: AgentPlan | null
+}
+
+export interface AgentCitation {
+  type: 'document' | 'tool_result' | 'backtest_run'
+  ref_id: string
+  label: string
+  field_path?: string | null
+  excerpt?: string | null
+  metadata?: Record<string, unknown>
+}
+
+export interface AgentMemoryItem {
+  id: string
+  conversation_id: string
+  kind: 'user_preference' | 'research_constraint' | 'confirmed_fact'
+  content: string
+  version: number
+  source_message_id?: string | null
+  superseded_by?: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface AgentEvent {

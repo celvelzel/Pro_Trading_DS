@@ -5,7 +5,11 @@ import { Ban, Bot, Pause, Play, RefreshCw, RotateCcw, Send, Square, Sparkles } f
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { PlanPanel } from '@/components/copilot/PlanPanel'
+import { MemoryPanel } from '@/components/copilot/MemoryPanel'
+import { SourcesPanel } from '@/components/copilot/SourcesPanel'
+import { Timeline } from '@/components/copilot/Timeline'
 import { agentApi, AgentRequestError } from '@/lib/agent-api'
 import { useAgentEvents } from '@/hooks/useAgentEvents'
 import { useAgentRun } from '@/hooks/useAgentRun'
@@ -17,6 +21,9 @@ export default function CopilotPage() {
   const [mode, setMode] = useState<'review' | 'auto'>('review')
   const [submitting, setSubmitting] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [actionBusy, setActionBusy] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+  const [clarification, setClarification] = useState('')
   const { run, setRun, loading, error, refresh } = useAgentRun(runId)
   const onGap = useCallback(() => { void refresh() }, [refresh])
   const { events } = useAgentEvents(runId, onGap)
@@ -35,16 +42,19 @@ export default function CopilotPage() {
     } finally { setSubmitting(false) }
   }
 
-  async function action(name: 'approve' | 'reject' | 'pause' | 'resume' | 'cancel' | 'retry') {
+  async function action(name: 'approve' | 'reject' | 'clarify' | 'pause' | 'resume' | 'cancel' | 'retry', reason?: string) {
     if (!run) return
-    setActionError(null)
+    setActionError(null); setActionBusy(true)
     try {
-      const next = await agentApi[name](run.id, run.version)
+      let next
+      if (name === 'reject') next = await agentApi.reject(run.id, run.version, reason)
+      else if (name === 'clarify') next = await agentApi.clarify(run.id, run.version, reason ?? '')
+      else next = await agentApi[name](run.id, run.version)
       setRun(next); if (name === 'retry') setRunId(next.id)
     } catch (cause) {
       setActionError(cause instanceof AgentRequestError ? cause.message : '操作失败，请刷新后重试')
       void refresh()
-    }
+    } finally { setActionBusy(false) }
   }
 
   const displayError = actionError ?? error?.message
@@ -84,10 +94,10 @@ export default function CopilotPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3"><span className="size-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,.7)]" /><span className="font-mono text-sm">{run?.status ?? 'idle'}</span></div>
               {run && <p className="font-mono text-xs text-slate-400">{run.id.slice(0, 8)} · v{run.version} · {events.length} events</p>}
-              {run?.status === 'waiting_user' && <div className="flex gap-2"><Button onClick={() => void action('approve')} className="min-h-10 flex-1 gap-2 bg-emerald-500 text-slate-950 hover:bg-emerald-400"><Play className="size-4" />批准计划</Button><Button variant="outline" onClick={() => void action('reject')} className="min-h-10 gap-2 border-slate-700 bg-transparent text-slate-100 hover:bg-slate-800"><Ban className="size-4" />拒绝</Button></div>}
-              {run && ['executing', 'waiting_tool', 'waiting_job'].includes(run.status) && <div className="flex gap-2"><Button variant="outline" onClick={() => void action('pause')} className="min-h-10 flex-1 border-slate-700 bg-transparent text-slate-100 hover:bg-slate-800"><Pause className="size-4" />暂停</Button><Button variant="destructive" onClick={() => void action('cancel')} className="min-h-10 flex-1"><Square className="size-4" />取消</Button></div>}
-              {run?.status === 'paused' && <Button onClick={() => void action('resume')} className="min-h-10 w-full gap-2"><Play className="size-4" />恢复执行</Button>}
-              {run?.status === 'failed' && <Button onClick={() => void action('retry')} className="min-h-10 w-full gap-2"><RotateCcw className="size-4" />创建重试任务</Button>}
+              {run?.status === 'waiting_user' && <div className="space-y-3"><div className="flex gap-2"><Button disabled={actionBusy} onClick={() => void action('approve')} className="min-h-10 flex-1 gap-2 bg-emerald-500 text-slate-950 hover:bg-emerald-400"><Play className="size-4" />批准计划</Button><Button disabled={actionBusy} variant="outline" onClick={() => void action('reject', rejectReason)} className="min-h-10 gap-2 border-slate-700 bg-transparent text-slate-100 hover:bg-slate-800"><Ban className="size-4" />重新规划</Button></div><label htmlFor="reject-reason" className="text-xs text-slate-400">给规划的反馈（可选）</label><Input id="reject-reason" value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} placeholder="例如：缩小数据范围，先完成风险分析" className="min-h-10 border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500" /><label htmlFor="clarification" className="text-xs text-slate-400">补充信息</label><Textarea id="clarification" value={clarification} onChange={(event) => setClarification(event.target.value)} placeholder="提供 Agent 继续规划所需的上下文" className="border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500" /><Button disabled={actionBusy || !clarification.trim()} variant="outline" onClick={() => void action('clarify', clarification.trim())} className="min-h-10 w-full border-slate-700 bg-transparent text-slate-100 hover:bg-slate-800">提交补充信息</Button></div>}
+              {run && ['executing', 'waiting_tool', 'waiting_job'].includes(run.status) && <div className="flex gap-2"><Button disabled={actionBusy} variant="outline" onClick={() => void action('pause')} className="min-h-10 flex-1 border-slate-700 bg-transparent text-slate-100 hover:bg-slate-800"><Pause className="size-4" />暂停</Button><Button disabled={actionBusy} variant="destructive" onClick={() => void action('cancel')} className="min-h-10 flex-1"><Square className="size-4" />取消</Button></div>}
+              {run?.status === 'paused' && <Button disabled={actionBusy} onClick={() => void action('resume')} className="min-h-10 w-full gap-2"><Play className="size-4" />恢复执行</Button>}
+              {run?.status === 'failed' && <Button disabled={actionBusy} onClick={() => void action('retry')} className="min-h-10 w-full gap-2"><RotateCcw className="size-4" />创建重试任务</Button>}
               {run?.status === 'pause_requested' && <p className="text-xs text-amber-300">暂停会在当前原子步骤结束后生效。</p>}
               {displayError && <p role="alert" className="rounded-lg border border-red-400/30 bg-red-950/50 p-3 text-xs text-red-200">{displayError}</p>}
             </CardContent>
@@ -96,10 +106,11 @@ export default function CopilotPage() {
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <PlanPanel plan={run?.plan} />
-          <Card><CardHeader><CardTitle className="text-sm">事件时间线</CardTitle></CardHeader><CardContent className="space-y-2"><div className="max-h-80 overflow-auto pr-1" aria-live="polite">{events.length === 0 ? <p className="text-sm text-muted-foreground">开始任务后，事件会按序显示。</p> : events.map((event) => <div key={event.event_id} className="flex gap-3 border-l border-border pl-3 text-xs"><span className="font-mono text-muted-foreground">{event.seq}</span><span>{event.event_type}</span></div>)}</div></CardContent></Card>
+          <Timeline events={events} />
         </section>
 
         {run?.final_answer && <Card className="border-emerald-500/20"><CardHeader><CardTitle className="text-sm">最终回答</CardTitle></CardHeader><CardContent><p className="whitespace-pre-wrap text-sm leading-7">{run.final_answer}</p></CardContent></Card>}
+        <section className="grid gap-6 lg:grid-cols-2"><SourcesPanel citations={run?.citations ?? []} /><MemoryPanel conversationId={conversationId} /></section>
       </div>
     </div>
   )
