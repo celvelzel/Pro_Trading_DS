@@ -94,6 +94,7 @@ def test_builtin_registry_contains_first_three_tools():
         "run_backtest",
         "get_backtest_result",
         "compare_backtests",
+        "search_knowledge_base",
     }
 
 
