@@ -16,6 +16,7 @@ import {
   List,
   Briefcase,
   Bot,
+  Database,
 } from 'lucide-react'
 
 const navItems = [
@@ -23,6 +24,11 @@ const navItems = [
     title: 'Copilot',
     href: '/copilot',
     icon: Bot,
+  },
+  {
+    title: 'Knowledge',
+    href: '/knowledge',
+    icon: Database,
   },
   {
     title: 'Dashboard',
