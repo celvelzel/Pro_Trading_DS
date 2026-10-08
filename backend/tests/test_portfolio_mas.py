@@ -1,6 +1,8 @@
 """Synthetic SQLite integration through public runtime and actual W3 tools."""
 import asyncio
 import json
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 
@@ -236,3 +238,95 @@ def test_resolver_receives_immutable_request_and_scope_guard(tmp_path):
     assert seen == [(value.id,'c',None)]
     assert artifact(d,value)['status'] == 'feasible'
     assert any('outside authorized scope' in text for text in artifact(d,value)['limitations'])
+
+
+def test_optional_resolver_timeout_preserves_standalone(tmp_path):
+    def unavailable(*_):
+        raise TimeoutError('peer unavailable')
+    d, _, _, _, _, providers = assemble(tmp_path,resolver=unavailable)
+    value, completed = run(d)
+    assert completed.status == 'completed', completed.error_code
+    result = artifact(d,value)
+    assert result['status'] == 'feasible'
+    assert all(providers[role].calls for role in ROLES)
+    assert any('Market artifact unavailable' in text for text in result['limitations'])
+    assert not any('peer unavailable' in text for text in result['limitations'])
+
+
+@pytest.mark.parametrize('async_adapter', [False, True])
+def test_failed_history_adapter_is_insufficient_data(tmp_path,async_adapter):
+    def broken(*_):
+        raise RuntimeError('private provider details')
+    async def async_broken(*_):
+        await asyncio.sleep(0)
+        raise TimeoutError('private provider details')
+    d, _, _, _, _, providers = assemble(tmp_path,history_loader=async_broken if async_adapter else broken)
+    value, completed = run(d)
+    assert completed.status == 'completed', completed.error_code
+    result = artifact(d,value)
+    assert result['status'] == 'insufficient_data'
+    assert 'history_adapter_unavailable_or_invalid' in result['limitations']
+    assert all(providers[role].calls for role in ROLES)
+
+
+def test_async_history_and_resolver_supported(tmp_path):
+    async def async_history(record,as_of):
+        await asyncio.sleep(0)
+        return history(record,as_of)
+    async def async_resolver(*_):
+        await asyncio.sleep(0)
+        return None
+    d, *_ = assemble(tmp_path,history_loader=async_history,resolver=async_resolver)
+    value, completed = run(d)
+    assert completed.status == 'completed'
+    assert artifact(d,value)['status'] == 'feasible'
+
+
+@pytest.mark.parametrize('action', ['cancel', 'deadline'])
+def test_slow_history_does_not_block_event_loop_or_hide_intervention(tmp_path,action):
+    entered = threading.Event()
+    released = threading.Event()
+    def slow(record,as_of):
+        entered.set()
+        released.wait(2)
+        return history(record,as_of)
+    d, _, sessions, _, _, providers = assemble(tmp_path,history_loader=slow)
+    value = d.create('c',PortfolioReviewRequest(portfolio_snapshot_id='saved',as_of=NOW),
+        idempotency_key=action,mode='auto',budget=RunBudget(max_active_seconds=.4 if action=='deadline' else 5))
+    async def exercise():
+        started = time.monotonic()
+        task = asyncio.create_task(d.start(value.id))
+        while not entered.is_set():
+            assert time.monotonic()-started < 1
+            await asyncio.sleep(.005)
+        # This callback executes while synchronous history remains blocked.
+        assert not released.is_set()
+        if action == 'cancel':
+            current = d.get_run(value.id)
+            d.cancel(value.id,current.version)
+            assert d.get_run(value.id).status == 'cancelled'
+            released.set()
+        result = await task
+        elapsed = time.monotonic()-started
+        released.set()  # release worker before asyncio.run's executor shutdown
+        return result,elapsed
+    completed,elapsed = asyncio.run(exercise())
+    assert completed.status == ('cancelled' if action=='cancel' else 'failed')
+    if action == 'deadline':
+        assert completed.error_code == 'budget_exhausted'  # frozen W1 active deadline semantics
+    assert elapsed < 1, 'runtime delivery must stop before blocking loader completes'
+    assert all(not providers[role].calls for role in ROLES)
+    with sessions() as db:
+        assert not db.scalars(select(FinancialArtifact)).all()
+
+
+def test_dependency_runtime_budget_guard_is_not_missing_data(tmp_path):
+    from agent.shared import BudgetExhausted
+    def interrupted(*_):
+        raise BudgetExhausted('adapter interruption fixture')
+    d, _, sessions, _, _, providers = assemble(tmp_path,resolver=interrupted)
+    _, completed = run(d)
+    assert completed.status == 'failed' and completed.error_code == 'budget_exhausted'
+    assert all(not providers[role].calls for role in ROLES)
+    with sessions() as db:
+        assert not db.scalars(select(FinancialArtifact)).all()

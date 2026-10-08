@@ -34,9 +34,9 @@ provider, with no forecast or real investment recommendation claim.
   W3's registered snapshot tool only. It must read explicit trusted immutable
   saved holdings, cash, quotes and timepoint metadata. No implicit default cash
   or cost-basis quote is accepted.
-- `history_loader: Callable[[SnapshotRecord, datetime], tuple[AssetHistory, ...]]`.
+- `history_loader: Callable[[SnapshotRecord, datetime], tuple[AssetHistory, ...] | Awaitable[tuple[AssetHistory, ...]]]`.
   The original validated snapshot and request as_of are passed to this trusted
-  synchronous adapter. It supplies immutable adjusted/total-return histories;
+  adapter. It supplies immutable adjusted/total-return histories;
   W3 checks availability, date alignment, currency and statistical sufficiency.
   Empty histories represent unavailable data. Cash-only simulation requires an
   explicit eligible history supplying the calendar, even with no equity holdings.
@@ -97,12 +97,12 @@ pause, active deadlines and worker fencing are supplied by RuntimeContext.
 deterministic restart testing. It is not needed in ordinary assembly.
 
 Optional `request.market_artifact_id` is read via an injected scoped shared
-ArtifactStore. An optional synchronous resolver allows W6 to attach evidence after
+ArtifactStore. An optional sync or async resolver allows W6 to attach evidence after
 the two immutable run requests have already been created:
 
 ```python
 artifact_resolver(run_id: str, conversation_id: str,
-                  request: PortfolioReviewRequest) -> MarketInvestigationArtifact | None
+                  request: PortfolioReviewRequest) -> MarketInvestigationArtifact | None | Awaitable[MarketInvestigationArtifact | None]
 PortfolioDriver(providers, deps, artifact_resolver=artifact_resolver)
 ```
 
@@ -116,6 +116,19 @@ artifact is untrusted task data; it cannot override tool checks. The resolver mu
 select a stable artifact once role invocation begins. W6 owns transfer deadlines,
 cycle/budget policy and durable relation selection; this driver creates no peer
 run and waits for no peer service.
+
+Injected history/resolver/store calls run through `ctx.external`; synchronous
+callables are offloaded with `asyncio.to_thread`, and returned awaitables are
+awaited. This keeps the event loop responsive and preserves runtime deadline,
+lease and intervention fencing. History adapter failure is insufficient_data;
+optional artifact adapter failure (including peer timeout) adds a limitation and
+continues standalone analysis. BudgetExhausted/FinancialConflict/RunInterrupted
+are never converted into missing data. Raw adapter exception text is not exposed.
+Python worker threads cannot be forcibly killed: runtime delivery can be expired
+or cancelled while a synchronous read continues, and `asyncio.run` may wait for
+default-executor shutdown. This is the same limitation as the existing W3
+ToolExecutor, not a process hard-kill guarantee. Trusted adapters must remain
+read-only and configure their own underlying I/O timeouts.
 
 ## Evaluation and validation boundaries
 

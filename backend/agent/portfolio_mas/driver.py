@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import json
+import asyncio
+import inspect
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Callable, Mapping, Literal
+from typing import Callable, Mapping, Literal, Awaitable
 
 from pydantic import Field
 from agent.llm import ModelProvider, ModelResponse
@@ -14,6 +16,7 @@ from agent.shared import (
     SpecialistRegistry, SpecialistSpec, ConstraintCheck, ConstraintViolation,
     RiskComparison, RiskMetrics, SimulationResult, PortfolioReviewRequest,
     MarketInvestigationArtifact, ArtifactStore,
+    BudgetExhausted, FinancialConflict,
 )
 from agent.tools import allocation as a, portfolio_snapshot as s, portfolio_risk as r
 
@@ -27,7 +30,7 @@ class PortfolioDependencies:
     snapshot_loader is used only by explicit W3 tool registration.
     """
     snapshot_loader: s.SnapshotLoader
-    history_loader: Callable[[s.SnapshotRecord, datetime], tuple[r.AssetHistory, ...]]
+    history_loader: Callable[[s.SnapshotRecord, datetime], tuple[r.AssetHistory, ...] | Awaitable[tuple[r.AssetHistory, ...]]]
     classifications: Mapping[str, a.AssetClassification]
 
 
@@ -62,7 +65,24 @@ ALLOWLISTS = {
     'verifier': frozenset(),
 }
 
-MarketArtifactResolver = Callable[[str, str, PortfolioReviewRequest], MarketInvestigationArtifact | None]
+MarketArtifactResolver = Callable[[str, str, PortfolioReviewRequest], MarketInvestigationArtifact | None | Awaitable[MarketInvestigationArtifact | None]]
+
+
+class DependencyUnavailable(RuntimeError):
+    """Sanitized adapter failure, distinct from runtime interruption/budget errors."""
+
+
+async def dependency(ctx, loader, *args, **kwargs):
+    async def load():
+        try:
+            value = await asyncio.to_thread(loader, *args, **kwargs)
+            return await value if inspect.isawaitable(value) else value
+        except (BudgetExhausted, FinancialConflict):
+            raise
+        except Exception as exc:
+            raise DependencyUnavailable('trusted_readonly_adapter_unavailable') from exc
+    # Runtime guard exceptions originate outside the adapter boundary and propagate.
+    return await ctx.external(load())
 
 
 class SyntheticPortfolioModel:
@@ -158,21 +178,25 @@ class PortfolioDriver:
         if snap is None or snap.status != 'ok':
             missing.extend(snap.reasons if snap else ['snapshot_tool_failed'])
         else:
-            histories = tuple(r.AssetHistory.model_validate(h) for h in self.dependencies.history_loader(snap.snapshot, req.as_of))
+            try:
+                raw_histories = await dependency(ctx, self.dependencies.history_loader, snap.snapshot, req.as_of)
+                histories = tuple(r.AssetHistory.model_validate(h) for h in raw_histories)
+            except (DependencyUnavailable, ValueError, TypeError):
+                missing.append('history_adapter_unavailable_or_invalid')
         market_context = None
         if req.market_artifact_id or self.artifact_resolver:
             try:
                 if req.market_artifact_id:
                     if self.artifact_store is None:
                         raise KeyError('optional_market_store_unavailable')
-                    artifact = self.artifact_store.get(req.market_artifact_id, conversation_id=ctx.conversation_id,
-                        as_of=req.as_of)
+                    artifact = await dependency(ctx, self.artifact_store.get, req.market_artifact_id,
+                        conversation_id=ctx.conversation_id, as_of=req.as_of)
                 else:
-                    artifact = self.artifact_resolver(ctx.run_id, ctx.conversation_id, req)
+                    artifact = await dependency(ctx, self.artifact_resolver, ctx.run_id, ctx.conversation_id, req)
                 if not isinstance(artifact, MarketInvestigationArtifact) or artifact.as_of != req.as_of or not snap or not snap.snapshot or artifact.symbol not in {h.symbol for h in snap.snapshot.holdings}:
                     raise ValueError('not_market_artifact')
                 market_context = artifact.model_dump_json()
-            except (KeyError, ValueError):
+            except (DependencyUnavailable, KeyError, ValueError):
                 limitations.append('Optional Market artifact unavailable or outside authorized scope; independent portfolio analysis continued.')
         before = None
         candidates = None
