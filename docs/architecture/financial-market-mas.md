@@ -49,6 +49,14 @@ verification. These are experimental baseline hooks, not claims of quality.
 Synthetic tests use the versioned W2 fixture pack and ScriptedFakeModel. No
 default remote provider, secrets, portfolio writes or trading are configured.
 
+For reusable offline assembly, inject `{role: SyntheticMarketModel(role) for
+role in ('coordinator', 'price_volume', 'macro_sector', 'event', 'critic')}`.
+The exported stateless provider reads only its supplied task board. Critic
+requests history for text labeled rumor/denial/instruction, events for absent
+events, or sector for absent sector facts. This deliberately simple synthetic
+policy uses no per-case answer script and invents no numeric facts. Its token
+usage is unspecified; zero remote calls is not a real-model cost measurement.
+
 Validation: `PYTHONPATH=backend;lobster_quant python -m pytest
 backend/tests/test_market_mas.py -q` on Windows (set PYTHONPATH separately).
 Tests use disposable SQLite and actual typed W2 tools, check persisted numeric

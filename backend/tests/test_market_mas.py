@@ -12,7 +12,7 @@ from agent.llm import ScriptedFakeModel, ModelProviderError, ModelResponse
 from agent.shared import FinancialMASDispatcher, WorkflowRegistry, MarketInvestigationRequest, RunBudget
 from agent.tools.registry import ToolRegistry
 from agent.tools import market_history, market_events, anomaly
-from agent.market_mas import MarketCoordinator
+from agent.market_mas import MarketCoordinator, SyntheticMarketModel
 from agent.market_mas.driver import ROLES
 
 
@@ -217,3 +217,15 @@ def test_lowered_round_budget_includes_initial_investigation(tmp_path):
         assert s.scalar(select(FinancialInvocation).where(
             FinancialInvocation.run_id == run.id,
             FinancialInvocation.invocation_key == 'check:1:history')) is None
+
+
+@pytest.mark.parametrize('case', [0, 6, 7])
+def test_reusable_synthetic_policy_separate_calls_and_contexts(tmp_path, case):
+    d, run, sessions, driver, _, _ = assemble(tmp_path, case=case)
+    for role in ROLES:
+        object.__setattr__(driver.specialists.get(role), 'provider', SyntheticMarketModel(role))
+    assert finish(d, run).status == 'completed'
+    with sessions() as s:
+        calls = s.scalars(select(FinancialInvocation).where(FinancialInvocation.kind == 'model')).all()
+        assert set(c.role for c in calls) == set(ROLES)
+    assert json.loads(d.get_run(run.id).final_answer)['status'] == 'partial'
