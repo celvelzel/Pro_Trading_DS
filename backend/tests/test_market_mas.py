@@ -87,7 +87,7 @@ def test_evidence_challenge_changes_next_actual_tool(tmp_path, check, expected):
         assert len(calls) == 5
         assert calls[3].tool_name == expected
     assert len(ps['critic'].calls) == 3
-    assert d.snapshot(run.id)['budget']['rounds'] == 2
+    assert d.snapshot(run.id)['budget']['rounds'] == 3
 
 
 def test_restored_checkpoints_do_not_rebill_and_keep_refs(tmp_path):
@@ -203,4 +203,17 @@ def test_baseline_hooks_same_tools_no_dynamic_calls(tmp_path, mode, calls):
     d, run, _, _, _, _ = assemble(tmp_path, mode=mode, check='history')
     assert finish(d, run).status == 'completed'
     assert d.snapshot(run.id)['budget']['model_calls'] == calls
-    assert d.snapshot(run.id)['budget']['rounds'] == 0
+    assert d.snapshot(run.id)['budget']['rounds'] == 1
+
+
+def test_lowered_round_budget_includes_initial_investigation(tmp_path):
+    d, _, sessions, _, _, _ = assemble(tmp_path, check='history')
+    run = d.create('market', MarketInvestigationRequest(symbol='DEMO',
+        as_of='2026-09-29T20:10:00Z', sector_benchmark='SECTOR'),
+        mode='auto', idempotency_key='one-round', budget=RunBudget(max_rounds=1))
+    assert finish(d, run).status == 'completed'
+    assert d.snapshot(run.id)['budget']['rounds'] == 1
+    with sessions() as s:
+        assert s.scalar(select(FinancialInvocation).where(
+            FinancialInvocation.run_id == run.id,
+            FinancialInvocation.invocation_key == 'check:1:history')) is None

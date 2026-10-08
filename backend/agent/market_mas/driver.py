@@ -5,7 +5,7 @@ from typing import Literal
 from datetime import datetime
 from pydantic import Field
 from agent.shared import (MarketState, MarketInvestigationArtifact, EvidenceRef,
-    NumericFact, Hypothesis, SpecialistResult, SpecialistRegistry, SpecialistSpec)
+    NumericFact, Hypothesis, SpecialistResult, SpecialistRegistry, SpecialistSpec, BudgetExhausted)
 from agent.shared.contracts import FinancialModel
 from agent.tools.anomaly import MarketAnomalyInput, MarketAnomalyOutput
 from agent.tools.market_history import MarketHistoryInput, MarketHistoryOutput
@@ -139,6 +139,10 @@ class MarketCoordinator:
 
     async def execute(self, ctx, state: MarketState):
         if state.phase == 'investigate':
+            ctx.consume_budget('rounds')
+            state.phase = 'initial_tool'
+            ctx.checkpoint(state, action='handoff')
+        if state.phase == 'initial_tool':
             await self._tool(ctx, state, 'market', 'market:initial')
             state.hypotheses = [Hypothesis(explanation=x) for x in EXPLANATIONS]
             state.phase = 'role:0'
@@ -167,7 +171,11 @@ class MarketCoordinator:
             if self.mode != 'autonomous' or not requested or len(state.results) + 2 > ctx.request.max_llm_calls:
                 break
             if state.phase == f'round:{round_no}':
-                ctx.consume_budget('rounds')
+                try:
+                    ctx.consume_budget('rounds')
+                except BudgetExhausted:
+                    state.missing_checks = sorted(set(state.missing_checks + ['Coordination round budget exhausted']))
+                    break
                 state.phase = f'check:{round_no}'
                 ctx.checkpoint(state, action='replan')
             # A genuine critic/specialist request changes the next executed tool.
