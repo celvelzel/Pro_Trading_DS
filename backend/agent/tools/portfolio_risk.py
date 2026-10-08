@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 from lobster_quant.src.core.portfolio_risk import PortfolioRiskAnalyzer
 from .portfolio_snapshot import (StrictModel, UTCDateTime, Symbol, Currency, PositiveAmount,
-                                 Amount, SnapshotOutput)
+                                 Amount, SnapshotOutput, NonBlank, SymbolMap)
 from .registry import ToolSpec
 
 
@@ -25,9 +25,9 @@ class HistoryBar(StrictModel):
 class AssetHistory(StrictModel):
     symbol: Symbol
     currency: Currency
-    source: str = Field(min_length=1)
+    source: NonBlank
     adjustment: Literal["total_return", "adjusted"]
-    exchange_timezone: str = Field(min_length=1)
+    exchange_timezone: NonBlank
     bars: tuple[HistoryBar, ...] = Field(max_length=10000)
 
     @model_validator(mode="after")
@@ -49,7 +49,7 @@ class RiskOutput(StrictModel):
     status: Literal["ok", "insufficient_data"]
     snapshot_id: str | None = None
     content_hash: str | None = None
-    weights: dict[str, Amount] = Field(default_factory=dict)
+    weights: SymbolMap[Amount] = Field(default_factory=dict)
     total_value: Amount | None = None
     concentration: Amount | None = None
     cash_weight: Amount | None = None

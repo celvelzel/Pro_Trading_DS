@@ -3,10 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from decimal import Decimal, localcontext
 from hashlib import sha256
-from typing import Annotated, Callable, Literal
+from typing import Annotated, Callable, Literal, TypeVar
+from collections.abc import Mapping
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, AfterValidator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, AfterValidator, BeforeValidator, model_validator
 from .registry import ToolSpec
 
 
@@ -30,8 +31,26 @@ def currency(value: str) -> str:
     return value
 
 
+def nonblank(value: str) -> str:
+    value = value.strip()
+    if not value:
+        raise ValueError("Nonblank metadata required")
+    return value
+
+
+def reject_symbol_collisions(value):
+    if isinstance(value, Mapping):
+        normalized = [symbol(key) for key in value if isinstance(key, str)]
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("Duplicate normalized symbol key")
+    return value
+
+
+Value = TypeVar("Value")
+NonBlank = Annotated[str, AfterValidator(nonblank)]
 UTCDateTime = Annotated[datetime, AfterValidator(utc)]
 Symbol = Annotated[str, AfterValidator(symbol)]
+SymbolMap = Annotated[dict[Symbol, Value], BeforeValidator(reject_symbol_collisions)]
 Currency = Annotated[str, AfterValidator(currency)]
 Amount = Annotated[Decimal, Field(ge=0, allow_inf_nan=False)]
 PositiveAmount = Annotated[Decimal, Field(gt=0, allow_inf_nan=False)]
@@ -45,8 +64,8 @@ class Holding(StrictModel):
     symbol: Symbol
     quantity: Amount
     currency: Currency | None = None
-    sector: str | None = None
-    classification_source: str | None = None
+    sector: NonBlank | None = None
+    classification_source: NonBlank | None = None
 
     @model_validator(mode="after")
     def reserved(self):
@@ -61,13 +80,13 @@ class ValuationQuote(StrictModel):
     currency: Currency | None = None
     effective_at: UTCDateTime | None = None
     available_at: UTCDateTime | None = None
-    source: str | None = None
+    source: NonBlank | None = None
     price_kind: Literal["market", "cost_basis"] = "market"
 
 
 class SnapshotRecord(StrictModel):
     snapshot_id: str = Field(min_length=1)
-    source: str | None = None
+    source: NonBlank | None = None
     effective_at: UTCDateTime | None = None
     holdings: tuple[Holding, ...] = Field(max_length=32)
     cash: Amount | None = None
@@ -94,7 +113,7 @@ class SnapshotOutput(StrictModel):
     status: Literal["ok", "insufficient_data"]
     snapshot: SnapshotRecord | None = None
     content_hash: str | None = None
-    market_values: dict[str, Amount] = Field(default_factory=dict)
+    market_values: SymbolMap[Amount] = Field(default_factory=dict)
     total_value: Amount | None = None
     reasons: tuple[str, ...] = ()
 

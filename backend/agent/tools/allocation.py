@@ -2,21 +2,30 @@
 from __future__ import annotations
 from datetime import date
 from decimal import Decimal
-from typing import Literal
-from pydantic import Field, field_validator
+from typing import Annotated, Literal
+from pydantic import AfterValidator, BeforeValidator, Field, field_validator
 from lobster_quant.src.core.allocation_simulator import AllocationSimulator
-from .portfolio_snapshot import StrictModel, Symbol, Amount, PositiveAmount, UTCDateTime, Currency
+from .portfolio_snapshot import StrictModel, Symbol, Amount, PositiveAmount, UTCDateTime, Currency, NonBlank, SymbolMap, nonblank
 from .portfolio_risk import AssetHistory, checked_histories
 from .registry import ToolSpec
 
 Weight = Amount
+Sector = Annotated[str, AfterValidator(lambda value: nonblank(value).upper())]
+
+
+def reject_sector_collisions(value):
+    if isinstance(value, dict):
+        normalized = [nonblank(key).upper() for key in value if isinstance(key, str)]
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("Duplicate normalized sector key")
+    return value
 
 
 class AllocationConstraints(StrictModel):
-    max_weight_by_symbol: dict[Symbol, Amount] = Field(default_factory=dict)
+    max_weight_by_symbol: SymbolMap[Amount] = Field(default_factory=dict)
     min_cash_weight: Amount = Decimal(0)
     max_equity_weight: Amount | None = None
-    max_sector_weight: dict[str, Amount] = Field(default_factory=dict)
+    max_sector_weight: Annotated[dict[Sector, Amount], BeforeValidator(reject_sector_collisions)] = Field(default_factory=dict)
     weight_tolerance: Decimal = Field(default=Decimal("1e-8"), ge=0, le=Decimal("0.0001"), allow_inf_nan=False)
 
     @field_validator("max_weight_by_symbol", "max_sector_weight", "min_cash_weight", "max_equity_weight")
@@ -30,14 +39,14 @@ class AllocationConstraints(StrictModel):
 
 class AssetClassification(StrictModel):
     asset_class: Literal["equity", "other"] | None = None
-    sector: str | None = None
-    source: str = Field(min_length=1)
+    sector: Sector | None = None
+    source: NonBlank
 
 
 class AllocationInput(StrictModel):
-    weights: dict[Symbol, Decimal]  # negatives produce a deterministic failed check
+    weights: SymbolMap[Decimal]  # negatives produce a deterministic failed check
     constraints: AllocationConstraints = Field(default_factory=AllocationConstraints)
-    classifications: dict[Symbol, AssetClassification] = Field(default_factory=dict)
+    classifications: SymbolMap[AssetClassification] = Field(default_factory=dict)
 
 
 class CheckDetail(StrictModel):
@@ -89,12 +98,12 @@ def validate_allocation(payload: AllocationInput) -> ConstraintCheck:
 class CandidateInput(StrictModel):
     symbols: tuple[Symbol, ...] = Field(max_length=32)
     constraints: AllocationConstraints = Field(default_factory=AllocationConstraints)
-    classifications: dict[Symbol, AssetClassification] = Field(default_factory=dict)
+    classifications: SymbolMap[AssetClassification] = Field(default_factory=dict)
     max_candidates: int = Field(default=3, ge=1, le=8)
 
 
 class Candidate(StrictModel):
-    weights: dict[Symbol, Amount]
+    weights: SymbolMap[Amount]
     constraint_check: ConstraintCheck
 
 
@@ -160,7 +169,7 @@ class SimulationInput(StrictModel):
     histories: tuple[AssetHistory, ...] = Field(max_length=32)
     as_of: UTCDateTime
     currency: Currency
-    target_weights: dict[Symbol, Amount]
+    target_weights: SymbolMap[Amount]
     initial_value: PositiveAmount
     rebalance_every: int = Field(default=1, ge=1, le=10000)
     fee_bps: Amount = Decimal(0)
@@ -180,7 +189,7 @@ class SimulationOutput(StrictModel):
     total_cost: Amount | None = None
     total_turnover: Amount | None = None
     total_return: Decimal | None = None
-    final_weights: dict[Symbol, Amount] = Field(default_factory=dict)
+    final_weights: SymbolMap[Amount] = Field(default_factory=dict)
     warnings: tuple[str, ...] = ()
     reasons: tuple[str, ...] = ()
     history_sources: tuple[str, ...] = ()

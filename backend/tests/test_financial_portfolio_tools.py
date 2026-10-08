@@ -127,7 +127,7 @@ def test_history_safety(mutation,reason):
 def test_classified_sector_and_equity_checks():
     classes={'A':{'asset_class':'equity','sector':'tech','source':'fixture:sector/v1'}}
     r=allocation.validate_allocation(allocation.AllocationInput(weights={'A':'.8','CASH':'.2'},constraints={'max_equity_weight':'.7','max_sector_weight':{'tech':'.5'}},classifications=classes))
-    assert r.status=='fail' and set(r.violations)=={'max_equity','max_sector:tech'}
+    assert r.status=='fail' and set(r.violations)=={'max_equity','max_sector:TECH'}
     assert not r.unknowns
 
 
@@ -181,3 +181,64 @@ def test_quote_unknown_date_and_duplicate_holding_rejected():
     assert snapshot(record).status=='insufficient_data'
     record=copy.deepcopy(BASE);record['holdings']*=2
     with pytest.raises(ValidationError): snapshot(record)
+
+
+@pytest.mark.parametrize('aliases',[('A','a'),('A',' A '),('a',' A '),('CASH',' cash ')])
+@pytest.mark.parametrize('field',['weights','caps','classifications','candidate_classifications','simulation_weights'])
+def test_normalized_symbol_alias_collisions_rejected_before_parsing(aliases,field):
+    first,second=aliases
+    classes={first:{'asset_class':'equity','sector':'tech','source':'fixture'},second:{'asset_class':'equity','sector':'other','source':'fixture'}}
+    with pytest.raises(ValidationError,match='Duplicate normalized symbol key'):
+        if field=='weights': allocation.AllocationInput(weights={first:'.1',second:'1'})
+        elif field=='caps': allocation.AllocationInput(weights={'A':1,'CASH':0},constraints={'max_weight_by_symbol':{first:'.1',second:'1'}})
+        elif field=='classifications': allocation.AllocationInput(weights={'A':1,'CASH':0},classifications=classes)
+        elif field=='candidate_classifications': allocation.CandidateInput(symbols=['A'],classifications=classes)
+        else: allocation.SimulationInput(histories=[HISTORY],as_of=ASOF,currency='USD',target_weights={first:'.1',second:'1'},initial_value=100)
+
+
+@pytest.mark.parametrize('blank',['',' ','\t\r\n'])
+@pytest.mark.parametrize('field',['sector','source'])
+def test_blank_classification_cannot_pass_or_generate_candidate(blank,field):
+    classification={'asset_class':'equity','sector':'tech','source':'fixture'}
+    classification[field]=blank
+    for model,kwargs in (
+        (allocation.AllocationInput,{'weights':{'A':1,'CASH':0}}),
+        (allocation.CandidateInput,{'symbols':['A']}),
+    ):
+        with pytest.raises(ValidationError,match='Nonblank metadata required'):
+            model(**kwargs,constraints={'max_sector_weight':{'tech':'.1'},'max_weight_by_symbol':{'CASH':0}},classifications={'A':classification})
+
+
+@pytest.mark.parametrize('location',['snapshot','quote','history'])
+@pytest.mark.parametrize('blank',['',' \t '])
+def test_blank_sources_rejected(location,blank):
+    if location=='history':
+        history=copy.deepcopy(HISTORY);history['source']=blank
+        with pytest.raises(ValidationError): risk.AssetHistory.model_validate(history)
+    else:
+        record=copy.deepcopy(BASE)
+        if location=='snapshot': record['source']=blank
+        else: record['quotes'][0]['source']=blank
+        with pytest.raises(ValidationError): snapshot(record)
+
+
+def test_trimmed_sector_and_source_keep_cap_enforced():
+    classes={' a ':{'asset_class':'equity','sector':' TECH ','source':' fixture '}}
+    r=allocation.validate_allocation(allocation.AllocationInput(weights={' a ':1,' cash ':0},constraints={'max_sector_weight':{' Tech ':'.1'}},classifications=classes))
+    assert r.status=='fail' and 'max_sector:TECH' in r.violations
+    r=allocation.generate_feasible_candidates(allocation.CandidateInput(symbols=['A'],constraints={'max_sector_weight':{' Tech ':'.1'},'max_weight_by_symbol':{'CASH':0}},classifications=classes))
+    assert r.status=='infeasible' and not r.candidates
+    assert allocation.AssetClassification(**classes[' a ']).source=='fixture'
+    with pytest.raises(ValidationError,match='Duplicate normalized sector key'):
+        allocation.AllocationConstraints(max_sector_weight={'tech':'.1',' TECH ':1})
+
+
+def test_public_candidate_tools_reject_review_repros():
+    registry=ToolRegistry();allocation.register_tools(registry)
+    for name,payload in (
+        ('validate_allocation',{'weights':{'A':1,'CASH':0},'constraints':{'max_weight_by_symbol':{'A':'.1','a':'1'}}}),
+        ('generate_feasible_candidates',{'symbols':['A'],'constraints':{'max_weight_by_symbol':{'A':'.1',' a ':'1'}}}),
+        ('generate_feasible_candidates',{'symbols':['A'],'constraints':{'max_weight_by_symbol':{'CASH':0},'max_sector_weight':{'tech':'.1'}},'classifications':{'A':{'asset_class':'equity','sector':'','source':'fixture'}}}),
+    ):
+        envelope=asyncio.run(ToolExecutor(registry).execute(name,payload))
+        assert envelope.status.value=='failed' and envelope.error.code=='validation_error'
