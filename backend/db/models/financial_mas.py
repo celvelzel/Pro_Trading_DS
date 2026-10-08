@@ -16,6 +16,7 @@ class FinancialRun(Base):
     idempotency_key: Mapped[str] = mapped_column(String(128))
     correlation_id: Mapped[str] = mapped_column(String(36), index=True)
     request: Mapped[dict] = mapped_column(JsonType)
+    creation_inputs: Mapped[dict] = mapped_column(JsonType)
     budget: Mapped[dict] = mapped_column(JsonType)
     checkpoint: Mapped[dict] = mapped_column(JsonType)
     active_seconds: Mapped[float] = mapped_column(Float, default=0)

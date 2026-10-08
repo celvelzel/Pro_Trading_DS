@@ -1,10 +1,15 @@
 """Offline DB/provider gates for the domain-neutral financial runtime."""
 import asyncio
+from collections import UserDict
+from decimal import Decimal
+from types import MappingProxyType
+import threading
 from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
 import pytest
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, select, event
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.exc import IntegrityError
 from db.base import Base
 from db.models import Conversation, AgentRun, AgentEvent, FinancialRun, FinancialInvocation, FinancialArtifact, ToolCall, ToolResult
 from agent.llm import ScriptedFakeModel
@@ -51,7 +56,7 @@ def setup(tmp_path):
     market, portfolio = FakeDriver('market_investigation'), FakeDriver('portfolio_rebalance')
     registry.register(market)
     registry.register(portfolio)
-    dispatcher = FinancialMASDispatcher(sessions, registry)
+    dispatcher = FinancialMASDispatcher(sessions, registry, ToolRegistry())
     yield dispatcher, sessions, market, portfolio
     engine.dispose()
 
@@ -410,3 +415,165 @@ def test_immutable_artifact_rejects_replacement(setup):
         with pytest.raises(ValueError):
             ArtifactStore.put_in_transaction(session, row, meta, 'final', artifact.model_copy(update={'limitations': ['changed']}))
     assert ArtifactStore(sessions).get(artifact_id, conversation_id='c1') == artifact
+
+
+@pytest.mark.parametrize('changed', [dict(mode='review'), dict(budget=RunBudget(max_model_calls=1)), dict(correlation_id='two')])
+def test_creation_key_compares_complete_immutable_effective_inputs(setup, changed):
+    d, _, _, _ = setup
+    request = MarketInvestigationRequest(symbol='MU', as_of=NOW)
+    options = dict(mode='auto', correlation_id='one')
+    run = d.create('c1', request, idempotency_key='complete', **options)
+    options.update(changed)
+    with pytest.raises(FinancialConflict):
+        d.create('c1', request, idempotency_key='complete', **options)
+    assert d.get_run(run.id).mode == 'auto'
+    assert d.snapshot(run.id)['budget']['max_model_calls'] == 16
+    assert d.snapshot(run.id)['correlation_id'] == 'one'
+
+
+def test_creation_equivalent_defaults_and_generated_correlation_replay(setup):
+    d, _, _, _ = setup
+    request = MarketInvestigationRequest(symbol='MU', as_of=NOW)
+    run = d.create('c1', request, idempotency_key='defaults', mode='auto')
+    same = d.create('c1', request, idempotency_key='defaults', mode='auto', budget=RunBudget(max_active_seconds=120.0))
+    assert same.id == run.id
+    asyncio.run(d.start(run.id))
+    assert d.create('c1', request, idempotency_key='defaults', mode='auto').id == run.id
+    assert d.snapshot(run.id)['budget']['model_calls'] == 2
+    with pytest.raises(FinancialConflict):
+        d.create('c1', request, idempotency_key='defaults', mode='auto', correlation_id=d.snapshot(run.id)['correlation_id'])
+
+
+@pytest.mark.parametrize('changed', [dict(mode='review'), dict(budget=RunBudget(max_model_calls=1)), dict(correlation_id='two'), {}])
+def test_concurrent_creation_collision_checks_all_effective_inputs(setup, changed):
+    d, sessions, _, _ = setup
+    engine = sessions.kw['bind']
+    barrier = threading.Barrier(2)
+    seen = set()
+    lock = threading.Lock()
+    commit_collisions = []
+    class ObservedSession(Session):
+        def commit(self):
+            try:
+                return super().commit()
+            except IntegrityError:
+                commit_collisions.append(True)
+                raise
+    d.sessions = sessionmaker(engine, class_=ObservedSession, expire_on_commit=False)
+    def after_select(conn, cursor, statement, parameters, context, executemany):
+        if statement.startswith('SELECT') and 'financial_runs.idempotency_key =' in statement:
+            identity = threading.get_ident()
+            with lock:
+                first = identity not in seen
+                seen.add(identity)
+            if first:
+                barrier.wait(timeout=5)
+    event.listen(engine, 'after_cursor_execute', after_select)
+    request = MarketInvestigationRequest(symbol='MU', as_of=NOW)
+    first = dict(mode='auto', correlation_id='one')
+    second = dict(first, **changed)
+    def create(options):
+        try:
+            return d.create('c1', request, idempotency_key='racing', **options)
+        except FinancialConflict as exc:
+            return exc
+    try:
+        with ThreadPoolExecutor(2) as pool:
+            results = list(pool.map(create, [first, second]))
+    finally:
+        event.remove(engine, 'after_cursor_execute', after_select)
+    assert len(commit_collisions) == 1  # Exercise actual post-commit collision branch.
+    if changed:
+        assert sum(isinstance(result, FinancialConflict) for result in results) == 1
+    else:
+        assert results[0].id == results[1].id
+
+
+@pytest.mark.parametrize('kind', ['market_investigation', 'portfolio_rebalance'])
+def test_final_artifact_rejects_wrong_requested_asset_or_snapshot(setup, kind):
+    d, sessions, market, portfolio = setup
+    driver = market if kind == 'market_investigation' else portfolio
+    async def execute(ctx, state):
+        if kind == 'market_investigation':
+            return MarketInvestigationArtifact(producing_run_id=ctx.run_id, symbol='AAPL', as_of=NOW, status='partial')
+        return PortfolioProposalArtifact(producing_run_id=ctx.run_id, snapshot_id='other-holdings', as_of=NOW,
+            current_weights={'CASH': 1}, proposed_weights={}, constraint_check=ConstraintCheck(status='unknown'), status='insufficient_data')
+    driver.execute = execute
+    run = market_run(d) if kind == 'market_investigation' else d.create('c1', PortfolioReviewRequest(portfolio_snapshot_id='requested-holdings', as_of=NOW), mode='auto', idempotency_key='wrong-snapshot')
+    result = asyncio.run(d.start(run.id))
+    assert result.status == 'failed' and result.final_answer is None
+    assert not d.snapshot(run.id)['checkpoint']['artifact_ids']
+    with sessions() as session:
+        assert session.scalar(select(FinancialArtifact).where(FinancialArtifact.run_id == run.id)) is None
+
+
+@pytest.mark.parametrize('mapping', [dict, UserDict, MappingProxyType])
+@pytest.mark.parametrize('target', ['symbol_caps', 'sector_caps', 'current', 'proposed', 'specialist', 'state'])
+def test_mapping_keys_checked_before_pydantic_coercion(mapping, target):
+    def validate(value):
+        if target == 'symbol_caps':
+            return AllocationConstraints(max_weight_by_symbol=value)
+        if target == 'sector_caps':
+            return AllocationConstraints(max_sector_weight=value)
+        if target == 'specialist':
+            return SpecialistResult(role='role', action='proposal', summary='test', proposed_weights=value)
+        if target == 'state':
+            return PortfolioState(proposed_weights=value)
+        kwargs = {'current_weights': {'CASH': 1}, 'proposed_weights': {}}
+        kwargs['current_weights' if target == 'current' else 'proposed_weights'] = value
+        return PortfolioProposalArtifact(producing_run_id='run', snapshot_id='snapshot', as_of=NOW,
+            constraint_check=ConstraintCheck(status='unknown'), status='insufficient_data', **kwargs)
+    for bad in ({'A': 0.1, b'A': 1}, {'A': 0.1, ' a ': 1}, {' ': 1}, {3: 1}):
+        with pytest.raises(ValueError):
+            validate(mapping(bad))
+    good = mapping({' cash ': Decimal('1.0')})
+    validate(good)
+    validate(mapping({'CASH': '1.0'}))
+
+
+def test_public_tool_result_references_are_persisted_scoped_and_stable(setup):
+    d, sessions, market, _ = setup
+    class ToolInput(FinancialModel):
+        value: int
+    calls, references = [], []
+    d.tools.register(ToolSpec('readonly', '1', 'read', ToolInput, ToolInput, lambda data: calls.append(data.value) or data))
+    async def execute(ctx, state):
+        with pytest.raises(KeyError):
+            ctx.tool_result_ref('missing')
+        result = await ctx.tool('investigator', 'scoped-tool', 'readonly', ToolInput(value=3))
+        reference = ctx.tool_result_ref('scoped-tool')
+        references.append(reference)
+        assert reference.run_id == ctx.run_id and reference.tool_call_id == result.call_id
+        assert ctx.tool_result_ref('scoped-tool') == reference
+        with sessions() as session:
+            persisted_call = session.get(ToolCall, reference.tool_call_id)
+            persisted_result = session.get(ToolResult, reference.tool_result_id)
+            assert persisted_call.run_id == ctx.run_id
+            assert persisted_call.call_id == result.call_id
+            assert persisted_result.tool_call_id == persisted_call.id
+        if len(references) == 1:
+            return None
+        cached = await ctx.tool('investigator', 'scoped-tool', 'readonly', ToolInput(value=3))
+        assert cached.call_id == result.call_id
+        return MarketInvestigationArtifact(producing_run_id=ctx.run_id, symbol='MU', as_of=NOW, status='partial',
+            numeric_facts=[NumericFact(name='value', value=3, unit='test', evidence_id='evidence', tool_result_id=reference.tool_result_id)])
+    market.execute = execute
+    run = market_run(d, key='scoped-result')
+    assert asyncio.run(d.start(run.id)).status == 'executing'
+    restarted = FinancialMASDispatcher(sessions, d.drivers, d.tools)
+    assert asyncio.run(restarted.start(run.id)).status == 'completed'
+    assert references[0] == references[1] and calls == [3]
+    foreign_run = market_run(d, key='foreign-reference')
+    async def foreign(ctx, state):
+        with pytest.raises(KeyError):
+            ctx.tool_result_ref('scoped-tool')
+        # Even a corrupted invocation FK cannot expose another run's result.
+        with sessions() as session:
+            session.add(FinancialInvocation(run_id=ctx.run_id, invocation_key='foreign', role='investigator', kind='tool',
+                input_hash='hash', status='succeeded', attempts=1, tool_call_id=references[0].tool_call_id))
+            session.commit()
+        with pytest.raises(KeyError):
+            ctx.tool_result_ref('foreign')
+        return MarketInvestigationArtifact(producing_run_id=ctx.run_id, symbol='MU', as_of=NOW, status='partial')
+    market.execute = foreign
+    assert asyncio.run(d.start(foreign_run.id)).status == 'completed'

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from collections.abc import Mapping
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -9,8 +10,12 @@ MASKind = Literal['market_investigation', 'portfolio_rebalance']
 
 
 def normalized_keys(value):
+    if not isinstance(value, Mapping):
+        raise ValueError('weights/caps must be a mapping')
     result = {}
     for key, weight in value.items():
+        if not isinstance(key, str):
+            raise ValueError('symbol/sector keys must be strings before coercion')
         normalized = key.strip().upper()
         if not normalized or normalized in result:
             raise ValueError('blank or duplicate normalized symbols/sector names')
@@ -52,13 +57,18 @@ class AllocationConstraints(FinancialModel):
     max_sector_weight: dict[str, float] = Field(default_factory=dict)
     weight_tolerance: float = Field(default=1e-6, gt=0, le=1e-4)
 
+    @field_validator('max_weight_by_symbol', 'max_sector_weight', mode='before')
+    @classmethod
+    def cap_keys(cls, value):
+        return normalized_keys(value)
+
     @field_validator('max_weight_by_symbol', 'max_sector_weight')
     @classmethod
     def caps(cls, value):
         import math
         if any(not math.isfinite(v) or v < 0 or v > 1 for v in value.values()):
             raise ValueError('caps must be finite weights')
-        return normalized_keys(value)
+        return value
 
 
 class MarketInvestigationRequest(FinancialModel):
@@ -181,11 +191,15 @@ class PortfolioProposalArtifact(FinancialModel):
     limitations: list[str] = Field(default_factory=list)
     status: Literal['feasible', 'infeasible', 'insufficient_data']
 
+    @field_validator('current_weights', 'proposed_weights', mode='before')
+    @classmethod
+    def weight_keys(cls, value):
+        return normalized_keys(value)
+
     @field_validator('current_weights', 'proposed_weights')
     @classmethod
     def weights(cls, value):
         import math
-        value = normalized_keys(value)
         if value and ('CASH' not in value or any(not math.isfinite(v) or v < 0 for v in value.values()) or abs(sum(value.values()) - 1) > 1e-6):
             raise ValueError('weights require CASH, nonnegative finite values, sum=1 within 1e-6')
         return value
@@ -206,7 +220,7 @@ class SpecialistResult(FinancialModel):
     hypotheses: list[Hypothesis] = Field(default_factory=list)
     proposed_weights: dict[str, float] = Field(default_factory=dict)
 
-    @field_validator('proposed_weights')
+    @field_validator('proposed_weights', mode='before')
     @classmethod
     def normalize_weights(cls, value):
         return normalized_keys(value)
@@ -231,7 +245,7 @@ class PortfolioState(FinancialModel):
     risk_comparison: RiskComparison | None = None
     missing_checks: list[str] = Field(default_factory=list)
 
-    @field_validator('proposed_weights')
+    @field_validator('proposed_weights', mode='before')
     @classmethod
     def normalize_weights(cls, value):
         return normalized_keys(value)
@@ -246,6 +260,15 @@ class Checkpoint(FinancialModel):
 class ArtifactRef(FinancialModel):
     artifact_id: str
     schema_version: Literal[1] = 1
+
+
+class ToolResultRef(FinancialModel):
+    """Persisted audit primary keys, not logical invocation keys."""
+    run_id: str
+    tool_call_id: str
+    tool_result_id: str
+    tool_name: str
+    tool_version: str
 
 
 class CrossMASEnvelope(FinancialModel):

@@ -75,10 +75,14 @@ class FinancialMASDispatcher:
         if isinstance(request, MarketInvestigationRequest):
             limits.max_model_calls = min(limits.max_model_calls, request.max_llm_calls)
         data = request.model_dump(mode='json')
+        creation_inputs = {'mas_kind': kind, 'request': data, 'mode': mode,
+                           'budget': limits.model_dump(mode='json'),
+                           'requested_correlation_id': correlation_id,
+                           'retry_parent_id': _retry_parent_id}
         with self.sessions() as session:
             existing = session.scalar(select(FinancialRun).where(FinancialRun.conversation_id == conversation_id, FinancialRun.idempotency_key == idempotency_key))
             if existing:
-                if existing.mas_kind != kind or existing.request != data:
+                if existing.creation_inputs != creation_inputs:
                     raise FinancialConflict('idempotency key has different input')
                 if _retry_parent_id is not None and session.get(AgentRun, existing.run_id).parent_run_id != _retry_parent_id:
                     raise FinancialConflict('retry key belongs to an existing non-retry run')
@@ -89,7 +93,7 @@ class FinancialMASDispatcher:
             session.add(run)
             session.flush()
             state = MarketState() if kind == 'market_investigation' else PortfolioState()
-            meta = FinancialRun(run_id=run.id, conversation_id=conversation_id, mas_kind=kind, idempotency_key=idempotency_key, correlation_id=correlation_id or str(uuid.uuid4()), request=data, budget=limits.model_dump(), checkpoint=Checkpoint(state=state).model_dump(mode='json'), active_seconds=0, next_event_seq=1)
+            meta = FinancialRun(run_id=run.id, conversation_id=conversation_id, mas_kind=kind, idempotency_key=idempotency_key, correlation_id=correlation_id if correlation_id is not None else str(uuid.uuid4()), request=data, creation_inputs=creation_inputs, budget=limits.model_dump(), checkpoint=Checkpoint(state=state).model_dump(mode='json'), active_seconds=0, next_event_seq=1)
             session.add(meta)
             self._event(session, run, meta, 'mas.created', {'mas_kind': kind})
             if _retry_parent_id is not None:
@@ -99,7 +103,7 @@ class FinancialMASDispatcher:
             except IntegrityError:
                 session.rollback()
                 existing = session.scalar(select(FinancialRun).where(FinancialRun.conversation_id == conversation_id, FinancialRun.idempotency_key == idempotency_key))
-                if existing is None or existing.request != data or existing.mas_kind != kind:
+                if existing is None or existing.creation_inputs != creation_inputs:
                     raise FinancialConflict('concurrent creation conflict')
                 if _retry_parent_id is not None and session.get(AgentRun, existing.run_id).parent_run_id != _retry_parent_id:
                     raise FinancialConflict('concurrent retry key conflict')
@@ -423,7 +427,8 @@ class RuntimeContext:
                 row = FinancialInvocation(run_id=self.run_id, invocation_key=invocation_key, role=role, kind=kind, input_hash=input_hash, status='reserved', attempts=1)
                 session.add(row)
             if kind == 'tool':
-                call = ToolCall(id=str(uuid.uuid4()), run_id=self.run_id, tool_name=tool_name, status='running', input_data=payload, request_id=str(uuid.uuid4()))
+                call_id = str(uuid.uuid4())
+                call = ToolCall(id=call_id, call_id=call_id, run_id=self.run_id, tool_name=tool_name, status='running', input_data=payload, request_id=str(uuid.uuid4()))
                 session.add(call)
                 session.flush()
                 row.tool_call_id = call.id
@@ -472,12 +477,33 @@ class RuntimeContext:
         if cached is not None:
             return ToolResultEnvelope.model_validate(cached)
         try:
-            result = await self.external(ToolExecutor(self.dispatcher.tools).execute(name, data, call_id=invocation_key))
+            with self.dispatcher.sessions() as session:
+                invocation = session.scalar(select(FinancialInvocation).where(FinancialInvocation.run_id == self.run_id, FinancialInvocation.invocation_key == invocation_key))
+                call = session.get(ToolCall, invocation.tool_call_id)
+                call_id = call.call_id
+            result = await self.external(ToolExecutor(self.dispatcher.tools).execute(name, data, call_id=call_id))
             self.record_result(invocation_key, result.model_dump(mode='json'))
             return result
         except Exception as exc:
             self.record_failure(invocation_key, getattr(exc, 'code', 'tool_failed'))
             raise
+
+    def tool_result_ref(self, invocation_key: str) -> ToolResultRef:
+        with self.dispatcher.sessions() as session:
+            invocation = session.scalar(select(FinancialInvocation).where(
+                FinancialInvocation.run_id == self.run_id,
+                FinancialInvocation.invocation_key == invocation_key))
+            if invocation is None or invocation.kind != 'tool' or invocation.status != 'succeeded':
+                raise KeyError('persisted tool result not found in run')
+            call = session.get(ToolCall, invocation.tool_call_id)
+            if call is None or call.run_id != self.run_id:
+                raise KeyError('tool call not found in run')
+            result = session.scalar(select(ToolResult).where(ToolResult.tool_call_id == call.id))
+            if result is None:
+                raise KeyError('persisted tool result not found in run')
+            return ToolResultRef(run_id=self.run_id, tool_call_id=call.id,
+                                 tool_result_id=result.id, tool_name=call.tool_name,
+                                 tool_version=call.tool_version)
 
     def checkpoint(self, state: MarketState | PortfolioState, *, action='handoff', evidence_ids: list[str] | None = None):
         expected = 'market_investigation' if isinstance(state, MarketState) else 'portfolio_rebalance'
@@ -510,6 +536,10 @@ class RuntimeContext:
         expected = MarketInvestigationArtifact if self.driver.kind == 'market_investigation' else PortfolioProposalArtifact
         if not isinstance(artifact, expected) or artifact.producing_run_id != self.run_id or artifact.as_of != self.request.as_of:
             raise ValueError('artifact ownership or timepoint mismatch')
+        if isinstance(artifact, MarketInvestigationArtifact) and artifact.symbol != self.request.symbol:
+            raise ValueError('artifact requested symbol mismatch')
+        if isinstance(artifact, PortfolioProposalArtifact) and artifact.snapshot_id != self.request.portfolio_snapshot_id:
+            raise ValueError('artifact requested holdings snapshot mismatch')
         with self.dispatcher._mutation(self.run_id, token=self.token) as (session, run, meta):
             self._guard(run, meta)
             from .artifact_store import ArtifactStore
