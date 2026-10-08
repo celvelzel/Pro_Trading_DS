@@ -31,3 +31,5 @@ Event records are manual/fixture or explicitly normalized document records. `nor
 Validation uses asyncio.run for ToolExecutor, hand-computed numerical tests and repeatability/timing fixture tests. These establish offline behavior only, not real exchange/provider acceptance or real-news causality.
 
 Calendar gaps include trailing expected sessions through the exchange-local cutoff date. Intraday/incomplete sessions conservatively count as missing until their bars become available; this daily tool does not claim an intraday anomaly. Calendar dates after the cutoff are excluded.
+
+Declared suspended sessions in the returned history window are unusable even if a provider supplies a filled OHLCV bar, and even when no expected-session calendar is supplied. They appear in `gaps` and retain suspension metadata, yielding insufficient data. Asset suspensions withhold all anomaly metrics; benchmark suspensions withhold benchmark-relative metrics. Future suspension dates are excluded by the same exchange-local cutoff.

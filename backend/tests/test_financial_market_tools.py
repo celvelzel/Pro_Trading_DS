@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone, date
 from pathlib import Path
 
 import pytest
@@ -80,13 +80,60 @@ def test_trailing_suspension_is_not_silently_a_current_return():
     assert anomaly.calculate_market_anomaly(req, deps).return_pct is None
 
 
+@pytest.mark.parametrize("has_calendar", [True, False])
+@pytest.mark.parametrize("suspended_symbol", ["DEMO", "SECTOR"])
+def test_filled_suspension_overrides_bar_with_or_without_calendar(has_calendar, suspended_symbol):
+    series = [history.HistorySeries.model_validate(s) for s in PACK["series"]]
+    suspended = next(s for s in series if s.symbol == suspended_symbol)
+    bar = suspended.bars[20]
+    for field in ("open", "high", "low", "close"):
+        setattr(bar, field, 100.)
+    bar.volume = 0.
+    suspended.suspended_sessions = [bar.session_date]
+    if not has_calendar:
+        suspended.expected_sessions = []
+    deps = history.MarketDependencies(history.FixtureHistoryBackend(series))
+    cutoff = PACK["cases"][0]["as_of"]
+    output = history.get_market_history(history.MarketHistoryInput(symbol=suspended_symbol, as_of=cutoff), deps)
+    assert output.status == "insufficient_data"
+    assert bar.session_date in output.gaps
+    assert output.series.suspended_sessions == [bar.session_date]
+    result = anomaly.calculate_market_anomaly(anomaly.MarketAnomalyInput(symbol="DEMO", benchmark="SECTOR", as_of=cutoff), deps)
+    assert result.status == "insufficient_data"
+    assert result.excess_return_pct is None
+    assert result.relative_strength is None
+    if suspended_symbol == "DEMO":
+        assert result.return_pct is None
+        assert result.volume_ratio_20 is None
+    else:
+        assert result.return_pct == pytest.approx(-10)
+        assert result.volume_ratio_20 == 3
+
+
+def test_future_suspension_does_not_affect_historical_metrics():
+    series = history.HistorySeries.model_validate(PACK["series"][0])
+    series.suspended_sessions = [series.bars[21].session_date]
+    deps = history.MarketDependencies(history.FixtureHistoryBackend([series]))
+    req = history.MarketHistoryInput(symbol="DEMO", as_of=PACK["cases"][0]["as_of"])
+    output = history.get_market_history(req, deps)
+    assert output.status == "ok"
+    assert output.series.suspended_sessions == []
+    assert output.gaps == []
+
+
 def test_bar_not_yet_available_and_nontrading_cutoff():
     req = history.MarketHistoryInput(symbol="DEMO", as_of=PACK["cases"][0]["as_of"])
     before_availability = req.model_copy(update={"as_of": req.as_of - timedelta(minutes=8)})
     assert len(history.get_market_history(before_availability, dependencies()).series.bars) == 20
-    # A cutoff on a later nontrading day retains the last eligible session.
-    last = history.get_market_history(req, dependencies()).series.bars[-1]
-    assert last.close_at <= req.as_of
+    # September 26 is Saturday; Friday September 25 is the last eligible close.
+    weekend = history.MarketHistoryInput(symbol="DEMO", as_of=datetime(2026, 9, 26, 22, tzinfo=timezone.utc), lookback=2)
+    output = history.get_market_history(weekend, dependencies())
+    assert weekend.as_of.weekday() == 5
+    assert output.status == "ok"
+    assert output.gaps == []
+    assert output.series.bars[-1].session_date == date(2026, 9, 25)
+    assert output.data_last_bar_at == datetime(2026, 9, 25, 20, tzinfo=timezone.utc)
+    assert all(b.close_at <= weekend.as_of and b.available_at <= weekend.as_of for b in output.series.bars)
 
 
 def test_strict_inputs_and_rag_unknown_metadata():

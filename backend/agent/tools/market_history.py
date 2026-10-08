@@ -145,15 +145,18 @@ def get_market_history(payload: MarketHistoryInput, dependencies: MarketDependen
     # Calendar bounds come from eligible bars, never from future data.
     cutoff_date = payload.as_of.astimezone(ZoneInfo(series.exchange_timezone)).date()
     calendar = [d for d in series.expected_sessions if (not bars or bars[0].session_date <= d) and d <= cutoff_date]
-    gaps = sorted(set(calendar) - {b.session_date for b in bars})
+    # A provider may forward-fill suspended sessions. Explicit suspension metadata
+    # overrides bar presence and does not depend on an optional trading calendar.
+    suspensions = sorted(set(d for d in series.suspended_sessions if (not bars or bars[0].session_date <= d) and d <= cutoff_date))
+    gaps = sorted((set(calendar) - {b.session_date for b in bars}) | set(suspensions))
     limitations = []
     if not series.expected_sessions:
         limitations.append("Trading calendar unavailable; gaps/nontrading days cannot be inferred")
     if gaps:
-        limitations.append("Missing trading sessions (including declared suspensions)")
+        limitations.append("Missing or declared suspended trading sessions; filled suspension bars are unusable")
     if len(bars) < payload.lookback:
         limitations.append("Insufficient trading bars")
-    trimmed = series.model_copy(update={"bars": bars, "expected_sessions": calendar, "suspended_sessions": [d for d in series.suspended_sessions if d in calendar]})
+    trimmed = series.model_copy(update={"bars": bars, "expected_sessions": calendar, "suspended_sessions": suspensions})
     ref = stable_ref("market-history", {"request": payload.model_dump(mode="json"), "series": trimmed.model_dump(mode="json")})
     return MarketHistoryOutput(symbol=payload.symbol, as_of=payload.as_of, status="insufficient_data" if gaps or len(bars) < payload.lookback else "ok", series=trimmed,
         data_last_bar_at=bars[-1].close_at if bars else None, gaps=gaps, limitations=limitations, result_ref=ref,
