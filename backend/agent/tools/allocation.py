@@ -1,6 +1,7 @@
 """Deterministic allocation constraints, bounded candidates and simulation tools."""
 from __future__ import annotations
 from datetime import date
+from collections.abc import Mapping
 from decimal import Decimal
 from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, Field, field_validator
@@ -14,8 +15,10 @@ Sector = Annotated[str, AfterValidator(lambda value: nonblank(value).upper())]
 
 
 def reject_sector_collisions(value):
-    if isinstance(value, dict):
-        normalized = [nonblank(key).upper() for key in value if isinstance(key, str)]
+    if isinstance(value, Mapping):
+        if any(not isinstance(key, str) for key in value):
+            raise ValueError("Sector map keys must be strings")
+        normalized = [nonblank(key).upper() for key in value]
         if len(normalized) != len(set(normalized)):
             raise ValueError("Duplicate normalized sector key")
     return value

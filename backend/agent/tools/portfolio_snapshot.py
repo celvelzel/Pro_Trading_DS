@@ -40,7 +40,9 @@ def nonblank(value: str) -> str:
 
 def reject_symbol_collisions(value):
     if isinstance(value, Mapping):
-        normalized = [symbol(key) for key in value if isinstance(key, str)]
+        if any(not isinstance(key, str) for key in value):
+            raise ValueError("Symbol map keys must be strings")
+        normalized = [symbol(key) for key in value]
         if len(normalized) != len(set(normalized)):
             raise ValueError("Duplicate normalized symbol key")
     return value

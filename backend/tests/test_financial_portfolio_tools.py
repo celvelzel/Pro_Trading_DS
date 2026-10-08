@@ -242,3 +242,44 @@ def test_public_candidate_tools_reject_review_repros():
     ):
         envelope=asyncio.run(ToolExecutor(registry).execute(name,payload))
         assert envelope.status.value=='failed' and envelope.error.code=='validation_error'
+
+
+@pytest.mark.parametrize('container_name',['dict','userdict','mappingproxy'])
+@pytest.mark.parametrize('bad_kind',['sector_alias','symbol_bytes','sector_bytes'])
+@pytest.mark.parametrize('tool',['validate_allocation','generate_feasible_candidates'])
+def test_all_mapping_containers_reject_aliases_and_nonstring_keys(container_name,bad_kind,tool):
+    from collections import UserDict
+    from types import MappingProxyType
+    container={'dict':dict,'userdict':UserDict,'mappingproxy':MappingProxyType}[container_name]
+    constraints={'max_weight_by_symbol':{'CASH':0}}
+    if bad_kind=='sector_alias': constraints['max_sector_weight']=container({'tech':'.1',' TECH ':'1'})
+    elif bad_kind=='symbol_bytes': constraints['max_weight_by_symbol']=container({'A':'.1',b'a':'1','CASH':0})
+    else: constraints['max_sector_weight']=container({'tech':'.1',b'TECH':'1'})
+    payload={'constraints':constraints,'classifications':{'A':{'asset_class':'equity','sector':'tech','source':'fixture'}}}
+    payload.update({'weights':{'A':1,'CASH':0}} if tool=='validate_allocation' else {'symbols':['A']})
+    registry=ToolRegistry();allocation.register_tools(registry)
+    envelope=asyncio.run(ToolExecutor(registry).execute(tool,payload))
+    assert envelope.status.value=='failed' and envelope.error.code=='validation_error'
+
+
+@pytest.mark.parametrize('field',['weights','classifications','candidate_classifications','simulation_weights'])
+def test_raw_nonstring_symbol_keys_rejected_in_every_input_map(field):
+    from collections import UserDict
+    with pytest.raises(ValidationError,match='Symbol map keys must be strings'):
+        if field=='weights': allocation.AllocationInput(weights=UserDict({b'A':1,'CASH':0}))
+        elif field=='classifications': allocation.AllocationInput(weights={'A':1,'CASH':0},classifications=UserDict({b'A':{'sector':'tech','source':'fixture'}}))
+        elif field=='candidate_classifications': allocation.CandidateInput(symbols=['A'],classifications=UserDict({b'A':{'sector':'tech','source':'fixture'}}))
+        else: allocation.SimulationInput(histories=[HISTORY],as_of=ASOF,currency='USD',target_weights=UserDict({b'A':1,'CASH':0}),initial_value=100)
+
+
+@pytest.mark.parametrize('tool',['validate_allocation','generate_feasible_candidates'])
+def test_valid_mapping_containers_preserve_decimal_string_caps(tool):
+    from collections import UserDict
+    from types import MappingProxyType
+    constraints={'max_weight_by_symbol':MappingProxyType({'A':'.1','CASH':0}),'max_sector_weight':UserDict({' tech ':'.1'})}
+    payload={'constraints':constraints,'classifications':{'A':{'asset_class':'equity','sector':'tech','source':'fixture'}}}
+    payload.update({'weights':{'A':1,'CASH':0}} if tool=='validate_allocation' else {'symbols':['A']})
+    registry=ToolRegistry();allocation.register_tools(registry)
+    envelope=asyncio.run(ToolExecutor(registry).execute(tool,payload))
+    assert envelope.status.value=='succeeded'
+    assert envelope.data['status']==('fail' if tool=='validate_allocation' else 'infeasible')
