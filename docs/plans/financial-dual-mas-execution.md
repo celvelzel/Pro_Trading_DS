@@ -1,15 +1,15 @@
 # Dual MAS execution ledger
 
-Source plan: financial-dual-mas-implementation.md. Current work begins at W0; no later wave is declared implemented here.
+Source plan: financial-dual-mas-implementation.md. Gate states below record actual implementation and verification; unfinished waves remain explicit.
 
 | Wave | Acceptance evidence required | State |
 |---|---|---|
 | W0 | baseline, inventory, ADR, contract draft, ownership map, independent review | PASS: independent gate_reviewer, 2026-10-08 |
-| W1 | typed shared runtime, DB checkpoint/restore, two-agent fake drivers, cancellation, dedup, migration and General regression | c38e1b27 NEEDS_WORK; creation identity, artifact subject, key coercion and persisted reference repairs pending |
+| W1 | typed shared runtime, DB checkpoint/restore, two-agent fake drivers, cancellation, dedup, migration and General regression | PASS 761c90a; integrated 2b4b587; Backend 325 / quant 711 passed; executable contracts frozen |
 | W2 | deterministic point-in-time history/anomaly/evidence; future exclusion | PASS bc51601; integrated 244ba52, Backend 152 / quant 680 passed |
-| W3 | strict snapshots, deterministic risk/constraints/candidates/date-aligned simulator; no holdings writes | PASS 3943a2a; integrated eb54c07; combined regressions running |
-| W4 | independent Market Coordinator/team/state/critic, dynamic evidence-driven routing | blocked on W1 + W2 |
-| W5 | independent Portfolio Coordinator/team/state/verifier, bounded revision, numeric checks | blocked on W1 + W3 |
+| W3 | strict snapshots, deterministic risk/constraints/candidates/date-aligned simulator; no holdings writes | PASS 3943a2a; integrated eb54c07; combined regressions Backend 261 / quant 711 passed |
+| W4 | independent Market Coordinator/team/state/critic, dynamic evidence-driven routing | ready: W1 + W2 passed |
+| W5 | independent Portfolio Coordinator/team/state/verifier, bounded revision, numeric checks | ready: W1 + W3 passed |
 | W6 | versioned artifacts, correlation graph, TTL/idempotency/cycle guards; three workflows | blocked on W4 + W5 |
 | W7 | typed API, legacy lifecycle/SSE dispatch, UI modes and result views | blocked on W6 |
 | W8 | fixtures, equal-budget baselines/ablations, metrics, security/recovery/E2E, full regressions/build | blocked on W7 |
@@ -31,3 +31,5 @@ W2 repair bc51601: Reviewer PASS; 32 targeted tests independently passed, filled
 W3 reviews required repairs for case/trim key collisions and blank sector/provenance, then accepted-Mapping/byte-key coercion bypasses. Repair 3943a2a: numerical_reviewer PASS; 140 targeted tests independently passed, original and Python mapping repros rejected, valid Mapping/decimal-string inputs still work. Prior financial math/snapshot/cost/read-only acceptance retained; worker full Backend 236 / quant 703 evidence. Lead integrated all three W3 commits; no shared schema changes.
 
 W1 first review: NEEDS_WORK c38e1b27. Independent runtime/migration/legacy core suite 41 passed, focused contract tests 4 passed. Remaining blockers: creation idempotency must include effective mode/budget/correlation, final artifact subject must match request, keys must be checked before Pydantic coercion, drivers need public scoped persisted tool result IDs. The range alignment 0<tolerance<=1e-4 passed. No executable contract freeze or W4/W5 launch until repair and independent PASS.
+
+W1 repair re-review: PASS at 761c90a; independently 70 runtime/migration/legacy-core tests and all four public blocker repros passed. Lead integrated three feature commits excluding duplicate support commit; full Backend 325 and quant 711 passed. Initial Lead test command omitted required PYTHONPATH and failed collection; corrected command with backend;lobster_quant passed without test changes. Contract v1 freezes now. Live PostgreSQL/Redis/Celery recovery remains unverified.

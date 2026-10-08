@@ -1,6 +1,6 @@
 # Financial runtime API v1
 
-Status: executable W1 contract, pending independent W1 review. Import from `agent.shared` with absolute backend and lobster_quant directories in PYTHONPATH. ADR-0002 governs budgets, concurrency, migration ownership and read-only semantics. No Market/Portfolio implementation is imported by this package.
+Status: frozen executable W1 contract; independent review PASS at 761c90a, integrated at 2b4b587. Import from `agent.shared` with absolute backend and lobster_quant directories in PYTHONPATH. ADR-0002 governs budgets, concurrency, migration ownership and read-only semantics. No Market/Portfolio implementation is imported by this package.
 
 ## Assembly and lifecycle
 

@@ -1,6 +1,6 @@
-# Financial MAS contract draft v1 (W0)
+# Financial MAS contract v1 (frozen W1)
 
-The implementation plan is `docs/plans/financial-dual-mas-implementation.md`. W1 freezes executable Pydantic contracts and documents exact exported signatures here before W4/W5 begin. Draft changes needed by W1 are reviewed before freeze. After freeze, incompatible changes require an ADR and a reported dependency block.
+The implementation plan is `docs/plans/financial-dual-mas-implementation.md`. W1 executable contracts are frozen after independent PASS at 761c90a and Lead integration at 2b4b587. Exact exported signatures are documented in financial-mas-runtime-api.md; contracts.py is canonical. After freeze, incompatible changes require an ADR and a reported dependency block.
 
 ## Common rules
 
