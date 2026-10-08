@@ -284,6 +284,13 @@ def test_constraint_key_collisions_and_blank_names_rejected(field):
     assert getattr(AllocationConstraints(**{field: {' a ': 0.1}}), field) == {'A': 0.1}
 
 
+def test_allocation_tolerance_matches_deterministic_tool_supported_range():
+    assert AllocationConstraints().weight_tolerance == 1e-6
+    assert AllocationConstraints(weight_tolerance=1e-4).weight_tolerance == 1e-4
+    with pytest.raises(ValueError):
+        AllocationConstraints(weight_tolerance=0.01)
+
+
 def test_weight_key_collisions_rejected_before_discarding_values():
     with pytest.raises(ValueError):
         SpecialistResult(role='opportunity', action='proposal', summary='test', proposed_weights={'MU': 0.1, 'mu': 0.8})

@@ -50,7 +50,7 @@ class AllocationConstraints(FinancialModel):
     min_cash_weight: float = Field(default=0, ge=0, le=1)
     max_equity_weight: float = Field(default=1, ge=0, le=1)
     max_sector_weight: dict[str, float] = Field(default_factory=dict)
-    weight_tolerance: float = Field(default=1e-6, gt=0, le=0.01)
+    weight_tolerance: float = Field(default=1e-6, gt=0, le=1e-4)
 
     @field_validator('max_weight_by_symbol', 'max_sector_weight')
     @classmethod
