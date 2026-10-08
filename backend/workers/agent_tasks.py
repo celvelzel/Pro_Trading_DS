@@ -12,6 +12,11 @@ from workers.celery_app import celery_app
 
 @celery_app.task(name="backend.workers.agent_tasks.run_agent", queue="agent")
 def run_agent(run_id: str) -> dict:
+    from agent.shared import FinancialMASDispatcher
+    dispatcher = FinancialMASDispatcher(sync_session_factory)
+    if dispatcher.is_financial(run_id):
+        run = asyncio.run(dispatcher.start(run_id))
+        return {"run_id": run.id, "status": run.status, "version": run.version}
     from agent.llm import OpenAICompatibleModel
     from agent.orchestrator import AgentOrchestrator
 
@@ -22,6 +27,11 @@ def run_agent(run_id: str) -> dict:
 
 @celery_app.task(name="backend.workers.agent_tasks.resume_agent_job", queue="agent")
 def resume_agent_job(run_id: str, job_id: str) -> dict:
+    from agent.shared import FinancialMASDispatcher
+    dispatcher = FinancialMASDispatcher(sync_session_factory)
+    if dispatcher.is_financial(run_id):
+        run = asyncio.run(dispatcher.start(run_id))
+        return {"run_id": run.id, "status": run.status, "version": run.version}
     from agent.llm import OpenAICompatibleModel
     from agent.orchestrator import AgentOrchestrator
 
