@@ -5,9 +5,9 @@ Source plan: financial-dual-mas-implementation.md. Current work begins at W0; no
 | Wave | Acceptance evidence required | State |
 |---|---|---|
 | W0 | baseline, inventory, ADR, contract draft, ownership map, independent review | PASS: independent gate_reviewer, 2026-10-08 |
-| W1 | typed shared runtime, DB checkpoint/restore, two-agent fake drivers, cancellation, dedup, migration and General regression | coding in financial-mas-runtime worktree from 5cb7627 |
-| W2 | deterministic point-in-time history/anomaly/evidence; future exclusion | b2aa853 NEEDS_WORK: declared suspension with filled bar; repair/rereview pending |
-| W3 | strict snapshots, deterministic risk/constraints/candidates/date-aligned simulator; no holdings writes | ac91c8a: 82 dedicated / 178 Backend / 703 quant passed; independent review pending |
+| W1 | typed shared runtime, DB checkpoint/restore, two-agent fake drivers, cancellation, dedup, migration and General regression | c38e1b27 NEEDS_WORK; creation identity, artifact subject, key coercion and persisted reference repairs pending |
+| W2 | deterministic point-in-time history/anomaly/evidence; future exclusion | PASS bc51601; integrated 244ba52, Backend 152 / quant 680 passed |
+| W3 | strict snapshots, deterministic risk/constraints/candidates/date-aligned simulator; no holdings writes | PASS 3943a2a; integrated eb54c07; combined regressions running |
 | W4 | independent Market Coordinator/team/state/critic, dynamic evidence-driven routing | blocked on W1 + W2 |
 | W5 | independent Portfolio Coordinator/team/state/verifier, bounded revision, numeric checks | blocked on W1 + W3 |
 | W6 | versioned artifacts, correlation graph, TTL/idempotency/cycle guards; three workflows | blocked on W4 + W5 |
@@ -25,3 +25,9 @@ W2 clean-worktree Backend collection exposed an existing packaging prerequisite:
 Independent review of Lead support commits ac20111 / 5e0e727: PASS for source/offline scope; task registration tests 3 passed independently and relocation SHA256 equal. Root Backend 128 passed; W2 clean-worktree Backend 146 passed after support fix. Container/infrastructure scope remains unverified.
 
 W2 first review: NEEDS_WORK. Filled provider bars can mask declared suspension because only absent expected dates enter gaps. Reviewer reproduced spurious return/volume/excess metrics; repair must honor explicit suspension even without calendar and test real nontrading cutoff. No W2 integration or W4 start before repair and PASS.
+
+W2 repair bc51601: Reviewer PASS; 32 targeted tests independently passed, filled/no-calendar and benchmark suspensions now withhold metrics; future suspension has no historical effect; actual Saturday cutoff tested. Lead integrated original+repair and reran Backend 152 / quant 680, both passed.
+
+W3 reviews required repairs for case/trim key collisions and blank sector/provenance, then accepted-Mapping/byte-key coercion bypasses. Repair 3943a2a: numerical_reviewer PASS; 140 targeted tests independently passed, original and Python mapping repros rejected, valid Mapping/decimal-string inputs still work. Prior financial math/snapshot/cost/read-only acceptance retained; worker full Backend 236 / quant 703 evidence. Lead integrated all three W3 commits; no shared schema changes.
+
+W1 first review: NEEDS_WORK c38e1b27. Independent runtime/migration/legacy core suite 41 passed, focused contract tests 4 passed. Remaining blockers: creation idempotency must include effective mode/budget/correlation, final artifact subject must match request, keys must be checked before Pydantic coercion, drivers need public scoped persisted tool result IDs. The range alignment 0<tolerance<=1e-4 passed. No executable contract freeze or W4/W5 launch until repair and independent PASS.
