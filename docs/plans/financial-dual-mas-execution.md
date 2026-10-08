@@ -6,8 +6,8 @@ Source plan: financial-dual-mas-implementation.md. Current work begins at W0; no
 |---|---|---|
 | W0 | baseline, inventory, ADR, contract draft, ownership map, independent review | PASS: independent gate_reviewer, 2026-10-08 |
 | W1 | typed shared runtime, DB checkpoint/restore, two-agent fake drivers, cancellation, dedup, migration and General regression | coding in financial-mas-runtime worktree from 5cb7627 |
-| W2 | deterministic point-in-time history/anomaly/evidence; future exclusion | coding in financial-mas-market-data worktree from 5cb7627 |
-| W3 | strict snapshots, deterministic risk/constraints/candidates/date-aligned simulator; no holdings writes | coding in financial-mas-quant worktree from 5cb7627 |
+| W2 | deterministic point-in-time history/anomaly/evidence; future exclusion | b2aa853 NEEDS_WORK: declared suspension with filled bar; repair/rereview pending |
+| W3 | strict snapshots, deterministic risk/constraints/candidates/date-aligned simulator; no holdings writes | ac91c8a: 82 dedicated / 178 Backend / 703 quant passed; independent review pending |
 | W4 | independent Market Coordinator/team/state/critic, dynamic evidence-driven routing | blocked on W1 + W2 |
 | W5 | independent Portfolio Coordinator/team/state/verifier, bounded revision, numeric checks | blocked on W1 + W3 |
 | W6 | versioned artifacts, correlation graph, TTL/idempotency/cycle guards; three workflows | blocked on W4 + W5 |
@@ -21,3 +21,7 @@ W0 Reviewer checked complete plan, ADR, contract draft, inventory, baseline raw 
 Lead integration preparation: explicit Celery task includes added after reproducing missing agent/compute/RAG registration in a fresh process. `python -m pytest backend/tests/test_worker_registration.py backend/tests/test_agent_db.py -q`: 3 passed. Docker installs the quant project's declared dependencies from pyproject.toml in addition to backend requirements. Current local imports passed (SQLAlchemy 2.0.49, Pydantic 2.13.2, Celery 5.6.3). Docker engine check failed because dockerDesktopLinuxEngine pipe does not exist; container build and live infrastructure recovery remain unverified. These changes await independent review with W1 integration.
 
 W2 clean-worktree Backend collection exposed an existing packaging prerequisite: stocks.py imported `data.stock_name_map`, whose source was ignored by Git under backend/data. Lead copied the existing pure static mapping byte-for-byte to tracked backend/api/stock_name_map.py and changed the import. No private data files are added or edited. Validate clean-worktree API collection after this support repair; do not skip the affected tests.
+
+Independent review of Lead support commits ac20111 / 5e0e727: PASS for source/offline scope; task registration tests 3 passed independently and relocation SHA256 equal. Root Backend 128 passed; W2 clean-worktree Backend 146 passed after support fix. Container/infrastructure scope remains unverified.
+
+W2 first review: NEEDS_WORK. Filled provider bars can mask declared suspension because only absent expected dates enter gaps. Reviewer reproduced spurious return/volume/excess metrics; repair must honor explicit suspension even without calendar and test real nontrading cutoff. No W2 integration or W4 start before repair and PASS.
