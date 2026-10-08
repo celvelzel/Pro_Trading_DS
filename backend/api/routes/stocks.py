@@ -16,7 +16,7 @@ from api.models.stocks import (
 )
 from api.cache import cache_get, cache_set, make_cache_key
 from api.deps import get_data_engine_dep, get_indicator_engine_dep
-from data.stock_name_map import lookup_name
+from api.stock_name_map import lookup_name
 
 
 # ---------------------------------------------------------------------------
