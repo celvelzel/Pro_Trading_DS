@@ -10,7 +10,10 @@ from kombu import Queue
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-celery_app = Celery("pro_trading_ds", broker=REDIS_URL, backend=REDIS_URL)
+celery_app = Celery(
+    "pro_trading_ds", broker=REDIS_URL, backend=REDIS_URL,
+    include=["workers.agent_tasks", "workers.compute_tasks", "workers.rag_tasks"],
+)
 celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",

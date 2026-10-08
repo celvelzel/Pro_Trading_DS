@@ -8,6 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+COPY lobster_quant/pyproject.toml /tmp/quant-pyproject.toml
+RUN python -c "import subprocess, sys, tomllib; dependencies = tomllib.load(open('/tmp/quant-pyproject.toml', 'rb'))['project']['dependencies']; subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-cache-dir', *dependencies])"
 COPY backend /app/backend
 COPY lobster_quant /app/lobster_quant
 COPY alembic.ini /app/alembic.ini
