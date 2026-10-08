@@ -8,8 +8,8 @@ Source plan: financial-dual-mas-implementation.md. Gate states below record actu
 | W1 | typed shared runtime, DB checkpoint/restore, two-agent fake drivers, cancellation, dedup, migration and General regression | PASS 761c90a; integrated 2b4b587; Backend 325 / quant 711 passed; executable contracts frozen |
 | W2 | deterministic point-in-time history/anomaly/evidence; future exclusion | PASS bc51601; integrated 244ba52, Backend 152 / quant 680 passed |
 | W3 | strict snapshots, deterministic risk/constraints/candidates/date-aligned simulator; no holdings writes | PASS 3943a2a; integrated eb54c07; combined regressions Backend 261 / quant 711 passed |
-| W4 | independent Market Coordinator/team/state/critic, dynamic evidence-driven routing | ready: W1 + W2 passed |
-| W5 | independent Portfolio Coordinator/team/state/verifier, bounded revision, numeric checks | ready: W1 + W3 passed |
+| W4 | independent Market Coordinator/team/state/critic, dynamic evidence-driven routing | implementing: market_mas isolated worktree at cb53de9; prerequisites PASS |
+| W5 | independent Portfolio Coordinator/team/state/verifier, bounded revision, numeric checks | implementing: portfolio_mas isolated worktree at cb53de9; prerequisites PASS |
 | W6 | versioned artifacts, correlation graph, TTL/idempotency/cycle guards; three workflows | blocked on W4 + W5 |
 | W7 | typed API, legacy lifecycle/SSE dispatch, UI modes and result views | blocked on W6 |
 | W8 | fixtures, equal-budget baselines/ablations, metrics, security/recovery/E2E, full regressions/build | blocked on W7 |
@@ -33,3 +33,5 @@ W3 reviews required repairs for case/trim key collisions and blank sector/proven
 W1 first review: NEEDS_WORK c38e1b27. Independent runtime/migration/legacy core suite 41 passed, focused contract tests 4 passed. Remaining blockers: creation idempotency must include effective mode/budget/correlation, final artifact subject must match request, keys must be checked before Pydantic coercion, drivers need public scoped persisted tool result IDs. The range alignment 0<tolerance<=1e-4 passed. No executable contract freeze or W4/W5 launch until repair and independent PASS.
 
 W1 repair re-review: PASS at 761c90a; independently 70 runtime/migration/legacy-core tests and all four public blocker repros passed. Lead integrated three feature commits excluding duplicate support commit; full Backend 325 and quant 711 passed. Initial Lead test command omitted required PYTHONPATH and failed collection; corrected command with backend;lobster_quant passed without test changes. Contract v1 freezes now. Live PostgreSQL/Redis/Celery recovery remains unverified.
+
+Interruption continuity audit: independent Reviewer checked identical patch IDs for all eight W1/W2/W3 feature/repair commits, frozen cb53de9 worktree bases, baseline and integrated raw logs, unchanged real holdings hashes, and preserved dirty README. PASS; no missing predecessor. Explicit synthetic four-asset MU/SOXX/SPY/TLT fixture helper e9a968c independently reviewed with two actual-tool tests; cutoff and valuation consistency verified. This is demo input preparation, not W6 completion. W8 must adapt tool-level fixture gold to real workflow tasks, add actual nontrading cutoff and paired contradictory evidence/dynamic-routing traces; legacy shallow evaluations are not runtime E2E.
