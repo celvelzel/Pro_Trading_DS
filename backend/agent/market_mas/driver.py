@@ -1,11 +1,11 @@
 """Bounded coordinator; runtime owns persistence and all external operations."""
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Callable
 from datetime import datetime
 from pydantic import Field
 from agent.shared import (MarketState, MarketInvestigationArtifact, EvidenceRef,
-    NumericFact, Hypothesis, SpecialistResult, SpecialistRegistry, SpecialistSpec, BudgetExhausted)
+    NumericFact, Hypothesis, SpecialistResult, SpecialistRegistry, SpecialistSpec, BudgetExhausted, RunBudget)
 from agent.shared.contracts import FinancialModel
 from agent.tools.anomaly import MarketAnomalyInput, MarketAnomalyOutput
 from agent.tools.market_history import MarketHistoryInput, MarketHistoryOutput
@@ -38,11 +38,13 @@ class MarketCoordinator:
     kind = 'market_investigation'
 
     def __init__(self, providers, *, mode: Literal['autonomous', 'fixed', 'single'] = 'autonomous',
-                 max_rounds=3, yield_after_handoff=False):
+                 max_rounds=3, yield_after_handoff=False,
+                 budget_reader: Callable[[str], RunBudget] | None = None):
         if mode not in ('autonomous', 'fixed', 'single') or not 1 <= max_rounds <= 3:
             raise ValueError('unsupported market execution configuration')
         self.mode, self.max_rounds = mode, max_rounds
         self.yield_after_handoff = yield_after_handoff
+        self.budget_reader = budget_reader
         self.specialists = SpecialistRegistry()
         for role in ROLES:
             self.specialists.register(SpecialistSpec(role, providers[role],
@@ -77,6 +79,10 @@ class MarketCoordinator:
         if output.symbol != req.symbol or output.as_of != req.as_of:
             raise ValueError('tool result scope mismatch')
         ref = ctx.tool_result_ref(key)
+        # Same-check data warnings are current availability, not permanent audit.
+        if output.status == 'ok':
+            state.missing_checks = [warning for warning in state.missing_checks
+                                    if not warning.startswith(f'{check}:')]
         if isinstance(output, EventEvidenceOutput):
             for record in output.evidence:
                 if record.published_at is None or record.available_at is None or max(record.published_at, record.available_at) > req.as_of:
@@ -102,7 +108,8 @@ class MarketCoordinator:
                             evidence_id=evidence.id, tool_result_id=ref.tool_result_id)
                         state.numeric_facts = [f for f in state.numeric_facts if f.name != fact.name] + [fact]
         if output.status != 'ok':
-            state.missing_checks = sorted(set(state.missing_checks + [f'{check}: {output.status}'] + output.limitations))
+            state.missing_checks = sorted(set(state.missing_checks + [f'{check}: {output.status}'] +
+                [f'{check}: {warning}' for warning in output.limitations]))
 
     async def _invoke(self, ctx, state, role, key):
         # Each specialist receives only its relevant board slice, never another prompt.
@@ -137,6 +144,12 @@ class MarketCoordinator:
                     existing.against_ids = sorted(set(existing.against_ids + hypothesis.against_ids))
         return result
 
+    def _pending_checks(self, state):
+        # After reconsideration, only the current coordinator/critic verdicts
+        # govern follow-up work. Earlier messages remain audit history.
+        current = state.results[-2:] if len(state.results) > len(ROLES) else state.results
+        return list(dict.fromkeys(c for result in current for c in result.missing_checks))
+
     async def execute(self, ctx, state: MarketState):
         if state.phase == 'investigate':
             ctx.consume_budget('rounds')
@@ -165,23 +178,43 @@ class MarketCoordinator:
             if self.yield_after_handoff:
                 return None
         for round_no in range(1, self.max_rounds):
-            if state.phase not in (f'round:{round_no}', f'check:{round_no}'):
+            if state.phase != f'round:{round_no}' and not any(state.phase.startswith(f'{stage}:{round_no}:') for stage in ('check', 'coordinate', 'critique')):
                 continue
-            requested = list(dict.fromkeys(c for r in state.results for c in r.missing_checks))
-            if self.mode != 'autonomous' or not requested or len(state.results) + 2 > ctx.request.max_llm_calls:
-                break
             if state.phase == f'round:{round_no}':
+                requested = self._pending_checks(state)
+                if self.mode != 'autonomous' or not requested:
+                    break
+                if self.budget_reader is None:
+                    state.missing_checks = sorted(set(state.missing_checks + ['Effective budget reader unavailable; adaptive checks deferred']))
+                    break
+                budget = RunBudget.model_validate(self.budget_reader(ctx.run_id))
+                if (budget.max_model_calls - budget.model_calls < 2 or
+                        budget.max_tool_calls - budget.tool_calls < 1 or
+                        budget.max_rounds - budget.rounds < 1):
+                    state.missing_checks = sorted(set(state.missing_checks + ['Insufficient remaining budget for complete adaptive check']))
+                    break
+                check = requested[0]
                 try:
                     ctx.consume_budget('rounds')
                 except BudgetExhausted:
                     state.missing_checks = sorted(set(state.missing_checks + ['Coordination round budget exhausted']))
                     break
-                state.phase = f'check:{round_no}'
+                state.phase = f'check:{round_no}:{check}'
                 ctx.checkpoint(state, action='replan')
             # A genuine critic/specialist request changes the next executed tool.
-            check = requested[(round_no - 1) % len(requested)]
-            await self._tool(ctx, state, check, f'check:{round_no}:{check}')
-            await self._invoke(ctx, state, 'coordinator', f'coordinator:round:{round_no}')
+            check = state.phase.split(':', 2)[2]
+            if state.phase.startswith('check:'):
+                await self._tool(ctx, state, check, f'check:{round_no}:{check}')
+                state.phase = f'coordinate:{round_no}:{check}'
+                ctx.checkpoint(state, action='handoff')
+                if self.yield_after_handoff:
+                    return None
+            if state.phase.startswith('coordinate:'):
+                await self._invoke(ctx, state, 'coordinator', f'coordinator:round:{round_no}')
+                state.phase = f'critique:{round_no}:{check}'
+                ctx.checkpoint(state, action='handoff')
+                if self.yield_after_handoff:
+                    return None
             await self._invoke(ctx, state, 'critic', f'critic:round:{round_no}')
             state.phase = f'round:{round_no + 1}'
             ctx.checkpoint(state, action='replan')
@@ -192,7 +225,7 @@ class MarketCoordinator:
         return MarketInvestigationArtifact(producing_run_id=ctx.run_id, symbol=ctx.request.symbol,
             as_of=ctx.request.as_of, evidence=state.evidence, numeric_facts=state.numeric_facts,
             hypotheses=state.hypotheses, status='partial' if state.numeric_facts else 'insufficient_evidence',
-            limitations=sorted(set(state.missing_checks + [c for r in state.results for c in r.missing_checks] +
+            limitations=sorted(set(state.missing_checks + self._pending_checks(state) +
                 ['Associations are unverified hypotheses; no confirmed causality.',
                  'Source authenticity requires independently audited input adapters.'])))
 

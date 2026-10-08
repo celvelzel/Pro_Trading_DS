@@ -47,6 +47,7 @@ def assemble(tmp_path, *, check=None, case=0, mode='autonomous', missing=False, 
     registry = WorkflowRegistry()
     registry.register(driver)
     dispatcher = FinancialMASDispatcher(sessions, registry, tools)
+    driver.budget_reader = lambda run_id: RunBudget.model_validate(dispatcher.snapshot(run_id)['budget'])
     request = MarketInvestigationRequest(symbol='DEMO', as_of=pack['cases'][case]['as_of'], sector_benchmark=series[1].symbol)
     run = dispatcher.create('market', request, mode='auto', idempotency_key='investigation')
     return dispatcher, run, sessions, driver, ps, pack
@@ -97,6 +98,7 @@ def test_restored_checkpoints_do_not_rebill_and_keep_refs(tmp_path):
     replacement = MarketCoordinator(ps, yield_after_handoff=True)
     registry.register(replacement)
     restored = FinancialMASDispatcher(sessions, registry, d.tools)
+    replacement.budget_reader = lambda run_id: RunBudget.model_validate(restored.snapshot(run_id)['budget'])
     assert finish(restored, run).status == 'completed'
     budget = restored.snapshot(run.id)['budget']
     assert budget['model_calls'] == 9 and budget['tool_calls'] == 5
@@ -217,6 +219,59 @@ def test_lowered_round_budget_includes_initial_investigation(tmp_path):
         assert s.scalar(select(FinancialInvocation).where(
             FinancialInvocation.run_id == run.id,
             FinancialInvocation.invocation_key == 'check:1:history')) is None
+
+
+@pytest.mark.parametrize('clear,ceiling,expected', [(True, 7, 7), (False, 7, 7), (False, 6, 5)])
+def test_current_challenge_and_effective_budget_before_next_tool(tmp_path, clear, ceiling, expected):
+    d, _, sessions, driver, _, _ = assemble(tmp_path, check='history')
+    if clear:
+        object.__setattr__(driver.specialists.get('critic'), 'provider', ScriptedFakeModel([
+            {'kind': 'result', 'payload': {'role': 'critic', 'action': 'challenge', 'summary': 'Check missing history', 'missing_checks': ['history']}},
+            {'kind': 'result', 'payload': {'role': 'critic', 'action': 'verdict', 'summary': 'History checked; request resolved', 'missing_checks': []}}]))
+    run = d.create('market', MarketInvestigationRequest(symbol='DEMO',
+        as_of='2026-09-29T20:10:00Z', sector_benchmark='SECTOR'), mode='auto',
+        idempotency_key='effective-limit', budget=RunBudget(max_model_calls=ceiling))
+    assert finish(d, run).status == 'completed'
+    budget = d.snapshot(run.id)['budget']
+    assert budget['model_calls'] == expected
+    assert budget['tool_calls'] == (4 if expected == 7 else 3)
+    with sessions() as s:
+        assert s.scalar(select(FinancialInvocation).where(FinancialInvocation.run_id == run.id,
+            FinancialInvocation.invocation_key == 'check:2:history')) is None
+    artifact = json.loads(d.get_run(run.id).final_answer)
+    if clear:
+        assert 'history' not in artifact['limitations']
+
+
+def test_missing_budget_reader_defers_without_spending_followup(tmp_path):
+    d, run, _, driver, _, _ = assemble(tmp_path, check='history')
+    driver.budget_reader = None
+    assert finish(d, run).status == 'completed'
+    assert d.snapshot(run.id)['budget']['model_calls'] == 5
+    assert 'Effective budget reader unavailable; adaptive checks deferred' in json.loads(d.get_run(run.id).final_answer)['limitations']
+
+
+def test_successful_followup_retires_same_check_data_warning(tmp_path):
+    d, run, _, driver, _, pack = assemble(tmp_path, check='events')
+    records = [market_events.EventRecord.model_validate(e) for e in pack['cases'][0]['events']]
+    class NewlyAvailableEvents:
+        def __init__(self):
+            self.calls = 0
+        def load(self, symbol):
+            self.calls += 1
+            return [] if self.calls == 1 else records
+    # Reassemble only the registered event dependency; actual W2 handler retained.
+    original_tools = d.tools
+    tools = ToolRegistry()
+    for name in ('get_market_history', 'calculate_market_anomaly'):
+        tools.register(original_tools.get(name))
+    market_events.register_tools(tools, market_events.EventDependencies(NewlyAvailableEvents()))
+    d.tools = tools
+    driver.max_rounds = 2
+    assert finish(d, run).status == 'completed'
+    artifact = json.loads(d.get_run(run.id).final_answer)
+    assert not any(warning.startswith('events:') for warning in artifact['limitations'])
+    assert any(e['source_type'] != 'market_tool' for e in artifact['evidence'])
 
 
 @pytest.mark.parametrize('case', [0, 6, 7])

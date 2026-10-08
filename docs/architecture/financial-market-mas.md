@@ -2,7 +2,7 @@
 
 `agent.market_mas.MarketCoordinator` implements the frozen W1 WorkflowDriver.
 `create_market_driver(providers, *, mode='autonomous', max_rounds=3,
-yield_after_handoff=False)` constructs it; `register_market_driver(registry,
+yield_after_handoff=False, budget_reader=None)` constructs it; `register_market_driver(registry,
 providers, **kwargs)` additionally registers it. `providers` explicitly maps
 `coordinator`, `price_volume`, `macro_sector`, `event`, `critic` to ModelProvider
 objects. Each role makes a separate model call with a distinct prompt and typed
@@ -27,6 +27,26 @@ Logical invocation keys and phase checkpoints remain stable across delivery
 restart; persisted tool envelopes and calls are replayed, retaining actual
 ToolResult UUIDs. `yield_after_handoff` supports reproducible checkpoint demos.
 Changing execution configuration behind an existing run is unsupported.
+
+Autonomous follow-up scheduling requires an explicit `budget_reader(run_id)`
+returning the effective current RunBudget. After assembling the dispatcher,
+inject `lambda run_id: RunBudget.model_validate(dispatcher.snapshot(run_id)['budget'])`.
+This uses the existing public snapshot API and does not inspect runtime tables.
+Without a reader, the initial independent investigation completes as partial
+with an explicit deferred-check limitation. Before starting a follow-up the
+driver requires two remaining model calls, one tool call and one round; a lower
+runtime ceiling is authoritative even when request.max_llm_calls is higher.
+An admitted round checkpoints its selected check, accepted tool output,
+Coordinator result and Critic result separately. Restored intermediate phases
+continue stable invocation keys without a new admission check for cached work.
+Initial investigation consumes one round; total rounds remain bounded by W1.
+
+After reconsideration, only current Coordinator/Critic missing_checks determine
+the next action. Earlier specialist messages remain audit history; a cleared
+challenge is retired and omitted from active limitations. Persistent challenges
+may repeat within budget, but a resolved history request cannot schedule a
+second history tool call. Source/data limitations remain explicit independently
+of role requests.
 
 NumericFacts are copied only from validated W2 anomaly fields and cite
 `ctx.tool_result_ref(key).tool_result_id`, not the W2 content reference or
