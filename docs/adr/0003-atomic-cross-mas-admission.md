@@ -1,6 +1,6 @@
 # ADR-0003: Atomic cross-MAS message admission
 
-- Status: Proposed; W6 is blocked until independent design and implementation reviews pass.
+- Status: Accepted; independent design PASS 124dcba and implementation PASS 8fb79b6, integrated 50a41f2. W6 still awaits other prerequisites.
 - Date: 2026-10-08
 - Predecessor: frozen W1 contract and independent W4/W5 gates, integration `eb1d256`.
 
