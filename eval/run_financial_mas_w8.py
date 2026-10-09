@@ -74,6 +74,18 @@ MARKET_COMPARATOR_LABELS = {
     "fixed": "fixed specialist sequence without dynamic routing",
     "single": "single coordinator model with deterministic tools",
 }
+MARKET_NUMERIC_FACT_GOLD_FIELDS = {
+    "market.return_pct": "return_pct",
+    "market.volume_ratio_20": "volume_ratio_20",
+    "market.excess_return_pct": "market_excess_return_pct",
+    "market.relative_strength": "market_relative_strength",
+    "sector.excess_return_pct": "sector_excess_return_pct",
+    "sector.relative_strength": "sector_relative_strength",
+}
+INFEASIBLE_STATUS_REASONS = {
+    "min_cash_exceeds_cash_cap",
+    "insufficient_capacity_under_hard_caps",
+}
 TERMINAL = {"completed", "failed", "cancelled", "expired"}
 
 
@@ -181,17 +193,9 @@ def _market_metrics(case, artifact, persisted):
                            if actual_event_count is not None else False)
 
     fact_values = {fact.get("name"): fact.get("value") for fact in (artifact or {}).get("numeric_facts", [])}
-    fact_map = {
-        "market.return_pct": "return_pct",
-        "market.volume_ratio_20": "volume_ratio_20",
-        "market.excess_return_pct": "market_excess_return_pct",
-        "market.relative_strength": "market_relative_strength",
-        "sector.excess_return_pct": "sector_excess_return_pct",
-        "sector.relative_strength": "sector_relative_strength",
-    }
     numeric_matches = 0
     numeric_expected = 0
-    for fact_name, gold_name in fact_map.items():
+    for fact_name, gold_name in MARKET_NUMERIC_FACT_GOLD_FIELDS.items():
         if gold_name not in case.gold:
             continue
         numeric_expected += 1
@@ -433,28 +437,42 @@ def _simulation_consistency(persisted, artifact):
             "artifact_net_return": str(artifact_return) if artifact_return is not None else None}
 
 
+def _portfolio_gold_eligibility(gold):
+    expected = gold.get("status")
+    reason = gold.get("reason")
+    expected_infeasible = reason in INFEASIBLE_STATUS_REASONS
+    expected_feasible = expected == "feasible"
+    expected_missing = reason in INDEPENDENT_STATUS_REASONS and not expected_infeasible
+    return {
+        "status_metric_eligible": expected_infeasible or expected_missing,
+        "infeasibility_detection_eligible": expected_infeasible or expected_feasible,
+        "gold_infeasible": expected_infeasible,
+        "gold_feasible": expected_feasible,
+        "missing_data_safety_eligible": expected_missing,
+    }
+
+
 def _portfolio_metrics(case, artifact, persisted):
     status = (artifact or {}).get("status")
     expected = case.gold.get("status")
-    reason = case.gold.get("reason")
-    expected_infeasible = reason in {"min_cash_exceeds_cash_cap", "insufficient_capacity_under_hard_caps"}
-    expected_feasible = expected == "feasible"
-    infeasibility_eligible = expected_infeasible or expected_feasible
+    eligibility = _portfolio_gold_eligibility(case.gold)
+    expected_infeasible = eligibility["gold_infeasible"]
+    expected_feasible = eligibility["gold_feasible"]
+    expected_missing = eligibility["missing_data_safety_eligible"]
     predicted_infeasible = status == "infeasible"
-    expected_missing = reason in INDEPENDENT_STATUS_REASONS and not expected_infeasible
     predicted_safe_missing = status != "feasible"
     check = (artifact or {}).get("constraint_check") or {}
     unsafe_feasible = status == "feasible" and check.get("status") != "pass"
     return {
         "artifact_status": status,
         "gold_status": expected,
-        "status_metric_eligible": expected_infeasible or expected_missing,
-        "status_correct": (status == expected) if expected_infeasible or expected_missing else None,
+        "status_metric_eligible": eligibility["status_metric_eligible"],
+        "status_correct": status == expected if eligibility["status_metric_eligible"] else None,
         "hard_constraint_violation": unsafe_feasible,
         "infeasibility_detection": {"true_positive": expected_infeasible and predicted_infeasible,
             "false_positive": expected_feasible and predicted_infeasible,
             "false_negative": expected_infeasible and not predicted_infeasible,
-            "eligible": infeasibility_eligible,
+            "eligible": eligibility["infeasibility_detection_eligible"],
             "gold_positive": expected_infeasible,
             "gold_negative": expected_feasible},
         "missing_data_safety": {"safe": predicted_safe_missing,
@@ -504,27 +522,87 @@ def _new_dispatcher(session_factory, case, domain, mode):
         execution_profile=PROFILE, **kwargs)
 
 
-def _run_one(case, domain, mode, session_factory):
+def _budget_counters(budget):
+    return {
+        "model_calls": budget.get("model_calls", 0),
+        "tool_calls": budget.get("tool_calls", 0),
+        "rounds": budget.get("rounds", 0),
+        "limits": {key: budget.get(key) for key in ("max_model_calls", "max_tool_calls",
+            "max_rounds", "max_active_seconds", "max_hops", "max_followups")},
+        "persisted_model_invocations": 0,
+        "persisted_tool_invocations": 0,
+        "persisted_tool_calls": 0,
+        "persisted_tool_results": 0,
+        "events": 0,
+        "artifacts": 0,
+        "relations": 0,
+        "token_usage": None,
+    }
+
+
+def _run_one(case, domain, mode, session_factory, execution_context=None):
+    context = execution_context if execution_context is not None else {}
+    context.update({
+        "actual_workflow_executed": False,
+        "failure_stage": "pre_execution",
+        "run_id": None,
+        "conversation_id": None,
+        "run_status": None,
+        "run_error_code": None,
+        "wall_ms": None,
+        "run_budget": {},
+        "counters": _budget_counters({}),
+        "actual_artifact": None,
+        "persisted": {},
+    })
     dispatcher = _new_dispatcher(session_factory, case, domain, mode)
+    context["_dispatcher"] = dispatcher
     if any(not tool.read_only or tool.side_effect for tool in dispatcher.tools.list()):
         raise RuntimeError("evaluation runner refuses a non-read-only financial tool")
     conversation_id = str(uuid.uuid4())
     with session_factory() as session:
         session.add(Conversation(id=conversation_id, title=f"W8 {domain} {case.case_id}"))
         session.commit()
+    context["conversation_id"] = conversation_id
     request = case.request
     run = dispatcher.create(conversation_id, request, mode="auto",
         idempotency_key=f"w8:{domain}:{mode}:{case.case_id}",
         correlation_id=f"w8:{domain}:{mode}:{case.case_id}", budget=RunBudget())
+    context.update({"actual_workflow_executed": True, "failure_stage": "execution_capture",
+        "run_id": run.id, "conversation_id": conversation_id,
+        "run_status": run.status, "run_error_code": run.error_code})
+    initial_snapshot = dispatcher.snapshot(run.id)
+    context.update({"failure_stage": "runtime",
+        "run_budget": initial_snapshot.get("budget", {}),
+        "counters": _budget_counters(initial_snapshot.get("budget", {}))})
     started = time.perf_counter_ns()
     completed = None
-    for _ in range(8):
-        completed = asyncio.run(dispatcher.start(run.id))
-        if completed.status in TERMINAL:
-            break
-    wall_ms = (time.perf_counter_ns() - started) / 1_000_000
+    try:
+        for _ in range(8):
+            try:
+                completed = asyncio.run(dispatcher.start(run.id))
+            except Exception:
+                snapshot = dispatcher.snapshot(run.id)
+                context["run_status"] = snapshot.get("status", context.get("run_status"))
+                context["run_error_code"] = snapshot.get("error_code")
+                context["run_budget"] = snapshot.get("budget", context.get("run_budget", {}))
+                context["counters"] = _budget_counters(context["run_budget"])
+                context["failure_stage"] = "runtime"
+                raise
+            context["run_status"] = completed.status
+            context["run_error_code"] = completed.error_code
+            context["failure_stage"] = "runtime"
+            snapshot = dispatcher.snapshot(run.id)
+            context["run_budget"] = snapshot.get("budget", {})
+            context["counters"] = _budget_counters(context["run_budget"])
+            if completed.status in TERMINAL:
+                break
+    finally:
+        wall_ms = (time.perf_counter_ns() - started) / 1_000_000
+        context["wall_ms"] = wall_ms
     if completed is None or completed.status not in TERMINAL:
         raise RuntimeError("bounded runtime did not reach a terminal status")
+    context["failure_stage"] = "execution_capture"
     persisted = _persisted_run(session_factory, run.id)
     answer = completed.final_answer
     try:
@@ -534,12 +612,8 @@ def _run_one(case, domain, mode, session_factory):
     budget = persisted["financial_run"]["budget"]
     invocations = persisted["invocations"]
     tools = persisted["tool_calls"]
-    counters = {
-        "model_calls": budget.get("model_calls", 0),
-        "tool_calls": budget.get("tool_calls", 0),
-        "rounds": budget.get("rounds", 0),
-        "limits": {key: budget.get(key) for key in ("max_model_calls", "max_tool_calls",
-            "max_rounds", "max_active_seconds", "max_hops", "max_followups")},
+    counters = _budget_counters(budget)
+    counters.update({
         "persisted_model_invocations": sum(row["kind"] == "model" for row in invocations),
         "persisted_tool_invocations": sum(row["kind"] == "tool" for row in invocations),
         "persisted_tool_calls": len(tools),
@@ -547,10 +621,7 @@ def _run_one(case, domain, mode, session_factory):
         "events": len(persisted["events"]),
         "artifacts": len(persisted["artifacts"]),
         "relations": len(persisted["relations"]),
-        "token_usage": None,
-    }
-    metrics = (_market_metrics(case, artifact, persisted) if domain == "market"
-               else _portfolio_metrics(case, artifact, persisted))
+    })
     raw = {
         "schema_version": SCHEMA_VERSION,
         "suite": "financial-mas-workflow-v1",
@@ -570,17 +641,70 @@ def _run_one(case, domain, mode, session_factory):
         "run_error_code": completed.error_code,
         "run_id": run.id,
         "conversation_id": conversation_id,
+        "run_budget": budget,
         "wall_ms": wall_ms,
         "counters": counters,
         "actual_artifact": artifact,
-        "metrics": metrics,
+        "gold_metric_eligibility": (_portfolio_gold_eligibility(case.gold)
+            if domain == "portfolio" else {}),
+        "failure_stage": "scoring",
+        "evaluation_status": "pending",
+        "evaluation_error": None,
+        "metrics": {},
         "persisted": persisted,
     }
+    context.update(raw)
+    context["failure_stage"] = "scoring"
+    try:
+        raw["metrics"] = (_market_metrics(case, artifact, persisted) if domain == "market"
+                           else _portfolio_metrics(case, artifact, persisted))
+        raw["evaluation_status"] = "scored"
+        raw["failure_stage"] = None
+        context["failure_stage"] = None
+    except Exception as exc:  # Preserve completed execution evidence when scoring fails.
+        raw["evaluation_status"] = "evaluation_error"
+        raw["failure_stage"] = "scoring"
+        raw["evaluation_error"] = {"type": type(exc).__name__, "message": str(exc)}
+        context.update(raw)
     return raw
+
+
+def _metric_scoring_coverage(rows):
+    cases = len(rows)
+    scored = sum(row.get("evaluation_status") == "scored" for row in rows)
+    evaluation_errors = sum(row.get("evaluation_status") == "evaluation_error" for row in rows)
+    harness_errors = sum(row.get("run_status") == "harness_error" for row in rows)
+    return {
+        "case_count": cases,
+        "scored_case_count": scored,
+        "unscored_case_count": cases - scored,
+        "scored_fraction": scored / cases if cases else None,
+        "evaluation_error_count": evaluation_errors,
+        "harness_error_count": harness_errors,
+    }
+
+
+def _mark_metrics_unscorable(metrics, metric_names, coverage):
+    if not coverage["unscored_case_count"]:
+        return
+    for name in metric_names:
+        metric = metrics.get(name)
+        if not isinstance(metric, dict) or metric.get("scorable") is False:
+            continue
+        if "value" in metric:
+            metric["scored_subset_value"] = metric["value"]
+            metric["value"] = None
+        metric.update({
+            "scorable": False,
+            "scored_case_count": coverage["scored_case_count"],
+            "unscored_case_count": coverage["unscored_case_count"],
+            "reason": "One or more fixture rows have no complete metric scoring; see metric_scoring_coverage.",
+        })
 
 
 def _aggregate(rows, domain):
     cases = len(rows)
+    scoring_coverage = _metric_scoring_coverage(rows)
     wall = [float(row["wall_ms"]) for row in rows if row.get("wall_ms") is not None]
     counter_names = ("model_calls", "tool_calls", "rounds", "persisted_model_invocations",
                      "persisted_tool_invocations", "persisted_tool_results")
@@ -594,6 +718,7 @@ def _aggregate(rows, domain):
             "median": statistics.median(wall) if wall else None,
             "max": max(wall) if wall else None},
         "token_usage": {"available": False, "total": None},
+        "metric_scoring_coverage": scoring_coverage,
     }
     if domain == "market":
         metric_rows = [row.get("metrics", {}) for row in rows]
@@ -606,8 +731,9 @@ def _aggregate(rows, domain):
         fact_ref_num = sum(metric.get("numeric_fact_provenance", {}).get("numerator", 0) for metric in metric_rows)
         fact_ref_den = sum(metric.get("numeric_fact_provenance", {}).get("denominator", 0) for metric in metric_rows)
         numeric_num = sum(metric.get("numeric_fact_accuracy", {}).get("numerator", 0) for metric in metric_rows)
-        numeric_den = sum(metric.get("numeric_fact_accuracy", {}).get("denominator", 0) for metric in metric_rows)
-        return base | {"event_eligible_count_accuracy": {"numerator": count_correct,
+        numeric_den = sum(sum(gold_field in row.get("expected_gold", {})
+            for gold_field in MARKET_NUMERIC_FACT_GOLD_FIELDS.values()) for row in rows)
+        result = base | {"event_eligible_count_accuracy": {"numerator": count_correct,
                 "denominator": cases, "value": count_correct / cases if cases else None},
             "artifact_status_accuracy": {"numerator": status_correct, "denominator": cases,
                 "value": status_correct / cases if cases else None},
@@ -624,35 +750,65 @@ def _aggregate(rows, domain):
             "event_association_supported_disposition_count": sum(metric.get("event_association_supported_disposition_count", 0)
                 for metric in metric_rows),
             "numeric_fact_accuracy": {"numerator": numeric_num, "denominator": numeric_den,
-                "value": numeric_num / numeric_den if numeric_den else None},
+                "value": numeric_num / numeric_den if numeric_den else None,
+                "failure_policy": "unscored case facts receive zero credit against fixture-derived gold denominator",
+                "scored_case_count": scoring_coverage["scored_case_count"],
+                "unscored_case_count": scoring_coverage["unscored_case_count"]},
             "partial_result_correctness": {"numerator": status_correct, "denominator": cases,
                 "value": status_correct / cases if cases else None}}
+        result["event_eligible_count_accuracy"].update({
+            "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+            "scored_case_count": scoring_coverage["scored_case_count"],
+            "unscored_case_count": scoring_coverage["unscored_case_count"],
+        })
+        result["artifact_status_accuracy"].update({
+            "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+            "scored_case_count": scoring_coverage["scored_case_count"],
+            "unscored_case_count": scoring_coverage["unscored_case_count"],
+        })
+        result["partial_result_correctness"].update({
+            "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+            "scored_case_count": scoring_coverage["scored_case_count"],
+            "unscored_case_count": scoring_coverage["unscored_case_count"],
+        })
+        _mark_metrics_unscorable(result, (
+            "evidence_citation_precision", "artifact_evidence_provenance",
+            "numeric_fact_provenance", "timing_violations",
+            "event_association_supported_disposition_count",
+        ), scoring_coverage)
+        return result
 
     metric_rows = [row.get("metrics", {}) for row in rows]
-    status_rows = [metric for metric in metric_rows if metric.get("status_metric_eligible")]
-    status_correct = sum(metric.get("status_correct") is True for metric in status_rows)
-    infeasible_rows = [metric.get("infeasibility_detection", {}) for metric in metric_rows
-                       if metric.get("infeasibility_detection", {}).get("eligible")]
-    missing_rows = [metric for metric in metric_rows if metric.get("missing_data_safety", {}).get("eligible")]
+    status_rows = [row for row in rows
+                   if row.get("gold_metric_eligibility", {}).get("status_metric_eligible")]
+    status_correct = sum(row.get("metrics", {}).get("status_correct") is True for row in status_rows)
+    infeasible_rows = [row for row in rows
+                       if row.get("gold_metric_eligibility", {}).get("infeasibility_detection_eligible")]
+    missing_rows = [row for row in rows
+                    if row.get("gold_metric_eligibility", {}).get("missing_data_safety_eligible")]
     risk_num = sum(metric.get("risk_calculation_accuracy", {}).get("numerator", 0) for metric in metric_rows)
     risk_den = sum(metric.get("risk_calculation_accuracy", {}).get("denominator", 0) for metric in metric_rows)
     risk_computable = sum(metric.get("risk_calculation_accuracy", {}).get("computable_fields", 0) for metric in metric_rows)
     sim_num = sum(metric.get("simulation_net_value_consistency", {}).get("correct_points", 0) for metric in metric_rows)
     sim_den = sum(metric.get("simulation_net_value_consistency", {}).get("total_points", 0) for metric in metric_rows)
-    return base | {
+    result = base | {
         "status_accuracy_on_input_determined_cases": {"numerator": status_correct,
-            "denominator": len(status_rows), "value": status_correct / len(status_rows) if status_rows else None},
+            "denominator": len(status_rows), "value": status_correct / len(status_rows) if status_rows else None,
+            "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+            "unscored_eligible_cases": sum(row.get("evaluation_status") != "scored" for row in status_rows)},
         "hard_constraint_violation_safety": {"unsafe_feasible_declarations": sum(
             metric.get("hard_constraint_violation", False) for metric in metric_rows), "denominator": cases},
         "infeasibility_detection": {"true_positive": sum(metric.get("infeasibility_detection", {}).get("true_positive", False) for metric in metric_rows),
             "false_positive": sum(metric.get("infeasibility_detection", {}).get("false_positive", False) for metric in metric_rows),
             "false_negative": sum(metric.get("infeasibility_detection", {}).get("false_negative", False) for metric in metric_rows),
-            "gold_positive_denominator": sum(metric.get("gold_positive", False) for metric in infeasible_rows),
-            "gold_negative_denominator": sum(metric.get("gold_negative", False) for metric in infeasible_rows)},
-        "missing_data_safety": {"safe": sum(metric.get("missing_data_safety", {}).get("safe", False) for metric in missing_rows),
-            "unsafe_feasible_declarations": sum(metric.get("missing_data_safety", {}).get("unsafe_feasible_declaration", False) for metric in metric_rows),
-            "denominator": len(missing_rows), "value": sum(metric.get("missing_data_safety", {}).get("safe", False)
-                for metric in missing_rows) / len(missing_rows) if missing_rows else None},
+            "gold_positive_denominator": sum(row.get("gold_metric_eligibility", {}).get("gold_infeasible", False)
+                for row in infeasible_rows),
+            "gold_negative_denominator": sum(row.get("gold_metric_eligibility", {}).get("gold_feasible", False)
+                for row in infeasible_rows)},
+        "missing_data_safety": {"safe": sum(row.get("metrics", {}).get("missing_data_safety", {}).get("safe", False) for row in missing_rows),
+            "unsafe_feasible_declarations": sum(row.get("metrics", {}).get("missing_data_safety", {}).get("unsafe_feasible_declaration", False) for row in rows),
+            "denominator": len(missing_rows), "value": sum(row.get("metrics", {}).get("missing_data_safety", {}).get("safe", False)
+                for row in missing_rows) / len(missing_rows) if missing_rows else None},
         "risk_calculation_accuracy": {"numerator": risk_num, "denominator": risk_den,
             "value": risk_num / risk_den if risk_den else None,
             "computable_fields": risk_computable,
@@ -669,6 +825,20 @@ def _aggregate(rows, domain):
             "feasible_artifacts_with_simulation": sum((row.get("actual_artifact") or {}).get("status") == "feasible"
                 and bool((row.get("actual_artifact") or {}).get("simulation")) for row in rows)},
     }
+    result["status_accuracy_on_input_determined_cases"].update({
+        "scored_eligible_cases": sum(row.get("evaluation_status") == "scored" for row in status_rows),
+        "scorable": True,
+    })
+    result["missing_data_safety"].update({
+        "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+        "unscored_eligible_cases": sum(row.get("evaluation_status") != "scored" for row in missing_rows),
+        "scorable": True,
+    })
+    _mark_metrics_unscorable(result, (
+        "hard_constraint_violation_safety", "infeasibility_detection",
+        "risk_calculation_accuracy", "simulation_net_value_consistency",
+    ), scoring_coverage)
+    return result
 
 
 def run_domain(domain, modes, cases, output_dir, verbose=True):
@@ -683,9 +853,49 @@ def run_domain(domain, modes, cases, output_dir, verbose=True):
             for mode in modes:
                 rows = []
                 for index, case in enumerate(cases, start=1):
+                    execution_context = {}
                     try:
-                        row = _run_one(case, domain, mode, sessions)
+                        row = _run_one(case, domain, mode, sessions, execution_context)
                     except Exception as exc:  # Preserve the failure as an explicit row; never drop a case.
+                        persisted = execution_context.get("persisted") or {}
+                        run_id = execution_context.get("run_id")
+                        dispatcher = execution_context.get("_dispatcher")
+                        if run_id and dispatcher:
+                            try:
+                                snapshot = dispatcher.snapshot(run_id)
+                                execution_context["run_status"] = snapshot.get("status",
+                                    execution_context.get("run_status"))
+                                execution_context["run_error_code"] = snapshot.get("error_code")
+                                execution_context["run_budget"] = snapshot.get("budget",
+                                    execution_context.get("run_budget", {}))
+                                execution_context["counters"] = _budget_counters(
+                                    execution_context["run_budget"])
+                            except Exception:
+                                pass
+                        if run_id and not persisted:
+                            try:
+                                persisted = _persisted_run(sessions, run_id)
+                            except Exception:
+                                persisted = {}
+                        counters = dict(execution_context.get("counters") or _budget_counters({}))
+                        if persisted:
+                            counters.update({
+                                "persisted_model_invocations": sum(row["kind"] == "model" for row in persisted["invocations"]),
+                                "persisted_tool_invocations": sum(row["kind"] == "tool" for row in persisted["invocations"]),
+                                "persisted_tool_calls": len(persisted["tool_calls"]),
+                                "persisted_tool_results": len(persisted["tool_results"]),
+                                "events": len(persisted["events"]),
+                                "artifacts": len(persisted["artifacts"]),
+                                "relations": len(persisted["relations"]),
+                            })
+                        actual_artifact = execution_context.get("actual_artifact")
+                        if actual_artifact is None and persisted:
+                            answer = (persisted.get("run") or {}).get("final_answer")
+                            try:
+                                actual_artifact = json.loads(answer) if answer else None
+                            except (TypeError, json.JSONDecodeError):
+                                actual_artifact = None
+                        row_status = execution_context.get("run_status") or "harness_error"
                         row = {"schema_version": SCHEMA_VERSION, "suite": "financial-mas-workflow-v1",
                             "profile": PROFILE, "domain": domain, "strategy": mode,
                             "comparator": (MARKET_COMPARATOR_LABELS if domain == "market" else PORTFOLIO_COMPARATOR_LABELS)[mode],
@@ -693,11 +903,19 @@ def run_domain(domain, modes, cases, output_dir, verbose=True):
                             "synthetic_fixture": True, "fixture_adapter_sha256": case.adapter_sha256,
                             "source_case_sha256": case.source_case_sha256,
                             "request": case.request.model_dump(mode="json"), "expected_gold": case.gold,
-                            "actual_workflow_executed": False, "run_status": "harness_error",
-                            "run_error_code": f"{type(exc).__name__}: {exc}", "run_id": None,
-                            "conversation_id": None, "wall_ms": None,
-                            "counters": {"model_calls": 0, "tool_calls": 0, "token_usage": None},
-                            "actual_artifact": None, "metrics": {}, "persisted": {}}
+                            "gold_metric_eligibility": (_portfolio_gold_eligibility(case.gold)
+                                if domain == "portfolio" else {}),
+                            "actual_workflow_executed": bool(execution_context.get("actual_workflow_executed")),
+                            "run_status": row_status,
+                            "failure_stage": (execution_context.get("failure_stage")
+                                or ("execution_capture" if run_id else "pre_execution")),
+                            "evaluation_status": "unscored",
+                            "evaluation_error": None,
+                            "run_error_code": f"{type(exc).__name__}: {exc}",
+                            "conversation_id": execution_context.get("conversation_id"),
+                            "run_id": run_id, "run_budget": execution_context.get("run_budget", {}),
+                            "wall_ms": execution_context.get("wall_ms"), "counters": counters,
+                            "actual_artifact": actual_artifact, "metrics": {}, "persisted": persisted}
                     rows.append(row)
                     if verbose:
                         print(f"{domain}/{mode}: {index}/{len(cases)} {case.case_id} "

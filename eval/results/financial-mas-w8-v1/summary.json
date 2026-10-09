@@ -14,7 +14,7 @@
         "cross_admitted": 1
       },
       "run_count": 2,
-      "wall_ms": 1058.6381
+      "wall_ms": 1050.6031
     },
     "market:autonomous": {
       "comparator": "adaptive autonomous workflow",
@@ -26,7 +26,10 @@
         },
         "artifact_status_accuracy": {
           "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
           "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "case_count": 12,
@@ -41,7 +44,10 @@
         "event_association_supported_disposition_count": 0,
         "event_eligible_count_accuracy": {
           "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
           "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "evidence_citation_precision": {
@@ -51,13 +57,24 @@
         },
         "latency_ms": {
           "denominator": 12,
-          "max": 721.111,
-          "mean": 580.3030166666666,
-          "median": 612.92
+          "max": 681.6772,
+          "mean": 565.3335333333333,
+          "median": 616.6917000000001
+        },
+        "metric_scoring_coverage": {
+          "case_count": 12,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 12,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
         },
         "numeric_fact_accuracy": {
           "denominator": 72,
+          "failure_policy": "unscored case facts receive zero credit against fixture-derived gold denominator",
           "numerator": 72,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "numeric_fact_provenance": {
@@ -67,7 +84,10 @@
         },
         "partial_result_correctness": {
           "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
           "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "terminal_completed": 12,
@@ -99,7 +119,10 @@
         },
         "artifact_status_accuracy": {
           "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
           "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "case_count": 12,
@@ -114,7 +137,10 @@
         "event_association_supported_disposition_count": 0,
         "event_eligible_count_accuracy": {
           "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
           "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "evidence_citation_precision": {
@@ -124,13 +150,24 @@
         },
         "latency_ms": {
           "denominator": 12,
-          "max": 473.8435,
-          "mean": 401.678275,
-          "median": 399.16655000000003
+          "max": 392.063,
+          "mean": 365.5566,
+          "median": 367.0711
+        },
+        "metric_scoring_coverage": {
+          "case_count": 12,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 12,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
         },
         "numeric_fact_accuracy": {
           "denominator": 72,
+          "failure_policy": "unscored case facts receive zero credit against fixture-derived gold denominator",
           "numerator": 72,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "numeric_fact_provenance": {
@@ -140,7 +177,10 @@
         },
         "partial_result_correctness": {
           "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
           "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "terminal_completed": 12,
@@ -172,7 +212,10 @@
         },
         "artifact_status_accuracy": {
           "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
           "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "case_count": 12,
@@ -187,7 +230,10 @@
         "event_association_supported_disposition_count": 0,
         "event_eligible_count_accuracy": {
           "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
           "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "evidence_citation_precision": {
@@ -197,13 +243,24 @@
         },
         "latency_ms": {
           "denominator": 12,
-          "max": 243.3445,
-          "mean": 223.07448333333332,
-          "median": 226.30259999999998
+          "max": 289.2391,
+          "mean": 214.055025,
+          "median": 206.2405
+        },
+        "metric_scoring_coverage": {
+          "case_count": 12,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 12,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
         },
         "numeric_fact_accuracy": {
           "denominator": 72,
+          "failure_policy": "unscored case facts receive zero credit against fixture-derived gold denominator",
           "numerator": 72,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "numeric_fact_provenance": {
@@ -213,7 +270,10 @@
         },
         "partial_result_correctness": {
           "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
           "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
           "value": 1.0
         },
         "terminal_completed": 12,
@@ -260,14 +320,25 @@
         },
         "latency_ms": {
           "denominator": 30,
-          "max": 676.3418,
-          "mean": 463.61763333333334,
-          "median": 462.1932
+          "max": 641.4446,
+          "mean": 486.8991066666667,
+          "median": 508.52665
+        },
+        "metric_scoring_coverage": {
+          "case_count": 30,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 30,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
         },
         "missing_data_safety": {
           "denominator": 8,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
           "safe": 8,
+          "scorable": true,
           "unsafe_feasible_declarations": 0,
+          "unscored_eligible_cases": 0,
           "value": 1.0
         },
         "risk_calculation_accuracy": {
@@ -289,7 +360,11 @@
         },
         "status_accuracy_on_input_determined_cases": {
           "denominator": 10,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
           "numerator": 10,
+          "scorable": true,
+          "scored_eligible_cases": 10,
+          "unscored_eligible_cases": 0,
           "value": 1.0
         },
         "terminal_completed": 30,
@@ -326,14 +401,25 @@
         },
         "latency_ms": {
           "denominator": 30,
-          "max": 650.8178,
-          "mean": 459.6449166666667,
-          "median": 472.37715000000003
+          "max": 556.7176,
+          "mean": 435.71295,
+          "median": 457.2736
+        },
+        "metric_scoring_coverage": {
+          "case_count": 30,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 30,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
         },
         "missing_data_safety": {
           "denominator": 8,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
           "safe": 8,
+          "scorable": true,
           "unsafe_feasible_declarations": 0,
+          "unscored_eligible_cases": 0,
           "value": 1.0
         },
         "risk_calculation_accuracy": {
@@ -355,7 +441,11 @@
         },
         "status_accuracy_on_input_determined_cases": {
           "denominator": 10,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
           "numerator": 10,
+          "scorable": true,
+          "scored_eligible_cases": 10,
+          "unscored_eligible_cases": 0,
           "value": 1.0
         },
         "terminal_completed": 30,
@@ -392,14 +482,25 @@
         },
         "latency_ms": {
           "denominator": 30,
-          "max": 472.9474,
-          "mean": 370.2310366666667,
-          "median": 398.4563
+          "max": 692.7036,
+          "mean": 465.16363333333334,
+          "median": 490.7827
+        },
+        "metric_scoring_coverage": {
+          "case_count": 30,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 30,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
         },
         "missing_data_safety": {
           "denominator": 8,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
           "safe": 8,
+          "scorable": true,
           "unsafe_feasible_declarations": 0,
+          "unscored_eligible_cases": 0,
           "value": 1.0
         },
         "risk_calculation_accuracy": {
@@ -421,7 +522,11 @@
         },
         "status_accuracy_on_input_determined_cases": {
           "denominator": 10,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
           "numerator": 10,
+          "scorable": true,
+          "scored_eligible_cases": 10,
+          "unscored_eligible_cases": 0,
           "value": 1.0
         },
         "terminal_completed": 30,
@@ -458,14 +563,25 @@
         },
         "latency_ms": {
           "denominator": 30,
-          "max": 366.1392,
-          "mean": 268.0784766666667,
-          "median": 299.2124
+          "max": 552.7209,
+          "mean": 306.59307333333334,
+          "median": 335.49835
+        },
+        "metric_scoring_coverage": {
+          "case_count": 30,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 30,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
         },
         "missing_data_safety": {
           "denominator": 8,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
           "safe": 8,
+          "scorable": true,
           "unsafe_feasible_declarations": 0,
+          "unscored_eligible_cases": 0,
           "value": 1.0
         },
         "risk_calculation_accuracy": {
@@ -487,7 +603,11 @@
         },
         "status_accuracy_on_input_determined_cases": {
           "denominator": 10,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
           "numerator": 10,
+          "scorable": true,
+          "scored_eligible_cases": 10,
+          "unscored_eligible_cases": 0,
           "value": 1.0
         },
         "terminal_completed": 30,
