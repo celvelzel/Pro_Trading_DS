@@ -1,6 +1,8 @@
 # 双金融 MAS 暂停交接（2026-10-09）
 
-**续接状态：用户已明确恢复原任务。** 下文保留暂停时快照，不再构成停止执行指令；最新进展见 financial-dual-mas-execution.md。W6 路由已于 `a0d29f9` 快进集成，完整独立 Review PASS；确切提交上的 W6 专项 252 passed / 260.85s、Full Backend 716 passed / 438.09s。Review 期间发现的 legacy-root 来源推断与 follow-up 无因果回复均已补修并有零写入/精确关系回归。主分支现在是 `a0d29f9`；用户 README 仍只有原有 15 行未提交修改。Market 单位修复与 W7 只读结果组件验证继续有效；W7 页面/API/SSE/浏览器 E2E 以及 W8 同预算 baseline、实际工作流评测仍未完成，完整 63 项状态见 financial-dual-mas-task-status.md。W6 测试证据是 SQLite、合成 provider 与实际 Celery task 函数的新进程调用，不代表 Redis/broker/PostgreSQL 或实盘 provider 验收。
+**续接状态：用户已明确恢复原任务。** 下文暂停快照不再构成停止执行指令；当前阶段以 execution ledger 为准。主仓库分支 `codex/financial-dual-mas` 的精确 HEAD 是 `1e7771cf1ba401ba47fb3abcbd555c41e9d5f7ca`：代码验收点 `a0d29f9` 后仅新增 W6 Gate 文档提交 `1e7771c`。W6 路由完整独立 Review PASS；确切代码提交的专项 252 passed / 260.85s、Full Backend 716 passed / 438.09s。README 保留用户原有 15 行未提交修改。W7 API/UI 契约 v1 于 2026-10-09 经独立 Review PASS 并冻结，尚无页面/API/SSE 编码 worktree；该设计验收不是 W7 功能 Gate。W7 浏览器 E2E 和 W8 同预算 baseline、实际工作流评测仍未完成，完整 63 项状态见 financial-dual-mas-task-status.md。W6 测试证据是 SQLite、合成 provider 与实际 Celery task 函数的新进程调用，不代表 Redis/broker/PostgreSQL 或实盘 provider 验收。
+
+**本次续接完整性审计**：W0–W6 已接受提交仍是当前 HEAD 的祖先；没有发现缺失的已接受前置任务。`financial-domain-ui` 当前 HEAD 已从旧快照的 `e4ab4e9` 前进到 `bead3db`，其六个 owned 结果组件/类型文件与主分支内容一致；分支仍保留，不需要重新合入。`financial-cross-repair` 的 W6 候选 worktree 干净且精确停在 `a0d29f9`。`financial-market-recovery` 有未跟踪 `workspace/`，`financial-mas-quant` 保留两个既有支持文件改动；均未清理或覆盖。下面的暂停期列表与 TODO 是历史记录，当前 worktree 状态和续接步骤以本段及 execution ledger 为准。
 
 **以下为原暂停时历史快照，已被上方恢复状态和执行台账更新。** 当时用户要求子 Agent 完成后暂停主 Agent；当前恢复指令已撤销该停止要求。本记录保留历史，不应用作当前调度状态。完整需求见 financial-dual-mas-implementation.md，历史 Gate 证据见 financial-dual-mas-execution.md。
 
@@ -60,34 +62,36 @@ worktree C:/Users/RickyMa/.codex/worktrees/financial-domain-ui/Pro_Trading_DS，
 - worker 仅注册 synthetic-demo-v1；未知/缺失 profile 明确拒绝，无 fallback。自定义来源仅显式 direct factory，未部署 configured worker。
 - Python threads 不能强杀，executor shutdown 可能等待，不把 event-loop deadline/cancel 夸大为进程硬终止。
 
-## 保留 Worktree 与所有权
+## 续接时保留 Worktree 清单（2026-10-09）
 
-统一前缀 C:/Users/RickyMa/.codex/worktrees/，末级 Pro_Trading_DS。全部保留，不删除/归档。
+统一前缀 `C:/Users/RickyMa/.codex/worktrees/`，末级 `Pro_Trading_DS`。所有 worktree 保留；不删除或归档。状态是续接审计时 `git status --short --branch` 的结果。
 
-| worktree | HEAD | 用途 |
+| worktree | HEAD | 状态 / ownership |
 | --- | --- | --- |
-| financial-mas-integration | 866f7df | cross_mas W6 候选 |
-| financial-domain-ui | e4ab4e9 | domain_ui 六文件候选 |
-| financial-cross-admission | 8fb79b6 | cross_runtime 已审查证据 |
-| financial-execution-profile | 2bc5994 | cross_runtime 已审查证据 |
-| financial-eval-fixtures | 45d6d91 | eval_fixtures 已集成 |
-| financial-mas-market | 869307b | market_mas 已集成 W4 |
-| financial-mas-portfolio | 831c2b0 | 已集成 W5 |
-| financial-mas-market-data | bc51601 | market_data 已集成 W2 |
-| financial-mas-quant | 3943a2a | 已集成 W3 |
-| financial-mas-runtime | 761c90a | 已集成 W1 |
+| financial-cross-admission | `8fb79b6` | clean；已集成的原子准入证据 |
+| financial-cross-repair | `a0d29f9` | clean；已集成且 W6 Review PASS 的候选 |
+| financial-domain-ui | `bead3db` | clean；六个 owned 结果组件/类型文件与主分支内容一致，旧分支保留 |
+| financial-eval-fixtures | `45d6d91` | clean；fixtures 已集成，尚未执行 W8 工作流评测 |
+| financial-execution-authorization | `60999dc` | clean；已集成的授权运行时证据 |
+| financial-execution-profile | `2bc5994` | clean；已集成的执行 profile 证据 |
+| financial-market-recovery | `975cfa9` | 有未跟踪 `workspace/`；原样保留，不检查/清理其内容 |
+| financial-market-unit-fix | `49aec12` | clean；Market 百分比/百分点修复已集成 |
+| financial-mas-integration | `866f7df` | clean；早期 W6 候选，未合入最终 W6 路由 |
+| financial-mas-market | `869307b` | clean；W4 Market 代码已集成 |
+| financial-mas-market-data | `bc51601` | clean；W2 Market Data 已集成 |
+| financial-mas-portfolio | `831c2b0` | clean；W5 Portfolio 代码已集成 |
+| financial-mas-quant | `3943a2a` | 保留 `backend/api/routes/stocks.py` 修改及 `backend/api/stock_name_map.py` 新文件；此前用于可复现 clean-worktree collection 的支持副本，不覆盖 |
+| financial-mas-runtime | `761c90a` | clean；W1 Runtime 代码已集成 |
 
-主 Agent 独占共享 factory/worker/API/hooks/导航及集成；恢复时各 writer 独立 worktree、明确 ownership，不覆盖别人修改。当前无新派任务。
+主 Agent 独占共享 `backend/main.py` 与最终集成；W7 writers 将各自使用独立 worktree，按后续冻结契约划分 API/worker 与 UI 文件所有权。新工作树以当前 `codex/financial-dual-mas` 为基础，绝不从上表陈旧候选分支直接开始。
 
-## 恢复 TODO（依赖顺序）
+## 当前续接 TODO（依赖顺序）
 
-1. 用户明确恢复后读本交接、完整计划、execution ledger、技能，检查 Git/all worktrees/SHA/原始日志/README/四路径 holdings baseline；不能自动恢复。
-2. 独立 Review W6，尤其 receiver CAS/取消、TTL 历史恢复、scope/profile/cycle/计数和孤立未准入 run。NEEDS_WORK 回 owned worktree 修复/复审；PASS 后保留文档依赖集成，完成 root 必要全量回归及组装，明确释放 W6 Gate。
-3. 分别修 UI 微小值和 Market 百分比/百分点；明确 ownership，涉及冻结契约先报告影响；针对性测试、独立复审再合入，保留历史 immutable artifact。
-4. W7 typed API、已有生命周期/SSE 分流、General/Market/Portfolio/Combined 四模式、Combined 两个实际 run ID、role/evidence/risk/source 视图、分析确认、页面入口与统一测试发现。先读 installed Next guides，保留 General。测试/独立 Review PASS 才释放 W7。
-5. W8 实际运行版本化 12/30 输入三工作流；same data/tools/budget 下 strong adaptive single、fixed Portfolio、autonomous/消融。保存 persisted refs/逐案输出/calls/latency/budget。token usage 未持久化，未知成本 null；当前 Market one-shot 非 strong baseline，Portfolio fixed baseline 缺失。
-6. 注入/scope/时间价格/cancel/restart/migration/fallback；三模式本地浏览器 E2E；Backend/quant/frontend unit/build；独立最终 Review；完整可复现命令/评测/限制。真实持仓不变、无实盘/自动下单；未授权 push。
-
+1. 关闭本次 W7 契约 Review 的全部 finding；独立复审 PASS 后冻结 API/UI、生命周期、调度、事件、result schema、安全边界及 acceptance tests。
+2. 按冻结所有权建立独立 W7 backend 与 frontend worktree；实现 typed API/worker-pair task、General 兼容、SSE replay、Copilot 三种金融模式、来源/风险/证据展示及两个页面入口。先读取适用的 Next.js 指南；共享 router 接线由主 Agent 集成。
+3. 每一批修改执行针对性测试和独立 review；只有原计划 W7 Gate（真实双 run 轨迹、两组 run_id、旧 General 正常、无持仓写入）通过后，才启动依赖 W8。
+4. W8 用版本化 12/30 fixtures 执行 Market-only、Portfolio-only、Combined 实际流程和 same-data/tools/budget 单 Agent、固定 Portfolio baseline 与消融；保存逐案结果、artifact refs、调用/时延/预算及确定性质量指标。token usage 未持久化则记 null。
+5. 完成注入/scope/时序/过期/cancel/restart/migration/duplicate/inline-local 安全与恢复测试，三模式真实本地浏览器 E2E，backend/quant/frontend 全回归与 build，独立最终 Review 和可复现实验文档。保留真实持仓不变、禁止实盘/自动下单；未授权 push。
 ## 数据保护
 
 README 保持用户原有 15 增/0 删。backend/data/portfolio/positions.json SHA256 4F53CDA18C2BAA0C0354BB5F9A3ECBE5ED12AB4D8E11BA873C2F11161202B945，另三个 holdings/cash 基线路径原不存在。完整基线 logs/financial-mas/holdings-baseline-hashes.json；不输出真实持仓内容。所有成果是研究/模拟。

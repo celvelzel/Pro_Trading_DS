@@ -1,6 +1,6 @@
 # 双金融 MAS 逐项接手台账
 
-核对日期：2026-10-09；接手基线：624f4b2。共 63 项，逐项对应原计划。独立连续性审计确认 19 个已接受集成检查点及 owned 文件未丢失；README 用户修改保留。原计划定义不变，本表补充执行状态。
+核对日期：2026-10-09；原中断续接基线：`624f4b2`；本次当前 HEAD：`1e7771c`。共 63 项，逐项对应原计划。独立连续性审计确认 19 个已接受集成检查点及 owned 文件未丢失；README 用户修改保留。W7 API/UI contract v1 已独立 Review PASS 并冻结；这只接受设计契约，不代表任何 W7 实现或 Acceptance Gate。原计划定义不变，本表补充执行状态。
 
 DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所有任务完成。CANDIDATE 表示仅在未合并分支实现，不能作为依赖已就绪的依据。FIXTURE_DONE 仅指评测输入准备，未执行工作流。PARTIAL、DEFERRED、IN_PROGRESS、OPEN 均仍需完成。
 
@@ -61,6 +61,7 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 | W7-T4 | OPEN | 在 `analysis/[symbol]` 提供“调查异动”，在 `portfolio` 提供“模拟调仓风险复核”链接；默认不会静默持久化用户投资偏好。 |
 | W7-T5 | PARTIAL | “Review” 只批准分析/模拟阶段，**不是**授权真实持仓变更或实盘操作；保留两层权限界限。 |
 | W7-T6 | PARTIAL | 前端测试：响应 schema、SSE replay/reconnect、重复事件、加载态、错误/partial 状态、可访问性、原页面 regression。 |
+| W7 contract v1 | DESIGN_PASS | `docs/architecture/financial-mas-w7-api-ui-contract.md`：独立只读 Review PASS（2026-10-09），契约冻结；这是设计门，不改变 W7-T1..T6 的实现状态，也不释放 W7 Gate。 |
 | W8-T1 | FIXTURE_DONE | `eval/market_cases.jsonl`：10–15 个固定事件证据问题；题目分布包括行业共振、错误时序、假新闻、缺证据、未来资料禁止引用。只验可核事实，不将主观“下跌原因”作为唯一真值。 |
 | W8-T2 | FIXTURE_DONE | `eval/portfolio_cases.jsonl`：20–30 个约束场景；每例 gold constraint validity、expected failure kind、reference math。 |
 | W8-T3 | PARTIAL | 同样数据快照、同样工具与尽可能相同调用预算下：single-agent / fixed pipeline / fully autonomous MAS；可加 verifier ablation。 |
