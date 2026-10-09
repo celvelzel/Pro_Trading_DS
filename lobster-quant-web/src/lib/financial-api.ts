@@ -1,31 +1,33 @@
+import { object, text, strings, statuses, validArtifact } from '@/types/financial-validation'
 import { API_BASE_URL } from './constants'
 import type { FinancialCreation, FinancialRun, WorkflowType } from '@/types/financial-api'
 
 export class FinancialRequestError extends Error {
   constructor(public status: number, message: string) { super(message) }
 }
-export function parseFinancialRun(value: unknown): FinancialRun {
-  const v = value as FinancialRun
-  const outcomes = v?.mas_kind === 'market_investigation' ? ['verified', 'partial', 'insufficient_evidence', 'pending'] : ['feasible', 'infeasible', 'insufficient_data', 'pending']
-  if (!v || v.schema_version !== 1 || !['market_investigation', 'portfolio_rebalance'].includes(v.mas_kind)
-    || !['queued', 'executing', 'waiting_user', 'paused', 'completed', 'failed', 'cancelled', 'expired'].includes(v.status)
-    || !outcomes.includes(v.validation_outcome) || !v.run_id || typeof v.conversation_id !== 'string' || typeof v.correlation_id !== 'string' || !['auto', 'review'].includes(v.mode) || !Number.isInteger(v.version)
-    || !Array.isArray(v.limitations) || !v.limitations.every(text => typeof text === 'string')
-    || v.artifact === undefined || v.artifact_ref === undefined
-    || (!!v.artifact !== !!v.artifact_ref)
-    || (v.artifact_ref && (v.artifact_ref.schema_version !== 1 || typeof v.artifact_ref.artifact_id !== 'string'))
-    || (v.artifact && (v.artifact.schema_version !== 1 || v.artifact.producing_run_id !== v.run_id || v.artifact.status !== v.validation_outcome))) {
-    throw new Error('金融结果契约不匹配，请刷新或检查服务版本')
-  }
-  if (v.artifact) {
-    const artifact = v.artifact
-    const valid = typeof artifact.as_of === 'string' && Array.isArray(artifact.limitations) && (
-      v.mas_kind === 'market_investigation'
-        ? 'numeric_facts' in artifact && Array.isArray(artifact.numeric_facts) && Array.isArray(artifact.hypotheses) && Array.isArray(artifact.evidence)
-        : 'constraint_check' in artifact && typeof artifact.current_weights === 'object' && typeof artifact.proposed_weights === 'object' && !!artifact.constraint_check && Array.isArray(artifact.constraint_check.violations) && Array.isArray(artifact.constraint_check.unknowns) && Array.isArray(artifact.evidence_ids))
-    if (!valid) throw new Error('金融 artifact 类型不匹配')
-  }
-  return v
+export function parseFinancialRun(value: unknown, expectedId?: string, expectedConversation?: string, expectedCorrelation?: string): FinancialRun {
+  if (!object(value)) throw new Error('金融结果不是对象')
+  const v = value
+  const outcomes = v.mas_kind === 'market_investigation' ? ['verified', 'partial', 'insufficient_evidence', 'pending'] : ['feasible', 'infeasible', 'insufficient_data', 'pending']
+  if (v.schema_version !== 1 || !['market_investigation', 'portfolio_rebalance'].includes(v.mas_kind as string)
+    || !statuses.includes(v.status as string) || !outcomes.includes(v.validation_outcome as string)
+    || !text(v.run_id) || !text(v.conversation_id) || !text(v.correlation_id) || !['auto', 'review'].includes(v.mode as string) || !Number.isInteger(v.version) || Number(v.version) < 1
+    || !(v.error_code === null || typeof v.error_code === 'string') || !strings(v.limitations)
+    || (expectedId !== undefined && v.run_id !== expectedId) || (expectedConversation !== undefined && v.conversation_id !== expectedConversation) || (expectedCorrelation !== undefined && v.correlation_id !== expectedCorrelation)
+    || (v.artifact === null ? v.artifact_ref !== null || v.validation_outcome !== 'pending' : !object(v.artifact_ref) || v.artifact_ref.schema_version !== 1 || !text(v.artifact_ref.artifact_id) || !validArtifact(v.artifact, v.mas_kind as string, v.run_id as string, v.validation_outcome as string))) throw new Error('金融结果契约不匹配，请刷新或检查服务版本')
+  return v as unknown as FinancialRun
+}
+export function parseFinancialCreation(value: unknown, workflow: Exclude<WorkflowType, 'general'>, conversationId: string): FinancialCreation {
+  if (!object(value) || value.schema_version !== 1 || value.conversation_id !== conversationId || !text(value.correlation_id) || !Array.isArray(value.runs)) throw new Error('金融工作流契约不匹配')
+  const expected = workflow === 'combined' ? ['market_investigation', 'portfolio_rebalance'] : [workflow === 'market' ? 'market_investigation' : 'portfolio_rebalance']
+  const ids = new Set<string>()
+  if (value.runs.length !== expected.length || !value.runs.every(run => {
+    if (!object(run) || !text(run.run_id) || ids.has(run.run_id) || !expected.includes(run.mas_kind as string) || !statuses.includes(run.status as string) || !Number.isInteger(run.version) || Number(run.version) < 1) return false
+    ids.add(run.run_id)
+    return (run.mas_kind === 'market_investigation' ? value.market_run_id : value.portfolio_run_id) === run.run_id
+  }) || new Set(value.runs.map(run => run.mas_kind)).size !== expected.length
+    || (workflow === 'market' && value.portfolio_run_id != null) || (workflow === 'portfolio' && value.market_run_id != null)) throw new Error('金融工作流返回了无效运行 ID')
+  return value as unknown as FinancialCreation
 }
 async function request(path: string, body?: unknown): Promise<unknown> {
   const response = await fetch(`${API_BASE_URL}/api/financial${path}`, { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) })
@@ -41,11 +43,8 @@ export function demoRequest(workflow: Exclude<WorkflowType, 'general'>, conversa
 }
 export const financialApi = {
   create: async (workflow: Exclude<WorkflowType, 'general'>, body: ReturnType<typeof demoRequest>) => {
-    const v = await request(`/${{ market: 'market-investigations', portfolio: 'portfolio-reviews', combined: 'combined-reviews' }[workflow]}`, body) as FinancialCreation
-    const ids = v.runs?.map(r => r.run_id)
-    if (v.schema_version !== 1 || !ids?.length || new Set(ids).size !== ids.length || ids.length !== (workflow === 'combined' ? 2 : 1)) throw new Error('金融工作流返回了无效运行 ID')
-    return v
+    return parseFinancialCreation(await request(`/${{ market: 'market-investigations', portfolio: 'portfolio-reviews', combined: 'combined-reviews' }[workflow]}`, body), workflow, body.conversation_id)
   },
-  getRun: async (id: string) => parseFinancialRun(await request(`/runs/${encodeURIComponent(id)}`)),
-  action: async (id: string, name: 'approve' | 'pause' | 'resume' | 'cancel', version: number) => parseFinancialRun(await request(`/runs/${encodeURIComponent(id)}/${name}`, { expected_version: version })),
+  getRun: async (id: string) => parseFinancialRun(await request(`/runs/${encodeURIComponent(id)}`), id),
+  action: async (id: string, name: 'approve' | 'pause' | 'resume' | 'cancel', version: number) => parseFinancialRun(await request(`/runs/${encodeURIComponent(id)}/${name}`, { expected_version: version }), id),
 }

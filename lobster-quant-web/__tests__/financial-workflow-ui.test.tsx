@@ -6,7 +6,7 @@ import { agentApi } from '@/lib/agent-api'
 vi.mock('@/hooks/useFinancialEvents', () => ({ useFinancialEvents: (id: string) => ({ events: [{ seq: 1, event_id: id, event_type: 'mas.review_required', payload: { role: 'Coordinator', status: 'waiting_user', prompt: 'private prompt' } }], cursor: 1, connection: 'connected' }) }))
 vi.mock('@/lib/agent-api', () => ({ agentApi: { createConversation: vi.fn() } }))
 vi.mock('@/lib/financial-api', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/financial-api')>(), financialApi: { create: vi.fn(), getRun: vi.fn(), action: vi.fn() } }))
-const snapshot = (id: string, kind: string) => ({ schema_version: 1, run_id: id, conversation_id: 'c', correlation_id: 'pair', mas_kind: kind, status: 'waiting_user', mode: 'review', version: 1, artifact_ref: null, artifact: null, validation_outcome: 'pending', limitations: [] })
+const snapshot = (id: string, kind: string) => ({ schema_version: 1 as const, run_id: id, conversation_id: 'c', correlation_id: 'pair', mas_kind: kind, status: 'waiting_user', mode: 'review', version: 1, artifact_ref: null, artifact: null, validation_outcome: 'pending', error_code: null, limitations: [] })
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(agentApi.createConversation).mockResolvedValue({ id: 'c' }) })
 afterEach(() => vi.restoreAllMocks())
 describe('accessible financial workflow', () => {
@@ -40,7 +40,7 @@ it('announces loading and renders terminal partial evidence with source citation
   render(<FinancialWorkflow workflow="market" mode="auto" />)
   fireEvent.click(screen.getByRole('button', { name: '开始 market 合成演示' }))
   await waitFor(() => expect(screen.getByText(/正在读取结果/)).toBeInTheDocument())
-  resolveRun({ ...snapshot('m', 'market_investigation'), mas_kind: 'market_investigation', status: 'completed', mode: 'auto', validation_outcome: 'partial', error_code: null, artifact_ref: { artifact_id: 'a', schema_version: 1 }, artifact: { schema_version: 1, producing_run_id: 'm', symbol: 'MU', as_of: '2026-09-29T20:05:00Z', numeric_facts: [], hypotheses: [], limitations: ['missing independent source'], status: 'partial', evidence: [{ id: 'e', source_type: 'news', source_locator: 'https://example.org/source', published_at: null, available_at: null, observed_at: '2026-09-29T20:05:00Z', content_hash: 'hash', excerpt: 'source excerpt' }] }, limitations: [] })
+  resolveRun({ ...snapshot('m', 'market_investigation'), correlation_id: 'single', mas_kind: 'market_investigation', status: 'completed', mode: 'auto', validation_outcome: 'partial', error_code: null, artifact_ref: { artifact_id: 'a', schema_version: 1 }, artifact: { schema_version: 1, producing_run_id: 'm', symbol: 'MU', as_of: '2026-09-29T20:05:00Z', numeric_facts: [], hypotheses: [], limitations: ['missing independent source'], status: 'partial', evidence: [{ id: 'e', source_type: 'news', source_locator: 'https://example.org/source', published_at: null, available_at: null, observed_at: '2026-09-29T20:05:00Z', content_hash: 'hash', excerpt: 'source excerpt' }] }, limitations: [] })
   expect(await screen.findByText('missing independent source')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'https://example.org/source' })).toHaveAttribute('rel', 'noopener noreferrer')
   expect(screen.getByText(/部分结果/)).toBeInTheDocument()

@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { createHash } from 'node:crypto'
 import { test, expect } from '@playwright/test'
 // Actual typed API only: no route mocks. Run with the synthetic API service available.
 for (const workflow of ['market', 'portfolio', 'combined']) {
@@ -18,12 +21,26 @@ for (const workflow of ['market', 'portfolio', 'combined']) {
       const panel = page.getByRole('article').filter({ has: page.getByText(id, { exact: true }) })
       await expect(panel.getByRole('status').first()).toContainText('completed', { timeout: 60000 })
       await expect(panel.getByRole('status').first()).toContainText(/cursor [1-9]/)
+      await expect(panel.getByText(/mas.completed/)).toBeVisible({ timeout: 60000 })
     }
-    await expect(page.getByText('来源与证据详情').first()).toBeVisible()
+    if (workflow === 'combined') {
+      await expect(page.getByText(/cross_mas.linked/).first()).toBeVisible()
+      await expect(page.getByText(/cross_mas.admitted/).first()).toBeVisible()
+      await expect(page.getByText(/relation_id:/).first()).toBeVisible()
+    }
+    await expect(page.getByText(workflow === 'portfolio' ? 'Portfolio 合成来源与计算记录' : '来源与证据详情').first()).toBeVisible()
   })
 }
 test('Portfolio links use synthetic request and leave local holdings/cash byte-identical', async ({ page }) => {
   test.setTimeout(90000)
+  const dataDirectory = process.env.FINANCIAL_E2E_PORTFOLIO_DATA_DIR || resolve(process.cwd(), '../backend/data/portfolio')
+  const digest = () => ['positions.json', 'cash.json'].map(name => {
+    const path = resolve(dataDirectory, name)
+    return existsSync(path) ? { exists: true, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') } : { exists: false, sha256: null }
+  })
+  const beforeServer = digest()
+  const writes: string[] = []
+  page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/portfolio') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method())) writes.push(request.method()) })
   await page.goto('/portfolio')
   const before = await page.evaluate(() => JSON.stringify({ ...localStorage }))
   await expect(page.getByRole('link', { name: 'Portfolio 合成只读演示' })).toHaveAttribute('href', '/copilot?workflow=portfolio')
@@ -33,7 +50,11 @@ test('Portfolio links use synthetic request and leave local holdings/cash byte-i
   await page.getByRole('button', { name: '开始 combined 合成演示' }).click()
   const body = (await requestPromise).postDataJSON()
   expect(body.portfolio.portfolio_snapshot_id).toBe('synthetic-mu-soxx-v1')
-  expect(body.portfolio).not.toHaveProperty('positions'); expect(body.portfolio).not.toHaveProperty('cash')
+  expect(Object.keys(body.portfolio).sort()).toEqual(['as_of', 'portfolio_snapshot_id', 'user_constraints'])
+  expect(JSON.stringify(body)).not.toMatch(/holdings|cash_balance|positions/)
+  await expect(page.getByText(/mas.completed/)).toHaveCount(2, { timeout: 60000 })
+  expect(JSON.stringify(digest()) === JSON.stringify(beforeServer), 'portfolio storage bytes and existence stay unchanged').toBe(true)
+  expect(writes).toEqual([])
   expect(await page.evaluate(() => JSON.stringify({ ...localStorage }))).toBe(before)
 })
 test('Analysis link scopes the Market synthetic demo to the selected symbol', async ({ page }) => {
@@ -43,4 +64,15 @@ test('Analysis link scopes the Market synthetic demo to the selected symbol', as
   await expect(link).toHaveAttribute('href', /workflow=market.*symbol=MU/)
   await link.click()
   await expect(page.getByRole('textbox', { name: 'Market symbol' })).toHaveValue('MU')
+})
+
+test('General still uses its legacy create endpoint and independent mode', async ({ page }) => {
+  await page.goto('/copilot')
+  await expect(page.getByRole('combobox', { name: 'Workflow' })).toHaveValue('general')
+  await page.getByLabel('研究目标').fill('Synthetic compatibility smoke: inspect available tools')
+  const received = page.waitForResponse(response => response.url().endsWith('/api/agent/runs') && response.request().method() === 'POST')
+  await page.getByRole('button', { name: '开始规划' }).click()
+  const response = await received
+  expect(response.ok()).toBe(true)
+  expect(response.request().postDataJSON()).toMatchObject({ goal: 'Synthetic compatibility smoke: inspect available tools', mode: 'review' })
 })

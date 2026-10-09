@@ -2,10 +2,10 @@
 import { useEffect, useState } from 'react'
 import type { AgentEvent } from '@/lib/agent-types'
 import { agentEventsUrl } from '@/lib/agent-api'
-export const FINANCIAL_EVENTS = ['mas.created', 'mas.retry_linked', 'mas.approve', 'mas.pause', 'mas.resume', 'mas.cancel', 'mas.expired', 'mas.review_required', 'mas.started', 'mas.checkpoint', 'mas.failure', 'mas.invoked', 'mas.returned', 'mas.invocation_failed', 'mas.budget_reserved', 'mas.artifact_created', 'mas.completed', 'mas.handoff', 'mas.challenge', 'mas.replan', 'cross_mas.admitted', 'cross_mas.received', 'cross_mas.linked']
+export const FINANCIAL_EVENTS = ['mas.coordination', 'mas.approval_recommendation', 'mas.revision_request', 'mas.verdict', 'mas.created', 'mas.retry_linked', 'mas.approve', 'mas.pause', 'mas.resume', 'mas.cancel', 'mas.expired', 'mas.review_required', 'mas.started', 'mas.checkpoint', 'mas.failure', 'mas.invoked', 'mas.returned', 'mas.invocation_failed', 'mas.budget_reserved', 'mas.artifact_created', 'mas.completed', 'mas.handoff', 'mas.challenge', 'mas.replan', 'cross_mas.admitted', 'cross_mas.received', 'cross_mas.linked']
 export interface FinancialEventsState { events: AgentEvent[]; cursor: number }
 export function acceptFinancialEvent(state: FinancialEventsState, event: AgentEvent, runId: string) {
-  if (event.schema_version !== 1 || event.run_id !== runId || !Number.isInteger(event.seq) || !event.event_id || !FINANCIAL_EVENTS.includes(event.event_type)) return { state, gap: false }
+  if (!event || !event.payload || typeof event.payload !== 'object' || Array.isArray(event.payload) || event.schema_version !== 1 || event.run_id !== runId || !Number.isInteger(event.seq) || !event.event_id || !FINANCIAL_EVENTS.includes(event.event_type)) return { state, gap: false }
   if (event.seq <= state.cursor || state.events.some(e => e.event_id === event.event_id)) return { state, gap: false }
   if (event.seq !== state.cursor + 1) return { state, gap: true }
   return { state: { events: [...state.events, event], cursor: event.seq }, gap: false }

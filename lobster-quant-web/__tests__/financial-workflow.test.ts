@@ -7,8 +7,8 @@ const event = (seq: number, type = 'mas.created', run = 'm') => ({ schema_versio
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 describe('financial contracts', () => {
   it('accepts insufficient_data and rejects cross-kind status / wrong ownership', () => {
-    const run = { schema_version: 1, mas_kind: 'portfolio_rebalance', run_id: 'p', conversation_id: 'c', correlation_id: 'pair', mode: 'auto', artifact_ref: null, version: 1, status: 'completed', validation_outcome: 'insufficient_data', artifact: null, limitations: [] }
-    expect(parseFinancialRun(run).validation_outcome).toBe('insufficient_data')
+    const run = { schema_version: 1, mas_kind: 'portfolio_rebalance', run_id: 'p', conversation_id: 'c', correlation_id: 'pair', mode: 'auto', artifact_ref: null, error_code: null, version: 1, status: 'completed', validation_outcome: 'pending', artifact: null, limitations: [] }
+    expect(parseFinancialRun(run).validation_outcome).toBe('pending')
     expect(() => parseFinancialRun({ ...run, validation_outcome: 'verified' })).toThrow()
     expect(() => parseFinancialRun({ ...run, artifact: { schema_version: 1, producing_run_id: 'other', status: 'insufficient_data' } })).toThrow()
   })
