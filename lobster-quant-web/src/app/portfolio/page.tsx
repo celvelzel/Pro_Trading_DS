@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -155,7 +156,7 @@ export default function PortfolioPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary">Portfolio</h1>
+          <h1 className="text-3xl font-bold text-text-primary">Portfolio</h1><nav className="flex gap-4 text-sm" aria-label="只读合成金融演示"><Link href="/copilot?workflow=portfolio">Portfolio 合成只读演示</Link><Link href="/copilot?workflow=combined">Combined 合成只读演示</Link></nav>
           <p className="text-text-secondary mt-1">
             Track your positions and monitor P&L in real-time
           </p>
