@@ -1,6 +1,6 @@
 # ADR-0005: durable cross-work origin and guarded execution
 
-Status: PROPOSED; implementation blocked pending independent DESIGN PASS.
+Status: independent DESIGN PASS at 8676c26; implementation and integration pending.
 Date: 2026-10-09. Supersedes no accepted ADR. Additive to ADR-0002/0003/0004.
 
 ## Reported blocking evidence
