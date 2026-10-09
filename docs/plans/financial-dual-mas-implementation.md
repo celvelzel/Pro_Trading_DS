@@ -1,6 +1,6 @@
 # Pro_Trading_DS：双自治金融 MAS 集成实施计划
 
-> **状态**：Implementation-ready plan / 尚未实施。  
+> **状态**：实施中；本文保留原始要求，最新验收与未完成项见 [执行台账](financial-dual-mas-execution.md) 和 [逐项接手台账](financial-dual-mas-task-status.md)。
 > **仓库**：https://github.com/celvelzel/Pro_Trading_DS  
 > **核对基线**：`main@de262d4a089069e2a1387655e3daa3c6a7a4fe4b`（2026-10-08 读取；执行前重新确认）  
 > **目标**：独立的 Market Investigation MAS（M-MAS）与 Portfolio Rebalancing & Risk MAS（P-MAS），复用仓库基础设施，支持可控跨 MAS 交流；**不执行真实交易**。  
