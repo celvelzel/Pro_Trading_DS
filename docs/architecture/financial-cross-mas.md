@@ -1,10 +1,10 @@
-# Cross-MAS integration admission gate
+# Financial cross-MAS routing
 
-Status: W6 blocked before production implementation at baseline
-`eb1d25678f16b3c43bd70c9aa3ec1a0d4a97c388`. W4 and W5 remain independent
-workflows; this document does not declare W6 implemented or accepted.
+Status: W6 implementation submitted for future independent review, based on
+reviewed runtime/profile/bootstrap `8abda96`. W6 Gate is **not accepted** and
+application factory/API/worker integration remains owned by the coordinator.
 
-## Frozen public API limitation
+## Historical admission block, now closed
 
 The frozen dispatcher exposes `create`, `start`, `snapshot`, `link_runs` and
 `relations` to the router. `link_runs` atomically fences the source run version,
@@ -13,7 +13,7 @@ source event. It does not check or reserve persisted `RunBudget.hops` or
 `RunBudget.followups`. Its transaction does not admit a correlation-wide graph
 transition or fence the target run's lifecycle.
 
-Only `RuntimeContext.consume_budget` currently reserves these counters. That
+At the original `eb1d256` baseline, only `RuntimeContext.consume_budget` reserved these counters. That
 operation requires an executing driver's claim token; it is not a public router
 operation. Reserving separately would also separate budget consumption from
 relation insertion and break crash-safe idempotency.
@@ -27,16 +27,14 @@ alone would leave authoritative run counters unchanged and silently bypass the
 frozen budget contract. Process locks would not survive restart or protect
 multiple workers.
 
-Consequently implementing W6-T4, lowered user budgets and concurrent admission
-under the assigned public-only restriction requires an additive reviewed runtime
-contract. No integration code should use private `_mutation`, runtime tables or
-synthetic driver claims to work around this limitation.
+The reported blocker was resolved by independently reviewed ADR-0003 and its
+public `admit_cross_message` seam. ADR-0004 independently binds immutable
+execution profiles. The router uses these accepted contracts; it does not
+inspect persistence tables, call private `_mutation`, or claim driver authority.
 
-## Required coordinator decision
+## Admission authority
 
-Before implementation, the runtime owner must define an additive public atomic
-cross-message admission operation and document its compatibility/rollback in an
-ADR. The operation must combine:
+The accepted atomic operation combines:
 
 - Durable exact-payload idempotency, checked before new-request terminal rules
   so an accepted historical request can be replayed without creating new work.
@@ -56,10 +54,134 @@ retry-only semantics. Admission must support one bounded additional Market run
 without changing completed producer history. No third business Coordinator is
 needed.
 
-After that contract is reviewed, W6 will implement the typed thin router and
-scoped Portfolio artifact resolver using only public APIs and ArtifactStore,
-with trusted saved-holdings scope and consumption-time TTL checks. Full W6 tests
-must assemble the real W4/W5 drivers and W2/W3 tools on SQLite, including restart,
-duplicate/concurrent admission, lowered budgets, peer failure, immutable history
-and all three modes. PostgreSQL/worker/provider acceptance remains a separate
-deployment gate.
+## Public router assembly
+
+`agent.integration` imports shared contracts/runtime and the W3 snapshot contract;
+it imports neither domain MAS implementation. Application assembly injects
+reviewed drivers and deterministic tools separately.
+
+```python
+CrossMASRouter(dispatcher, artifact_store, snapshot_loader, *,
+               execution_profile: str, clock=None, ttl_seconds=60)
+router.create(request: CrossMASRequest) -> CrossMASResponse
+router.restore(run_id: str) -> CrossMASResponse
+await router.advance(response, *, max_deliveries=3, peer_timeout=30)
+router.request_further_evidence(portfolio_run_id, market_request, *,
+                               idempotency_key, mode='review') -> dict
+router.transfer(market_run_id, portfolio_run_id, *, request_relation=None) -> dict
+router.admit(source_run_id, target_run_id, envelope, *,
+             expected_source_version, expected_target_version) -> dict
+router.artifact_resolver(run_id, conversation_id,
+                         request: PortfolioReviewRequest) -> MarketInvestigationArtifact | None
+```
+
+`CrossMASRequest` supplies conversation, idempotency key, review/auto mode,
+optional typed Market/Portfolio requests and each independent RunBudget. Both
+requests must have identical aware UTC `as_of`; direct Portfolio artifact IDs
+are rejected so router consumption requires admission. `CrossMASResponse`
+returns each actual run ID, common correlation and optional-peer limitations.
+Correlation and creation keys are deterministic hashes of caller identity;
+repeated creation uses the frozen complete creation-input comparison. Normal
+combined mode creates both run IDs before either driver runs. An undeployed peer
+leaves the deployed workflow available. Partial creation can be retried using
+the same request/key; creation is not a two-run transaction.
+
+The execution_profile must exactly match the injected dispatcher. Both initial
+runs and further-evidence Market runs use that same dispatcher/profile. Demo
+factory assembly uses `synthetic-demo-v1`; configured factory assemblies require
+their explicit different identity. No symbol/snapshot inference or provider/data
+fallback exists. Configured queue-worker profiles remain unsupported unless an
+operator registers an independently reviewed reconstruction mapping.
+
+## Bounded evidence and independent completion
+
+READY and REQUEST envelopes have absolute aware UTC deadlines. TTL begins when
+the logical envelope is constructed for admission, after evidence is available;
+it is not a replacement for either run's active deadline. Accepted exact replay
+uses its stored envelope and cannot extend that deadline. Only `cross_admitted`
+relations authorize transfer/work. The router checks the trusted immutable saved
+snapshot's ID, source, exact effective_at and holdings scope before admission
+and before consuming an immutable artifact through scoped ArtifactStore.
+
+Initial Market READY charges its source one hop. Further evidence charges the
+Portfolio source one hop and one follow-up, across the whole correlation under
+the runtime's minimum member ceilings. Its new Market run has independent
+state/model/tool budget and no retry parent. The single causally matched reverse
+READY or UNAVAILABLE resolves that request at zero extra hop. Relations/envelopes
+retain exact message, causation, source/target, correlation, timepoint and immutable
+artifact version. Actual counters remain observable in public snapshots. Another
+request rejects; zero/lowered ceilings remain authoritative. No business
+Coordinator is added and neither completed history nor creation_inputs changes.
+
+Further evidence must be requested before Portfolio context acceptance or role
+invocation. The router does not mutate an existing model's task or create new
+work from a completed Portfolio run. `advance` restores admitted requests from
+relations; it delivers at most the configured bounded number of checkpoints.
+The default scheduler starts initial Market before Portfolio but each driver
+also runs independently in parallel. Failed/cancelled/undeployed/timed-out peers,
+expired optional messages and exhausted cross budgets do not require waiting:
+Portfolio proceeds with its existing optional-evidence limitation. Review-mode
+approval remains external through the existing versioned lifecycle APIs.
+
+Trusted scope checks used by asynchronous advance run in a bounded offloaded
+transfer; Portfolio resolver callbacks are offloaded by the reviewed W5 driver.
+Peer timeout does not replace the independent Portfolio execution allowance.
+Python cannot kill a synchronous adapter's running thread; trusted adapters must
+configure bounded I/O. A timed-out driver delivery can retain its runtime lease
+until recovery; the router does not modify claims or lease state.
+
+## First acceptance versus historical checkpoint replay
+
+First resolver acceptance chooses the newest admitted causal reply when present,
+otherwise initial READY. It validates conversation, profile, schema, producer,
+exact as_of, current trusted holdings and live TTL before recording selection.
+The immutable `artifact_selection` diagnostic relation is written with the
+Portfolio receiver's CAS, fencing cancellation; its deadline is the admitted
+READY's deadline, so public link validation rechecks TTL inside the transaction.
+Its non-work SYSTEM_UNAVAILABLE envelope carries no artifact and identifies
+the exact admitted READY by causation. This is receipt metadata distinguished by
+relation type, not an executable unavailable response or work authorization.
+
+Subsequent checkpoint replay follows that exact receiver-owned receipt back to
+the admitted READY and reads the same immutable context. This is historical
+context replay, not new cross-message consumption: expiry cannot replace the
+cached role task with None or silently select a different artifact. Current
+authorized holdings, profile/as_of/schema/producer still revalidate; no new
+message, receipt, hop or follow-up is emitted. An unselected expired READY or a
+new/retry receiver with no receipt returns None; failed/cancelled/expired receivers
+cannot accept context. This distinction preserves the frozen W5 invocation input
+identity without weakening the TTL of a new transfer.
+
+## Evidence, remaining review and deployment limits
+
+`backend/tests/test_cross_mas.py` assembles actual W4/W5 drivers, real W2/W3 typed
+tools, explicit synthetic MU/SOXX/SPY/TLT data, disposable SQLite and audit rows.
+It checks three workflows, actual artifact/tool-result references, distinct
+events and budgets, input/artifact immutability, one follow-up and zero-cost
+reply, duplicate/concurrent CAS, lowered budgets, time/schema/scope/cause denial,
+peer failure/cancel/timeout, disabled-peer fresh-process imports, review approval,
+Market checkpoint restoration and Portfolio revision checkpoint replay after
+TTL expiry. First acceptance cancellation/expiry races and new-receiver rejection
+are explicit tests. The reviewed shared admission suite supplies additional
+atomic graph/correlation-membership and resolution-race coverage.
+
+Creating a further-evidence run and admitting its request are separate public
+transactions. A concurrent admission loser can leave an unadmitted queued Market
+run; `advance` never delivers it because it follows admitted REQUEST relations
+only. No scheduler should dispatch unadmitted follow-up creation as accepted
+cross work. Same-key retry reconstructs the original run. No public atomic
+creation-and-admission API is claimed.
+
+No live provider, PostgreSQL/Redis/Celery restart, real holdings, real trading,
+application-route wiring, W7 or W8 acceptance is claimed. Independent W6 review
+and coordinator integration are outstanding; the user's pause takes effect after
+the implementation handoff and validation. Raw logs and validation metadata are
+retained in ignored `logs/financial-mas/w6-*` in this worktree.
+
+Local validation on 2026-10-09 used absolute repository root, backend and
+lobster_quant directories in PYTHONPATH: 31 dedicated Cross-MAS tests passed;
+the combined Cross-MAS/admission/profile suite passed 117 tests in 93.02 seconds;
+full Backend passed 522 tests in 266.20 seconds. `compileall` for integration and
+the staged diff whitespace check passed. These are worker validation results,
+not independent Gate acceptance. No quant/frontend suite was rerun because their
+source is unchanged by this owned patch.
