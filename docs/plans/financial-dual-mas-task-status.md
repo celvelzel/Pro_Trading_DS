@@ -38,7 +38,7 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 | W4-T4 | DONE | Evidence Critic 独立核对消息发布时间、来源真实性与时间顺序，遇冲突给 `REQUEST_CHECK`；不根据新闻标题强行断定因果。 |
 | W4-T5 | DONE | Coordinator 基于 `missing_checks` 和预算决定下一次调查；明确区别“新 evidence 改变动作”与固定 waterfall。 |
 | W4-T6 | DONE | 汇总强类型 `MarketInvestigationArtifact`：事实、可能解释、反证、缺失证据、拒绝过度归因；所有数字有 tool citations。 |
-| W4-T7 | DONE | 最小自足入口独立运行、不依赖 Portfolio MAS。多轮、任务取消/超时、失败降级测试。 |
+| W4-T7 | REOPENED | 最小自足入口独立运行、不依赖 Portfolio MAS。多轮、任务取消/超时、失败降级测试。 |
 | W4-T8 | DEFERRED | 固定流水线和单 Agent + 相同工具的 baseline；用 case 测验证率、晚发布信息错误、工具/Token 成本。 |
 | W5-T1 | DONE | `backend/agent/portfolio_mas/` 定义独立 WorkflowDriver、Coordinator、state、prompts、specialists、verifier、finalizer。 |
 | W5-T2 | DONE | Opportunity Specialist 仅提出候选方向与定性理由，不凭空制造预期收益；Risk Specialist 通过工具审查集中度、相关性、回撤；Constraint Specialist 将用户条件归一化并查矛盾。 |
@@ -82,3 +82,7 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 - W8-T6/T7/T8：已有安全、恢复、迁移片段证据，整合后仍需完整安全/恢复/inline/E2E 与可复现实验。Docker engine 不可用，不能声称已验证真实 PostgreSQL/Redis/Celery。
 
 最新 Gate 和原始测试证据见 [执行台账](financial-dual-mas-execution.md)，暂停时历史快照见 [交接记录](financial-dual-mas-handoff.md)。完整原计划仍是验收依据。
+
+## 新发现的恢复兼容性缺口
+
+W4-T7 重新打开：只读审计复现旧版单位 metadata 的 Market 调用已成功持久化、checkpoint 尚未写入时，升级至 f945427 后 macro specialist 任务 hash 冲突，run 保持 executing。原始 stdout 保存在 ignored logs/financial-mas/market-upgrade-scout-reproduction.md；原 scout 脚本未留存，因此独立 financial-market-recovery worktree 必须重建完整复现并修复、接受独立 Review，不能把原同版本恢复 PASS 当作升级兼容证据。历史结果不可改写，全局 hash 校验不可放宽。
