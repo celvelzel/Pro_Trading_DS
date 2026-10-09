@@ -16,7 +16,7 @@ const event = (seq: number): AgentEvent => ({
 
 describe('agent event reducer', () => {
   it('deduplicates old and repeated events', () => {
-    let state = { events: [], lastSeq: 0, gapDetected: false }
+    let state: ReturnType<typeof agentEventReducer> = { events: [], lastSeq: 0, gapDetected: false }
     state = agentEventReducer(state, { type: 'event', event: event(1) })
     state = agentEventReducer(state, { type: 'event', event: event(1) })
     expect(state.lastSeq).toBe(1)
@@ -24,7 +24,7 @@ describe('agent event reducer', () => {
   })
 
   it('marks a sequence gap so the REST snapshot can be refreshed', () => {
-    let state = { events: [], lastSeq: 0, gapDetected: false }
+    let state: ReturnType<typeof agentEventReducer> = { events: [], lastSeq: 0, gapDetected: false }
     state = agentEventReducer(state, { type: 'event', event: event(1) })
     state = agentEventReducer(state, { type: 'event', event: event(3) })
     expect(state.gapDetected).toBe(true)
