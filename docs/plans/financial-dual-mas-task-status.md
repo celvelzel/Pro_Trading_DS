@@ -48,13 +48,13 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 | W5-T6 | DONE | `PortfolioProposalArtifact`：before/after、实际计算值、violations、不可测限制、历史模拟假设、风险取舍、人工审阅所需信息。 |
 | W5-T7 | DONE | 独立测试：M-MAS API 不可用时 P-MAS 仍完成、价缺失时拒绝无依据提案、用户矛盾条件、重复执行不双写。 |
 | W5-T8 | DEFERRED | baseline：单 Agent + 同样工具；不含独立风险 Critic 的 multi-agent；比较 hard-constraint violations、infeasible detection、cost/latency。 |
-| W6-T1 | CANDIDATE | 统一 `CrossMASRequest/Response` 与 immutable artifact store，M/P 只依赖 shared contracts，不调用对方内部 Python agent classes。 |
-| W6-T2 | PARTIAL | 同时运行时每个 MAS 创建**不同 run_id**；使用 `correlation_id` 链接；保留 parent/cross relation 的持久化图，禁止借用旧的 `parent_run_id` 重新定义旧 retry 语义。 |
-| W6-T3 | PARTIAL | MVP 支持 P→M 请求进一步证据和用户组合任务 M→P 传调查 artifact；跨请求必须声明 `as_of`、scope、数据授权、预算、timeout。 |
-| W6-T4 | PARTIAL | 启用严格 cycle guards：`max_hops <= 2`、最多一次重复问询、TTL 到期降级、无环等待；明确重试幂等。 |
-| W6-T5 | CANDIDATE | cross-check `as_of`、资产代码映射、来源存在性、timepoint；消息不包含任意 prompt 指令，所有外部证据按不可信文本处理。 |
-| W6-T6 | CANDIDATE | 边界情况：对方未部署 / failed / cancelled / budget exhausted => 本 MAS 产出 partial，不无限等待。 |
-| W6-T7 | CANDIDATE | E2E 场景：调查 MU -> 评估含 MU/SOXX 的 demo 组合 -> 生成已验证模拟方案；可在未启用跨 MAS 情况下独立运行双方。 |
+| W6-T1 | DONE | 统一 `CrossMASRequest/Response` 与 immutable artifact store，M/P 只依赖 shared contracts，不调用对方内部 Python agent classes；已集成 `a0d29f9`。 |
+| W6-T2 | DONE | 同时运行时每个 MAS 创建**不同 run_id**；使用 `correlation_id` 链接；保留 parent/cross relation 的持久化图，禁止借用旧的 `parent_run_id` 重新定义旧 retry 语义。 |
+| W6-T3 | DONE | MVP 支持 P→M 请求进一步证据和用户组合任务 M→P 传调查 artifact；跨请求声明 `as_of`、scope、授权、预算及 TTL，并要求反向回复关联精确 REQUEST。 |
+| W6-T4 | DONE | 严格 cycle guards：`max_hops <= 2`、一次 follow-up、TTL 到期降级、无环等待；覆盖重试幂等、旧 origin 拒绝及无因果回复拒绝。 |
+| W6-T5 | DONE | cross-check `as_of`、资产范围、来源存在性与 timepoint；消息不包含任意 prompt 指令，外部证据按不可信文本处理。 |
+| W6-T6 | DONE | 对方未部署 / failed / cancelled / budget exhausted 时有限降级，不无限等待；超时、孤儿、过期及重复投递均有测试。 |
+| W6-T7 | DONE | Synthetic SQLite router E2E 覆盖 Market-only、Portfolio-only、Combined、独立运行、产物/预算审计与无持仓写入；评测质量基准仍归 W8。 |
 | W7-T1 | OPEN | 在现有 `/api/agent` 基础上增加**兼容的 typed 入口**，推荐 `POST /api/financial/market-investigations`、`POST /api/financial/portfolio-reviews`、`POST /api/financial/combined-reviews`；服务端统一创建/关联实际 AgentRun ID。若最终选择向原 `/runs` 加可选 `workflow_type`，必须保留旧请求行为。 |
 | W7-T2 | OPEN | 结果 GET 接口带 `schema_version`、run status、artifact ref、validation outcome；继续复用 `/api/agent/runs/{id}/events`、versioned approve/pause/resume/cancel。 |
 | W7-T3 | PARTIAL | `lobster-quant-web/src/app/copilot` 新增模式选择：General / Market / Portfolio / Combined，展示角色轨迹、evidence board、风险 before/after 和引用；禁止展示隐藏思维链。 |
@@ -75,7 +75,7 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 - W1-T3：金融 worker 分派已完成，旧 /api/agent 创建与 approve/resume/pause/cancel 仍走 General；金融生命周期 API 接线必须在 W7 完成。
 - W1-T6：后台 mas/cross_mas 事件已持久化，前端 useAgentEvents 的 EVENT_TYPES 尚未订阅，Timeline 尚未展示角色和 invocation；必须在 W7 补齐。
 - W4-T8、W5-T8：已有部分 baseline/ablation hooks，尚无同工具同预算的强单 Agent、Portfolio 固定流水线及实际比较报告；执行债务归 W8，不能以 hook 测试代替。
-- W6：候选 866f7df 未合并，独立 Review 为 NEEDS_WORK；拒绝准入后遗留 run 可绕过路由执行，以及 TTL preflight/claim 间隙被复现。ADR-0005 修订设计 8676c26 与共享运行时实现 60999dc 均独立 PASS。主分支已集成运行时及两个 worker 入口 cbee118，138 项 fresh worker/worker-bootstrap/授权测试 PASS。剩余 W6 独立路由候选 866f7df 尚未修复 origin 接线 P1、未 Review、未合并；三个实际模式/重试/并发/TTL Gate 未释放。
+- W6：路由与来源授权最终提交 `a0d29f9` 已快进集成；独立 Review 对 `dc09ae4..a0d29f9` 完整四文件差异 PASS。Review 揭示并修复两项缺口：router 不得把无授权的 legacy root 推断为 independent；follow-up 回复必须解析确切准入 REQUEST，不可降级成无因果新 READY。确切提交上的 252 项专项（260.85s）和完整 Backend（716 项，438.09s）通过；10 个 fresh-process 实际 worker 入口、legacy-origin 与 reverse-relation 定向矩阵均通过。原始日志及中断/失败候选记录保留在隔离 worktree 的 `logs/financial-mas/w6-repair-*`。W6 Gate 已释放 W7；证据限于 SQLite/合成 provider 和真实 Celery task 函数调用，不代表 Redis/broker/PostgreSQL 或实盘 provider 验收。
 - W7-T3/T5/T6：只读结果组件及数值展示已集成 e53bc28/7172360/9248ec5；150 前端单测、production build、TypeScript 检查 PASS。组件不是页面集成；Copilot 模式、真实 API、SSE、两个 run ID 的操作、入口链接及浏览器 E2E 尚未完成。
 - W8-T1/T2：eval/market_cases.jsonl 12 例、eval/portfolio_cases.jsonl 30 例及独立 Decimal gold 已准备；所有 fixture actual_workflow_executed=false。七个测试函数展开为 46 项用例，不能声称已跑 42 个真实工作流。
 - W8-T3/T4/T5：执行实际工作流与同预算基线/消融，保存逐例原始结果、调用计数、工具引用和确定性质量指标；现有工具数值 gold 不是工作流质量。
@@ -83,6 +83,6 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 
 最新 Gate 和原始测试证据见 [执行台账](financial-dual-mas-execution.md)，暂停时历史快照见 [交接记录](financial-dual-mas-handoff.md)。完整原计划仍是验收依据。
 
-## 新发现的恢复兼容性缺口
+## W4 recovery compatibility repair (closed)
 
-W4-T7 重新打开：原只读 scout 输出表明，旧版 Market 的宏观 Specialist 结果先持久化、checkpoint 尚未写入时，f945427 单位标签修复导致恢复任务的 invocation hash 不匹配，run 保持 executing。原 scout 的临时 harness 未留存，完整 stdout 在 ignored logs/financial-mas/market-upgrade-scout-reproduction.md。独立 financial-market-recovery worktree 已基于真实旧 Git blob 重建并保留 `logs/financial-mas/reproduce_upgrade.py`、`upgrade-reproduction.log`、`recovery-validation-final-head.log` 和隔离 SQLite 前后快照；实现候选 975cfa9 为恢复调用加单位版本并把正确单位只应用到恢复中的可变 state，旧 invocation rows 保持不变。最终 HEAD 包含新增预算耗尽用例，8 个 Market/金融运行时文件 239 项 PASS（159.75s），45 项 Market 测试全含。独立 Review 的恢复恶意探针 PASS；最终 verdict 尚待 Reviewer 返回。候选未合入，W4-T7/W6 仍不开 Gate。
+W4-T7 was reopened after a legacy Market macro Specialist result persisted before checkpointing could no longer be resumed after the `f945427` unit-label change. The isolated `financial-market-recovery` worktree reconstructed the issue from the real historical Git blob and retained `logs/financial-mas/reproduce_upgrade.py`, `upgrade-reproduction.log`, `recovery-validation-final-head.log`, and before/after SQLite snapshots. Repair `0e0e327` versions corrected invocation identity while normalizing only restored mutable state; historical invocation rows remain unchanged. Independent review `975cfa9` passed, and the root-owned exact eight-file rerun passed 239 tests in 157.39s (including all 45 Market tests), recorded in `logs/financial-mas/market-upgrade-integrated-root.log`. W4 remains synthetic/offline evidence; no live-provider or causal-accuracy claim is made.

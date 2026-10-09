@@ -1,8 +1,8 @@
 # Financial cross-MAS routing
 
-Status: W6 implementation submitted for future independent review, based on
-reviewed runtime/profile/bootstrap and ADR-0005 authorization. W6 Gate is **not accepted** and
-application factory/API/worker integration remains owned by the coordinator.
+Status: W6 Gate accepted in root commit `a0d29f9` after independent review and
+full validation on the exact commit. Typed application API, UI, SSE and navigation
+integration remain W7 coordinator work.
 
 ## Historical admission block, now closed
 
@@ -194,13 +194,11 @@ completion, denied orphan zero persistence changes, expired target zero calls,
 duplicate delivery and single-domain absent-peer imports. This is process restart
 and real task-entry evidence, not broker or Redis delivery evidence.
 
-No live provider, PostgreSQL/Redis/broker-backed Celery restart, real holdings, real trading,
-application-route wiring, W7 or W8 acceptance is claimed. Independent W6 review
-and coordinator integration are outstanding. The earlier pause was revoked and
-this task continues; Gate remains unaccepted until independent review and
-coordinator integration. Raw logs and validation metadata are
-retained in ignored `logs/financial-mas/w6-*` in this worktree.
-
-The original candidate's 31/117/522 counts predate ADR-0005 runtime integration
-and do not validate this repair. Current repair counts and exact commands are
-retained in `logs/financial-mas/w6-repair-*`; independent review is still required.
+No live provider, PostgreSQL/Redis/broker-backed Celery restart, real holdings,
+real trading, application-route wiring, W7 or W8 acceptance is claimed. W6 was
+independently reviewed against `dc09ae4..a0d29f9` and accepted after 252 scoped
+tests and 716 Full Backend tests passed on the exact candidate. The tests use
+SQLite, synthetic providers and direct Celery task-function calls in fresh
+interpreters; they do not establish broker or PostgreSQL behavior. Exact commands,
+raw output, earlier fixture failures and stopped pre-fix runs are retained under
+`C:/Users/RickyMa/.codex/worktrees/financial-cross-repair/Pro_Trading_DS/logs/financial-mas/w6-repair-*`.

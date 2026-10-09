@@ -1,6 +1,6 @@
 # 双金融 MAS 暂停交接（2026-10-09）
 
-**续接状态：用户已明确恢复原任务。** 下文保留暂停时快照，不再构成停止执行指令；最新进展见 financial-dual-mas-execution.md。恢复核对：19 个已接受集成检查点仍为主分支祖先，原 owned 文件与 worker 最终版本一致，四路径持仓/现金基线 PASS，README 仍为用户原有 15 行修改。主仓库最新完整 Backend 基线 537 passed / 297.91s；fixture 的七个测试函数实际展开为 46 项用例，不能按函数数推测全量测试数。Market 单位修复 f945427 和 UI 数值修复 e53bc28/7172360/9248ec5 已集成并独立 PASS；前端默认 150 项测试、build、TypeScript 检查通过。W6 独立 Review 为 NEEDS_WORK：未准入孤立 run 与 TTL 执行竞态仍需关闭。ADR-0005 修订设计已独立 PASS，共享运行时实现正跑全量测试，尚未实现验收。完整 63 项接手状态见 financial-dual-mas-task-status.md，W1 API/SSE 与 W4/W5 baseline 的未完成部分未被跳过。
+**续接状态：用户已明确恢复原任务。** 下文保留暂停时快照，不再构成停止执行指令；最新进展见 financial-dual-mas-execution.md。W6 路由已于 `a0d29f9` 快进集成，完整独立 Review PASS；确切提交上的 W6 专项 252 passed / 260.85s、Full Backend 716 passed / 438.09s。Review 期间发现的 legacy-root 来源推断与 follow-up 无因果回复均已补修并有零写入/精确关系回归。主分支现在是 `a0d29f9`；用户 README 仍只有原有 15 行未提交修改。Market 单位修复与 W7 只读结果组件验证继续有效；W7 页面/API/SSE/浏览器 E2E 以及 W8 同预算 baseline、实际工作流评测仍未完成，完整 63 项状态见 financial-dual-mas-task-status.md。W6 测试证据是 SQLite、合成 provider 与实际 Celery task 函数的新进程调用，不代表 Redis/broker/PostgreSQL 或实盘 provider 验收。
 
 **以下为原暂停时历史快照，已被上方恢复状态和执行台账更新。** 当时用户要求子 Agent 完成后暂停主 Agent；当前恢复指令已撤销该停止要求。本记录保留历史，不应用作当前调度状态。完整需求见 financial-dual-mas-implementation.md，历史 Gate 证据见 financial-dual-mas-execution.md。
 

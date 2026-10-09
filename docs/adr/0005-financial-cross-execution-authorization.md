@@ -1,6 +1,9 @@
 # ADR-0005: durable cross-work origin and guarded execution
 
-Status: independent DESIGN PASS at 8676c26; implementation and integration pending.
+Status: independent DESIGN PASS at 8676c26; implementation integrated as
+`a0d29f9` and exact-commit independent Review PASS. W6 Gate accepted after 252
+scoped and 716 Backend tests passed. Validation used SQLite and synthetic
+providers; broker/Redis/PostgreSQL and live-provider behavior remain unverified.
 Date: 2026-10-09. Supersedes no accepted ADR. Additive to ADR-0002/0003/0004.
 
 ## Reported blocking evidence
@@ -20,7 +23,8 @@ explicit correlations without relations. Initial Portfolio must remain available
 even if an optional follow-up leaves an orphan. No inference from run goal,
 symbols, keys, membership counts or current source status is acceptable.
 
-W6 Gate remains NEEDS_WORK. W7 dependent work stays blocked. Reviewer evidence
+At the time this blocking report was filed, W6 Gate remained NEEDS_WORK and W7
+dependent work stayed blocked. Reviewer evidence
 is retained in the W6 worktree logs/financial-mas/w6-independent-*.
 
 ## Proposed additive contract
