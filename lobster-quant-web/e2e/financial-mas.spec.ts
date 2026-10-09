@@ -17,8 +17,9 @@ for (const workflow of ['market', 'portfolio', 'combined']) {
     const ids = created.runs.map((run: { run_id: string }) => run.run_id)
     expect(new Set(ids).size).toBe(ids.length)
     for (const id of ids) {
-      await expect(page.getByText(id, { exact: true })).toBeVisible()
-      const panel = page.getByRole('article').filter({ has: page.getByText(id, { exact: true }) })
+      const panel = page.getByRole('article', { name: new RegExp(`run ${id}$`) })
+      await expect(panel).toHaveCount(1)
+      await expect(panel).toBeVisible()
       await expect(panel.getByRole('status').first()).toContainText('completed', { timeout: 60000 })
       await expect(panel.getByRole('status').first()).toContainText(/cursor [1-9]/)
       await expect(panel.getByText(/mas.completed/)).toBeVisible({ timeout: 60000 })
