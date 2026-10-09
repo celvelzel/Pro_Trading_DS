@@ -51,7 +51,7 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 | W6-T1 | CANDIDATE | 统一 `CrossMASRequest/Response` 与 immutable artifact store，M/P 只依赖 shared contracts，不调用对方内部 Python agent classes。 |
 | W6-T2 | PARTIAL | 同时运行时每个 MAS 创建**不同 run_id**；使用 `correlation_id` 链接；保留 parent/cross relation 的持久化图，禁止借用旧的 `parent_run_id` 重新定义旧 retry 语义。 |
 | W6-T3 | PARTIAL | MVP 支持 P→M 请求进一步证据和用户组合任务 M→P 传调查 artifact；跨请求必须声明 `as_of`、scope、数据授权、预算、timeout。 |
-| W6-T4 | IN_PROGRESS | 启用严格 cycle guards：`max_hops <= 2`、最多一次重复问询、TTL 到期降级、无环等待；明确重试幂等。 |
+| W6-T4 | PARTIAL | 启用严格 cycle guards：`max_hops <= 2`、最多一次重复问询、TTL 到期降级、无环等待；明确重试幂等。 |
 | W6-T5 | CANDIDATE | cross-check `as_of`、资产代码映射、来源存在性、timepoint；消息不包含任意 prompt 指令，所有外部证据按不可信文本处理。 |
 | W6-T6 | CANDIDATE | 边界情况：对方未部署 / failed / cancelled / budget exhausted => 本 MAS 产出 partial，不无限等待。 |
 | W6-T7 | CANDIDATE | E2E 场景：调查 MU -> 评估含 MU/SOXX 的 demo 组合 -> 生成已验证模拟方案；可在未启用跨 MAS 情况下独立运行双方。 |
@@ -75,7 +75,7 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 - W1-T3：金融 worker 分派已完成，旧 /api/agent 创建与 approve/resume/pause/cancel 仍走 General；金融生命周期 API 接线必须在 W7 完成。
 - W1-T6：后台 mas/cross_mas 事件已持久化，前端 useAgentEvents 的 EVENT_TYPES 尚未订阅，Timeline 尚未展示角色和 invocation；必须在 W7 补齐。
 - W4-T8、W5-T8：已有部分 baseline/ablation hooks，尚无同工具同预算的强单 Agent、Portfolio 固定流水线及实际比较报告；执行债务归 W8，不能以 hook 测试代替。
-- W6：候选 866f7df 未合并，独立 Review 为 NEEDS_WORK；拒绝准入后遗留 run 可绕过路由执行，以及 TTL preflight/claim 间隙被复现。ADR-0005 修订设计 8676c26 独立 DESIGN PASS，运行时实现位于独立 financial-execution-authorization worktree，测试及实现 Review 未接受。修复共享运行时、两个 worker 入口和路由后，重新验证三个实际模式及重试/并发/TTL，再释放 W6 Gate。
+- W6：候选 866f7df 未合并，独立 Review 为 NEEDS_WORK；拒绝准入后遗留 run 可绕过路由执行，以及 TTL preflight/claim 间隙被复现。ADR-0005 修订设计 8676c26 与共享运行时实现 60999dc 均独立 PASS。主分支已集成运行时及两个 worker 入口 cbee118，138 项 fresh worker/worker-bootstrap/授权测试 PASS。剩余 W6 独立路由候选 866f7df 尚未修复 origin 接线 P1、未 Review、未合并；三个实际模式/重试/并发/TTL Gate 未释放。
 - W7-T3/T5/T6：只读结果组件及数值展示已集成 e53bc28/7172360/9248ec5；150 前端单测、production build、TypeScript 检查 PASS。组件不是页面集成；Copilot 模式、真实 API、SSE、两个 run ID 的操作、入口链接及浏览器 E2E 尚未完成。
 - W8-T1/T2：eval/market_cases.jsonl 12 例、eval/portfolio_cases.jsonl 30 例及独立 Decimal gold 已准备；所有 fixture actual_workflow_executed=false。七个测试函数展开为 46 项用例，不能声称已跑 42 个真实工作流。
 - W8-T3/T4/T5：执行实际工作流与同预算基线/消融，保存逐例原始结果、调用计数、工具引用和确定性质量指标；现有工具数值 gold 不是工作流质量。
@@ -85,4 +85,4 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 
 ## 新发现的恢复兼容性缺口
 
-W4-T7 重新打开：只读审计复现旧版单位 metadata 的 Market 调用已成功持久化、checkpoint 尚未写入时，升级至 f945427 后 macro specialist 任务 hash 冲突，run 保持 executing。原始 stdout 保存在 ignored logs/financial-mas/market-upgrade-scout-reproduction.md；原 scout 脚本未留存，因此独立 financial-market-recovery worktree 必须重建完整复现并修复、接受独立 Review，不能把原同版本恢复 PASS 当作升级兼容证据。历史结果不可改写，全局 hash 校验不可放宽。
+W4-T7 重新打开：独立原始脚本和 post-fix reviewer 核验已保留； 的 Market 调用已成功持久化、checkpoint 尚未写入时，升级至 f945427 后 macro specialist 任务 hash 冲突，run 保持 executing。原始 stdout 保存在 ignored logs/financial-mas/market-upgrade-scout-reproduction.md；原 scout 脚本未留存，因此独立 financial-market-recovery worktree 必须重建完整复现并修复、接受独立 Review，不能把原同版本恢复 PASS 当作升级兼容证据。历史结果不可改写，全局 hash 校验不可放宽。
