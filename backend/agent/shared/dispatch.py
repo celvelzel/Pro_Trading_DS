@@ -33,6 +33,10 @@ class FinancialConflict(RuntimeError):
     status_code = 409
 
 
+class FinancialExecutionProfileError(ValueError):
+    """The injected assembly cannot execute this run's immutable provenance."""
+
+
 class BudgetExhausted(RuntimeError):
     code = 'budget_exhausted'
 
@@ -51,7 +55,12 @@ class _ExistingRelation(Exception):
 
 
 class FinancialMASDispatcher:
-    def __init__(self, session_factory: Callable, drivers: WorkflowRegistry | None = None, tools: ToolRegistry | None = None, *, clock=utcnow, lease_seconds=30):
+    def __init__(self, session_factory: Callable, drivers: WorkflowRegistry | None = None, tools: ToolRegistry | None = None, *, clock=utcnow, lease_seconds=30, execution_profile: str | None = None):
+        if execution_profile is not None and (not isinstance(execution_profile, str)
+                or not 1 <= len(execution_profile) <= 128
+                or execution_profile != execution_profile.strip()):
+            raise FinancialExecutionProfileError('execution_profile must be a string of 1-128 characters without surrounding whitespace')
+        self._execution_profile = execution_profile
         if lease_seconds <= 0:
             raise ValueError('lease_seconds must be positive')
         self.sessions = session_factory
@@ -59,6 +68,14 @@ class FinancialMASDispatcher:
         self.tools = tools if tools is not None else financial_tool_registry
         self.clock = clock
         self.lease_seconds = lease_seconds
+
+    @property
+    def execution_profile(self) -> str | None:
+        return self._execution_profile
+
+    def _require_execution_profile(self, meta):
+        if meta.creation_inputs.get('execution_profile') != self.execution_profile:
+            raise FinancialExecutionProfileError('financial execution profile mismatch')
 
     def is_financial(self, run_id: str) -> bool:
         with self.sessions() as session:
@@ -79,10 +96,13 @@ class FinancialMASDispatcher:
                            'budget': limits.model_dump(mode='json'),
                            'requested_correlation_id': correlation_id,
                            'retry_parent_id': _retry_parent_id}
+        if self.execution_profile is not None:
+            creation_inputs['execution_profile'] = self.execution_profile
         with self.sessions() as session:
             self._lock_conversation(session, conversation_id)
             if _retry_parent_id is not None:
-                parent, _ = self._load(session, _retry_parent_id)
+                parent, parent_meta = self._load(session, _retry_parent_id)
+                self._require_execution_profile(parent_meta)
                 if parent.conversation_id != conversation_id or parent.version != _retry_parent_version or parent.status not in TERMINAL:
                     raise FinancialConflict('retry needs current terminal run')
             existing = session.scalar(select(FinancialRun).where(FinancialRun.conversation_id == conversation_id, FinancialRun.idempotency_key == idempotency_key))
@@ -124,7 +144,7 @@ class FinancialMASDispatcher:
     def snapshot(self, run_id: str) -> dict:
         with self.sessions() as session:
             run, meta = self._load(session, run_id)
-            return {'run_id': run.id, 'conversation_id': run.conversation_id, 'status': run.status, 'version': run.version, 'mas_kind': meta.mas_kind, 'correlation_id': meta.correlation_id, 'request': meta.request, 'checkpoint': meta.checkpoint, 'budget': meta.budget, 'active_seconds': self._elapsed(meta), 'final_answer': run.final_answer, 'error_code': run.error_code}
+            return {'run_id': run.id, 'conversation_id': run.conversation_id, 'status': run.status, 'version': run.version, 'mas_kind': meta.mas_kind, 'correlation_id': meta.correlation_id, 'execution_profile': meta.creation_inputs.get('execution_profile'), 'request': meta.request, 'checkpoint': meta.checkpoint, 'budget': meta.budget, 'active_seconds': self._elapsed(meta), 'final_answer': run.final_answer, 'error_code': run.error_code}
 
     def _load(self, session, run_id):
         run = session.get(AgentRun, run_id)
@@ -345,6 +365,7 @@ class FinancialMASDispatcher:
             self._lock_conversation(session, run.conversation_id)
             session.expire_all()
             run, meta = self._load(session, run_id)
+            self._require_execution_profile(meta)
             if run.version != version or run.status not in TERMINAL:
                 raise FinancialConflict('retry needs current terminal run')
             request = self._request(meta)
@@ -362,6 +383,11 @@ class FinancialMASDispatcher:
         return (MarketInvestigationRequest if meta.mas_kind == 'market_investigation' else PortfolioReviewRequest).model_validate(meta.request)
 
     async def start(self, run_id: str) -> AgentRun:
+        # Deliberately outside the stale-worker handler and before any CAS.
+        # Profile identity is immutable after creation, including across retry.
+        with self.sessions() as session:
+            _, meta = self._load(session, run_id)
+            self._require_execution_profile(meta)
         token = str(uuid.uuid4())
         try:
             with self._mutation(run_id) as (session, run, meta):
