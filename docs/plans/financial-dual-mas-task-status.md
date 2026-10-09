@@ -71,6 +71,8 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 | W8-T7 | PARTIAL | 并发 / 持久化：重复 Celery 投递、cancel/resume/checkpoint restore、乐观锁 409、单调 seq、migration upgrade/downgrade（安全范围内）、缺 Redis inline 执行可用性。 |
 | W8-T8 | PARTIAL | 整理 README/ADR/演示脚本/可复现实验，记录真实性：没有实盘、没有验证因果、后验模拟不等于未来收益。 |
 
+W7 实现已从 `604cf5d` 建立两份独立 managed worktree：`financial-w7-backend` owns financial DTO/routes、pair worker 与 backend API/registration tests；`financial-w7-frontend` owns Copilot/SSE/client、分析/组合页入口与 frontend tests。主 Agent owns `backend/main.py` 和最终集成。代码尚待 scoped tests 与独立 Review，W7-T1..T6 仍按未完成记录。
+
 ## 未完成任务的具体接手边界
 
 - W1-T3：金融 worker 分派已完成，旧 /api/agent 创建与 approve/resume/pause/cancel 仍走 General；金融生命周期 API 接线必须在 W7 完成。
