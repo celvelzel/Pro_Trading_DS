@@ -66,7 +66,7 @@ function FinancialRunPanel({ id, conversation, correlation, marketReady, onSnaps
     {run?.status === 'executing' && <Button disabled={busy} onClick={() => void action('pause')}>暂停此分析</Button>}
     {run && !terminal(run.status) && <Button variant="outline" disabled={busy} onClick={() => void action('cancel')}>取消此 run</Button>}
     {run?.error_code && <p role="alert">{run.error_code}</p>}
-    {run?.limitations.map((text, i) => <p key={i}>{text === 'market_evidence_unavailable' ? 'Market 证据未传递到 Portfolio；组合结论受此限制。' : text}</p>)}
+    {run?.limitations.map((text, i) => <p key={i}>{text === 'SYSTEM_UNAVAILABLE' ? 'SYSTEM_UNAVAILABLE：API 已确认持久化的跨 MAS 不可用消息；Portfolio 未收到可用的 Market 证据。' : text === 'market_evidence_unavailable' ? 'Market 证据未传递到 Portfolio；组合结论受此限制。' : text}</p>)}
     <section aria-label="角色与证据轨迹"><h3 className="font-medium">角色与证据轨迹</h3>{!events.length && <p>等待运行事件。</p>}<ol className="space-y-2">{events.map(event => <li key={event.event_id} className="break-all text-xs"><span>{event.seq} · {typeof event.payload.role === 'string' ? event.payload.role : 'stage/system'} · {event.event_type}</span><p>{eventSummary(event.payload)}</p></li>)}</ol></section>
     {run?.mas_kind === 'portfolio_rebalance' && run.artifact && <PortfolioProvenance artifact={run.artifact} />}
     {run?.mas_kind === 'market_investigation' ? <MarketResult artifact={run.artifact} sourceProfile="demo" loading={!terminal(run.status)} /> : <PortfolioResult artifact={run?.artifact} sourceProfile="demo" loading={!run || !terminal(run.status)}  />}

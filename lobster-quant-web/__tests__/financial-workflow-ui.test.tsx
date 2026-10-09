@@ -6,7 +6,7 @@ import { agentApi } from '@/lib/agent-api'
 vi.mock('@/hooks/useFinancialEvents', () => ({ useFinancialEvents: (id: string) => ({ events: [{ seq: 1, event_id: id, event_type: 'mas.review_required', payload: { role: 'Coordinator', status: 'waiting_user', prompt: 'private prompt' } }], cursor: 1, connection: 'connected' }) }))
 vi.mock('@/lib/agent-api', () => ({ agentApi: { createConversation: vi.fn() } }))
 vi.mock('@/lib/financial-api', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/financial-api')>(), financialApi: { create: vi.fn(), getRun: vi.fn(), action: vi.fn() } }))
-const snapshot = (id: string, kind: string) => ({ schema_version: 1 as const, run_id: id, conversation_id: 'c', correlation_id: 'pair', mas_kind: kind, status: 'waiting_user', mode: 'review', version: 1, artifact_ref: null, artifact: null, validation_outcome: 'pending', error_code: null, limitations: [] })
+const snapshot = (id: string, kind: string) => ({ schema_version: 1 as const, run_id: id, conversation_id: 'c', correlation_id: 'pair', mas_kind: kind, status: 'waiting_user', mode: 'review', version: 1, artifact_ref: null, artifact: null, validation_outcome: 'pending' as const, error_code: null, limitations: [] })
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(agentApi.createConversation).mockResolvedValue({ id: 'c' }) })
 afterEach(() => vi.restoreAllMocks())
 describe('accessible financial workflow', () => {
@@ -44,4 +44,14 @@ it('announces loading and renders terminal partial evidence with source citation
   expect(await screen.findByText('missing independent source')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'https://example.org/source' })).toHaveAttribute('rel', 'noopener noreferrer')
   expect(screen.getByText(/部分结果/)).toBeInTheDocument()
+})
+
+it.each([['SYSTEM_UNAVAILABLE', true], ['market_evidence_unavailable', false]])('renders exact API limitation %s without inferring a system message', async (marker, explicit) => {
+  vi.mocked(financialApi.create).mockResolvedValue({ schema_version: 1, conversation_id: 'c', correlation_id: 'pair', portfolio_run_id: 'p', runs: [{ run_id: 'p', mas_kind: 'portfolio_rebalance', status: 'waiting_user', version: 1 }] })
+  vi.mocked(financialApi.getRun).mockResolvedValue({ ...snapshot('p', 'portfolio_rebalance'), mas_kind: 'portfolio_rebalance', status: 'waiting_user', mode: 'review', limitations: [marker] })
+  render(<FinancialWorkflow workflow="portfolio" mode="review" />)
+  fireEvent.click(screen.getByRole('button', { name: '开始 portfolio 合成演示' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: '批准此 Portfolio 分析' })).toBeEnabled())
+  if (explicit) expect(screen.getByText(/SYSTEM_UNAVAILABLE：API 已确认持久化/)).toBeInTheDocument()
+  else { expect(screen.queryByText(/SYSTEM_UNAVAILABLE/)).not.toBeInTheDocument(); expect(screen.getByText(/Market 证据未传递/)).toBeInTheDocument() }
 })
