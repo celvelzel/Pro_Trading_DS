@@ -18,6 +18,7 @@ def test_fresh_worker_loader_registers_all_queue_tasks():
     for name in (
         "backend.workers.agent_tasks.run_agent",
         "backend.workers.agent_tasks.resume_agent_job",
+        "backend.workers.agent_tasks.run_financial_pair",
         "backend.workers.compute_tasks.run_backtest_job",
     ):
         assert name in tasks
