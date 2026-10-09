@@ -8,12 +8,13 @@ Status: frozen executable W1 contract; independent review PASS at 761c90a, integ
 FinancialMASDispatcher(session_factory: Callable,
     drivers: WorkflowRegistry | None = None,
     tools: ToolRegistry | None = None,
-    *, clock=utcnow, lease_seconds=30)
+    *, clock=utcnow, lease_seconds=30, execution_profile: str | None = None)
 
 dispatcher.create(conversation_id: str,
     request: MarketInvestigationRequest | PortfolioReviewRequest,
     *, idempotency_key: str, mode="review", budget: RunBudget | None = None,
-    correlation_id: str | None = None) -> AgentRun
+    correlation_id: str | None = None,
+    execution_authorization: FinancialExecutionAuthorization | None = None) -> AgentRun
 await dispatcher.start(run_id: str) -> AgentRun
 dispatcher.approve(run_id: str, version: int) -> AgentRun
 dispatcher.pause(run_id: str, version: int) -> AgentRun
@@ -23,6 +24,7 @@ dispatcher.retry(run_id: str, version: int, *, idempotency_key: str) -> AgentRun
 dispatcher.get_run(run_id: str) -> AgentRun
 dispatcher.is_financial(run_id: str) -> bool
 dispatcher.snapshot(run_id: str) -> dict
+dispatcher.validate_queue_eligibility(run_id: str) -> None
 dispatcher.link_runs(source_run_id: str, target_run_id: str, *, version: int,
     relation_type: str, idempotency_key: str,
     envelope: CrossMASEnvelope | None = None) -> dict
@@ -31,7 +33,7 @@ dispatcher.relations(run_id: str) -> list[dict]
 
 The existing conversation must exist. `create` requires a registered driver. Keys are unique per conversation; identical repeated creation returns the persisted run, different inputs conflict. The immutable creation_inputs record compares the full normalized request, kind, effective mode, effective initial budget, caller correlation selection and retry parent in both ordinary and concurrent-create collision paths. Omitted budget and explicitly equivalent defaults deduplicate; consumed counters are never used as creation identity. Caller correlation_id=None remains None in that identity while the generated runtime correlation ID is retained separately. Replaying with an explicitly supplied correlation ID therefore requires the original caller selection. Mode is review/auto. Review starts at waiting_user; approve permits read-only execution. Resume restores the phase preceding pause (including queued/planning/waiting_user); Lead dispatches start after approve/resume when execution is eligible. Cancel works for every nonterminal state, including created/queued/planning/waiting_user/paused. Completed/failed/cancelled/expired are terminal. Terminal retry creates a different AgentRun and preserves parent_run_id retry ancestry atomically with creation. Existing non-retry keys cannot be reused for retry. The internal `_retry_parent_id` create keyword is reserved for dispatcher.retry; API callers do not expose or pass it. API catches FinancialConflict and returns 409; KeyError maps to 404. `start` catches execution failures and returns the persisted failed run, with a safe error_code. User intervention wins over a stale worker's output.
 
-Snapshot fields: run_id, conversation_id, status, version, mas_kind, correlation_id, request, checkpoint, budget, active_seconds, final_answer, error_code. Requests/checkpoints/budgets are JSON serialization of the corresponding Pydantic contracts. final_answer is the final artifact JSON; checkpoint.artifact_ids references immutable rows. Existing AgentEvent and SSE envelopes remain unchanged; financial event types use `mas.*`.
+Snapshot fields: run_id, conversation_id, status, version, mas_kind, correlation_id, execution_profile, execution_authorization, request, checkpoint, budget, active_seconds, final_answer, error_code. Requests/checkpoints/budgets are JSON serialization of the corresponding Pydantic contracts. final_answer is the final artifact JSON; checkpoint.artifact_ids references immutable rows. Existing AgentEvent and SSE envelopes remain unchanged; financial event types use `mas.*`.
 
 Application assembly registers drivers via `WorkflowRegistry.register(driver)` and separate tools via existing `ToolRegistry.register(spec)`. Constructor injection is preferred for tests. Exported `workflow_registry` and `financial_tool_registry` start empty; Lead's fresh-process bootstrap populates them before worker dispatch. They never modify default_registry. Worker detects FinancialRun before selecting financial start, otherwise invokes legacy AgentOrchestrator. Lead owns API dispatch and bootstrap wiring.
 
@@ -176,3 +178,78 @@ Before `start` acquires a claim, performs CAS, emits events or calls any provide
 `retry` checks the parent's profile under the canonical conversation lock before creating or replaying a child; the insertion transaction rechecks the parent profile with retry authority. A matching assembly preserves that profile along with existing retry ancestry, correlation and reset counters. Matching legacy None dispatchers continue to execute and retry directly. No artifact/request schema, table, migration or General registry changes are introduced.
 
 The shared runtime checks identity; application assembly must bind each identifier to the same trusted versioned configuration across restarts. Factory/worker reconstruction is separately owned and must reject missing/unknown deployment mappings rather than falling back to synthetic data. The initial demo identity is `synthetic-demo-v1`; custom configuration cannot reuse that reserved identity. A matching identifier alone is no proof of real-provider quality or live distributed recovery. Local validation includes fresh Python processes, complete database before/after comparisons on rejection, no provider calls, concurrent identity checks, legacy compatibility and the Backend regression suite.
+
+
+## Durable execution authorization (ADR-0005 additive seam)
+
+```python
+FinancialExecutionAuthorization(
+    purpose: Literal["independent", "cross_followup"],
+    source_run_id: str | None = None,
+    request_message_id: str | None = None)
+
+dispatcher.create(...,
+    execution_authorization: FinancialExecutionAuthorization | None = None) -> AgentRun
+dispatcher.validate_queue_eligibility(run_id: str) -> None
+```
+
+The exported contract is frozen, forbids extras, and validates exact nonblank
+identifier strings before coercion, rejecting surrounding whitespace.
+`cross_followup` requires both IDs; `independent` has neither. The trusted
+application supplies intent, which alone grants no permission. Validated non-None
+JSON is persisted in existing immutable creation_inputs, participates in full
+ordinary/concurrent identity, and is exposed as validated JSON in
+snapshot.execution_authorization. None omits the creation key and returns None in
+snapshot. Explicit null/malformed/unknown stored JSON denies rather than becoming
+legacy. No schema, migration, artifact, General registry or budget change occurs.
+
+Missing/mismatched admission raises exported
+`FinancialExecutionAuthorizationError(ValueError)`, `status_code=409`, stable
+`code="financial_execution_authorization_denied"`. Read-only preflight denies
+before any DML, claim, status/event, reservation or call; the exception is never
+swallowed as stale-worker success. Cross start locks the canonical conversation
+before run CAS and rechecks the exact immutable cross_admitted
+MARKET_EVIDENCE_REQUEST, original source/target IDs, conversation/correlation,
+kinds/profiles and request as_of. The absolute deadline is checked with the current
+clock at the claim decision. Admitted expired delivery performs one existing
+expired transition, mas.expired event and error_code="cross_execution_expired",
+without new-work reservation/call. Terminal replay is a no-op. Pause, pending
+review and an active owned lease take precedence; approval cannot extend TTL.
+
+Runtime guards honor the admitted deadline before reservations/external start,
+after external return, and before results/failure/checkpoint/final persistence.
+External waits use the stricter cross and existing active deadline. Late output
+cannot become a result or generic failed status. Still-owned work records fenced
+expiry; pause/cancel/stale ownership/expired lease wins. Fresh delivery can expire
+after an old lease expires. Read-only I/O threads cannot be forcibly stopped, but
+cannot authorize late runtime output. Reservations committed before expiry stay
+charged; incomplete audit rows stay reserved. External billing remains at least
+once after a crash, as in the existing runtime.
+
+Both retry and retained _retry_parent_id creation seam deny cross_followup before
+child creation, including spoofed independent origin, with zero DML/calls.
+Independent retries inherit origin; legacy None direct retries retain behavior.
+Same-run checkpoint/lease recovery is allowed within original TTL. A differently
+keyed sibling sharing REQUEST intent lacks exact-target admission. Source later
+completion/cancellation does not rewrite the target lifecycle or authorization.
+
+`validate_queue_eligibility(run_id: str) -> None` is a read-only worker preflight,
+checking profile/origin and positive exact admission for cross intent. It permits
+positively admitted expired targets through to shared start's fenced expiry. It
+neither claims/executes work nor registers deployment profiles or replaces atomic
+start. Workers require an independently reviewed trusted profile mapping. Legacy
+None queue delivery requires at most 32 acyclic retry parent edges, matching
+AgentRun parent and creation_inputs.retry_parent_id, existing ancestors with
+matching conversation/correlation/request/domain/profile and None origin,
+inherited child correlation, and a root without explicit requested correlation.
+Exactly 32 edges pass, 33 fail. Missing/mismatched/cyclic ancestry and explicit
+legacy root correlation deny without mutation. Legacy None direct runtime retains
+its accepted semantics, including explicit correlation. No goal/symbol/key-based
+origin inference occurs.
+
+Dedicated tests use real admission transactions, fake drivers, actual reviewed
+Market tools/driver, full all-table denial snapshots and call counts. PostgreSQL
+lock/claim SQL is compiled separately. Worker/router assembly, three-mode W6
+integration and independent implementation review remain separate requirements.
+This seam does not release W6/W7/W8 or establish live PostgreSQL/Redis/Celery or
+real-provider recovery.

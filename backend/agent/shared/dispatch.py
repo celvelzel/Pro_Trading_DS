@@ -16,6 +16,8 @@ from agent.tools.registry import ToolRegistry
 from agent.tools.executor import ToolExecutor
 from agent.schemas import ToolResultEnvelope
 from .contracts import *
+from .execution_authorization import (FinancialExecutionAuthorizationError, FinancialExecutionExpired,
+    origin, admitted_deadline, validate_legacy_queue)
 from .runtime import WorkflowRegistry, SpecialistInvoker, workflow_registry, financial_tool_registry
 
 TERMINAL = frozenset({'completed', 'failed', 'cancelled', 'expired'})
@@ -81,7 +83,18 @@ class FinancialMASDispatcher:
         with self.sessions() as session:
             return session.get(FinancialRun, run_id) is not None
 
-    def create(self, conversation_id: str, request: MarketInvestigationRequest | PortfolioReviewRequest, *, idempotency_key: str, mode='review', budget: RunBudget | None = None, correlation_id: str | None = None, _retry_parent_id: str | None = None, _retry_parent_version: int | None = None) -> AgentRun:
+    def create(self, conversation_id: str, request: MarketInvestigationRequest | PortfolioReviewRequest, *, idempotency_key: str, mode='review', budget: RunBudget | None = None, correlation_id: str | None = None, _retry_parent_id: str | None = None, _retry_parent_version: int | None = None, execution_authorization: FinancialExecutionAuthorization | None = None) -> AgentRun:
+        if execution_authorization is not None:
+            execution_authorization = FinancialExecutionAuthorization.model_validate(
+                execution_authorization.model_dump() if isinstance(execution_authorization, FinancialExecutionAuthorization) else execution_authorization)
+        # Retry refusals are read-only, even when callers spoof independent intent.
+        if _retry_parent_id is not None:
+            with self.sessions() as session:
+                _, parent_meta = self._load(session, _retry_parent_id)
+                self._require_execution_profile(parent_meta)
+                parent_origin = self._retry_origin(parent_meta)
+                if execution_authorization != parent_origin:
+                    raise FinancialExecutionAuthorizationError('retry must inherit immutable origin')
         if mode not in {'review', 'auto'}:
             raise ValueError('invalid mode')
         kind = 'market_investigation' if isinstance(request, MarketInvestigationRequest) else 'portfolio_rebalance'
@@ -98,11 +111,15 @@ class FinancialMASDispatcher:
                            'retry_parent_id': _retry_parent_id}
         if self.execution_profile is not None:
             creation_inputs['execution_profile'] = self.execution_profile
+        if execution_authorization is not None:
+            creation_inputs['execution_authorization'] = execution_authorization.model_dump(mode='json')
         with self.sessions() as session:
             self._lock_conversation(session, conversation_id)
             if _retry_parent_id is not None:
                 parent, parent_meta = self._load(session, _retry_parent_id)
                 self._require_execution_profile(parent_meta)
+                if self._retry_origin(parent_meta) != execution_authorization:
+                    raise FinancialExecutionAuthorizationError('retry origin mismatch')
                 if parent.conversation_id != conversation_id or parent.version != _retry_parent_version or parent.status not in TERMINAL:
                     raise FinancialConflict('retry needs current terminal run')
             existing = session.scalar(select(FinancialRun).where(FinancialRun.conversation_id == conversation_id, FinancialRun.idempotency_key == idempotency_key))
@@ -144,7 +161,7 @@ class FinancialMASDispatcher:
     def snapshot(self, run_id: str) -> dict:
         with self.sessions() as session:
             run, meta = self._load(session, run_id)
-            return {'run_id': run.id, 'conversation_id': run.conversation_id, 'status': run.status, 'version': run.version, 'mas_kind': meta.mas_kind, 'correlation_id': meta.correlation_id, 'execution_profile': meta.creation_inputs.get('execution_profile'), 'request': meta.request, 'checkpoint': meta.checkpoint, 'budget': meta.budget, 'active_seconds': self._elapsed(meta), 'final_answer': run.final_answer, 'error_code': run.error_code}
+            return {'run_id': run.id, 'conversation_id': run.conversation_id, 'status': run.status, 'version': run.version, 'mas_kind': meta.mas_kind, 'correlation_id': meta.correlation_id, 'execution_profile': meta.creation_inputs.get('execution_profile'), 'execution_authorization': (origin(meta).model_dump(mode='json') if origin(meta) is not None else None), 'request': meta.request, 'checkpoint': meta.checkpoint, 'budget': meta.budget, 'active_seconds': self._elapsed(meta), 'final_answer': run.final_answer, 'error_code': run.error_code}
 
     def _load(self, session, run_id):
         run = session.get(AgentRun, run_id)
@@ -180,13 +197,15 @@ class FinancialMASDispatcher:
         meta.budget = budget.model_dump()
 
     @contextmanager
-    def _mutation(self, run_id, *, version=None, token=None, cross_lock=False):
+    def _mutation(self, run_id, *, version=None, token=None, cross_lock=False, authorization_check=False):
         with self.sessions() as session:
             run, meta = self._load(session, run_id)
             if cross_lock:
                 self._lock_conversation(session, run.conversation_id)
                 session.expire_all()
                 run, meta = self._load(session, run_id)
+            if authorization_check:
+                admitted_deadline(self, session, run, meta)
             expected = run.version if version is None else version
             if expected != run.version or (token is not None and (meta.claim_token != token or not meta.lease_until or aware(meta.lease_until) <= self.clock())):
                 raise FinancialConflict('stale version or worker claim')
@@ -359,19 +378,40 @@ class FinancialMASDispatcher:
             expected_source_version=expected_source_version,
             expected_target_version=expected_target_version, envelope=envelope)
 
+    def validate_queue_eligibility(self, run_id: str) -> None:
+        """Read-only worker preflight. Shared start remains the execution authority."""
+        with self.sessions() as session:
+            run, meta = self._load(session, run_id)
+            self._require_execution_profile(meta)
+            authorization = origin(meta)
+            if authorization is None:
+                validate_legacy_queue(self, session, run, meta)
+            else:
+                admitted_deadline(self, session, run, meta)
+
+    @staticmethod
+    def _retry_origin(meta):
+        authorization = origin(meta)
+        if authorization is not None and authorization.purpose == 'cross_followup':
+            raise FinancialExecutionAuthorizationError('cross_followup retry is unsupported')
+        return authorization
+
     def retry(self, run_id: str, version: int, *, idempotency_key: str):
         with self.sessions() as session:
             run, meta = self._load(session, run_id)
+            self._require_execution_profile(meta)
+            authorization = self._retry_origin(meta)
             self._lock_conversation(session, run.conversation_id)
             session.expire_all()
             run, meta = self._load(session, run_id)
             self._require_execution_profile(meta)
+            authorization = self._retry_origin(meta)
             if run.version != version or run.status not in TERMINAL:
                 raise FinancialConflict('retry needs current terminal run')
             request = self._request(meta)
             budget = RunBudget.model_validate(meta.budget).model_copy(update={'model_calls': 0, 'tool_calls': 0, 'rounds': 0, 'hops': 0, 'followups': 0})
             conversation_id, mode, correlation_id = run.conversation_id, run.mode, meta.correlation_id
-        child = self.create(conversation_id, request, idempotency_key=idempotency_key, mode=mode, budget=budget, correlation_id=correlation_id, _retry_parent_id=run_id, _retry_parent_version=version)
+        child = self.create(conversation_id, request, idempotency_key=idempotency_key, mode=mode, budget=budget, correlation_id=correlation_id, _retry_parent_id=run_id, _retry_parent_version=version, execution_authorization=authorization)
         if child.id == run_id:
             raise FinancialConflict('retry must create a different run')
         if child.parent_run_id != run_id:
@@ -382,20 +422,42 @@ class FinancialMASDispatcher:
     def _request(meta):
         return (MarketInvestigationRequest if meta.mas_kind == 'market_investigation' else PortfolioReviewRequest).model_validate(meta.request)
 
+    def _expire(self, session, run, meta):
+        run.status = 'expired'
+        run.error_code = FinancialExecutionExpired.code
+        self._stop_clock(meta)
+        self._release(meta)
+        self._event(session, run, meta, 'mas.expired', {'code': run.error_code})
+
+    def _expire_owned(self, run_id, token):
+        try:
+            with self._mutation(run_id, token=token) as (session, run, meta):
+                if run.status != 'executing':
+                    raise RunInterrupted('intervention owns run')
+                self._expire(session, run, meta)
+        except FinancialConflict:
+            pass
+
     async def start(self, run_id: str) -> AgentRun:
         # Deliberately outside the stale-worker handler and before any CAS.
         # Profile identity is immutable after creation, including across retry.
         with self.sessions() as session:
             _, meta = self._load(session, run_id)
             self._require_execution_profile(meta)
+            guarded = origin(meta) is not None and origin(meta).purpose == 'cross_followup'
+            admitted_deadline(self, session, session.get(AgentRun, run_id), meta)
         token = str(uuid.uuid4())
         try:
-            with self._mutation(run_id) as (session, run, meta):
+            with self._mutation(run_id, cross_lock=guarded, authorization_check=guarded) as (session, run, meta):
                 if run.status in TERMINAL or run.status in {'paused', 'waiting_user'}:
                     raise _NoClaim()
                 if meta.claim_token and meta.lease_until and aware(meta.lease_until) > self.clock():
                     raise _NoClaim()
-                if run.mode == 'review' and run.status in {'queued', 'planning'}:
+                deadline = admitted_deadline(self, session, run, meta)
+                if deadline is not None and deadline <= self.clock():
+                    self._expire(session, run, meta)
+                    kind = meta.mas_kind
+                elif run.mode == 'review' and run.status in {'queued', 'planning'}:
                     run.status = 'waiting_user'
                     self._stop_clock(meta)
                     self._event(session, run, meta, 'mas.review_required', {})
@@ -407,7 +469,7 @@ class FinancialMASDispatcher:
                         meta.active_since = self.clock()
                     self._event(session, run, meta, 'mas.started', {})
                 kind = meta.mas_kind
-            if self.get_run(run_id).status == 'waiting_user':
+            if self.get_run(run_id).status in {'waiting_user', 'expired'}:
                 return self.get_run(run_id)
             driver = self.drivers.get(kind)
             context = RuntimeContext(self, run_id, token, driver)
@@ -418,8 +480,13 @@ class FinancialMASDispatcher:
             else:
                 # Driver must explicitly preserve state; release an unfinished delivery.
                 with self._mutation(run_id, token=token) as (session, run, meta):
+                    context._guard(run, meta)
                     self._release(meta)
                     self._event(session, run, meta, 'mas.checkpoint', {})
+        except FinancialExecutionAuthorizationError:
+            raise
+        except FinancialExecutionExpired:
+            self._expire_owned(run_id, token)
         except _NoClaim:
             pass
         except FinancialConflict:
@@ -428,11 +495,17 @@ class FinancialMASDispatcher:
         except Exception as exc:
             try:
                 with self._mutation(run_id, token=token) as (session, run, meta):
+                    if guarded:
+                        deadline = admitted_deadline(self, session, run, meta)
+                        if deadline is not None and deadline <= self.clock():
+                            raise FinancialExecutionExpired('admitted REQUEST deadline exhausted')
                     run.status = 'failed'
                     run.error_code = getattr(exc, 'code', 'financial_execution_failed')
                     self._stop_clock(meta)
                     self._release(meta)
                     self._event(session, run, meta, 'mas.failure', {'code': run.error_code})
+            except FinancialExecutionExpired:
+                self._expire_owned(run_id, token)
             except FinancialConflict:
                 pass
         return self.get_run(run_id)
@@ -447,10 +520,16 @@ class RuntimeContext:
             self.request = dispatcher._request(meta)
             self.state = Checkpoint.model_validate(meta.checkpoint).state
             self.conversation_id = meta.conversation_id
+            self.execution_deadline = admitted_deadline(dispatcher, session, session.get(AgentRun, run_id), meta)
 
     def _guard(self, run, meta):
         if run.status != 'executing':
             raise RunInterrupted('run is no longer executing')
+        if (meta.claim_token != self.token or not meta.lease_until
+                or aware(meta.lease_until) <= self.dispatcher.clock()):
+            raise RunInterrupted('stale worker claim')
+        if self.execution_deadline is not None and self.execution_deadline <= self.dispatcher.clock():
+            raise FinancialExecutionExpired('admitted REQUEST deadline exhausted')
         if self.dispatcher._elapsed(meta) >= RunBudget.model_validate(meta.budget).max_active_seconds:
             raise BudgetExhausted('active deadline exhausted')
 
@@ -459,24 +538,51 @@ class RuntimeContext:
             self._guard(run, meta)
 
     async def external(self, awaitable):
-        pending = asyncio.ensure_future(awaitable)
+        pending = None
+        external_started = False
+
+        async def invoke_guarded():
+            nonlocal external_started
+            # Scheduling can itself wait behind other event-loop work. Check
+            # again in the task immediately before entering the external code.
+            with self.dispatcher.sessions() as session:
+                run, meta = self.dispatcher._load(session, self.run_id)
+                self._guard(run, meta)
+            external_started = True
+            return await awaitable
+
         try:
+            # Coroutine creation is inert; do not schedule it until ownership/TTL
+            # has been checked after any preceding reservation.
+            with self.dispatcher.sessions() as session:
+                run, meta = self.dispatcher._load(session, self.run_id)
+                self._guard(run, meta)
+            pending = asyncio.ensure_future(invoke_guarded())
             while True:
                 with self.dispatcher.sessions() as session:
                     run, meta = self.dispatcher._load(session, self.run_id)
                     self._guard(run, meta)
                     remaining = RunBudget.model_validate(meta.budget).max_active_seconds - self.dispatcher._elapsed(meta)
+                    if self.execution_deadline is not None:
+                        remaining = min(remaining, (self.execution_deadline - self.dispatcher.clock()).total_seconds())
                 done, _ = await asyncio.wait({pending}, timeout=min(remaining, self.dispatcher.lease_seconds / 3))
                 if done:
+                    with self.dispatcher.sessions() as session:
+                        run, meta = self.dispatcher._load(session, self.run_id)
+                        self._guard(run, meta)
                     return pending.result()
-                # Renew only while we still own the claim; pause/cancel fences this renewal.
                 with self.dispatcher._mutation(self.run_id, token=self.token) as (_, run, meta):
                     self._guard(run, meta)
                     meta.lease_until = self.dispatcher.clock() + timedelta(seconds=self.dispatcher.lease_seconds)
         finally:
-            if not pending.done():
-                pending.cancel()
+            if pending is not None:
+                if not pending.done():
+                    pending.cancel()
+                # Retrieve a completed late exception even when the TTL guard
+                # overrides it, without allowing its output to be persisted.
                 await asyncio.gather(pending, return_exceptions=True)
+            if not external_started and hasattr(awaitable, 'close'):
+                awaitable.close()
 
     def reserve(self, kind, role, invocation_key, *, tool_name=None, payload=None, input_hash=None):
         if input_hash is None:
@@ -531,6 +637,7 @@ class RuntimeContext:
 
     def record_failure(self, invocation_key, code):
         with self.dispatcher._mutation(self.run_id, token=self.token) as (session, run, meta):
+            self._guard(run, meta)
             row = session.scalar(select(FinancialInvocation).where(FinancialInvocation.run_id == self.run_id, FinancialInvocation.invocation_key == invocation_key))
             if row:
                 row.status, row.error_code = 'failed', code

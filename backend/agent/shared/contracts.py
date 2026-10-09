@@ -36,6 +36,30 @@ class FinancialModel(BaseModel):
         return value
 
 
+class FinancialExecutionAuthorization(FinancialModel):
+    """Trusted immutable creation intent; cross intent alone grants no execution."""
+    model_config = ConfigDict(extra='forbid', frozen=True)
+    purpose: Literal['independent', 'cross_followup']
+    source_run_id: str | None = None
+    request_message_id: str | None = None
+
+    @field_validator('purpose', 'source_run_id', 'request_message_id', mode='before')
+    @classmethod
+    def exact_strings(cls, value):
+        if value is not None and (not isinstance(value, str) or not value or value != value.strip()):
+            raise ValueError('authorization identifiers require exact nonblank strings')
+        return value
+
+    @model_validator(mode='after')
+    def valid_origin(self):
+        if self.purpose == 'cross_followup':
+            if self.source_run_id is None or self.request_message_id is None:
+                raise ValueError('cross_followup requires source and REQUEST message')
+        elif self.source_run_id is not None or self.request_message_id is not None:
+            raise ValueError('independent forbids source and REQUEST message')
+        return self
+
+
 class RunBudget(FinancialModel):
     max_model_calls: int = Field(default=16, ge=1, le=16)
     max_tool_calls: int = Field(default=20, ge=0, le=20)
