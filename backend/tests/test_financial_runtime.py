@@ -460,15 +460,15 @@ def test_concurrent_creation_collision_checks_all_effective_inputs(setup, change
                 commit_collisions.append(True)
                 raise
     d.sessions = sessionmaker(engine, class_=ObservedSession, expire_on_commit=False)
-    def after_select(conn, cursor, statement, parameters, context, executemany):
-        if statement.startswith('SELECT') and 'financial_runs.idempotency_key =' in statement:
+    def before_conversation_lock(conn, cursor, statement, parameters, context, executemany):
+        if statement.startswith('UPDATE conversations SET updated_at=conversations.updated_at'):
             identity = threading.get_ident()
             with lock:
                 first = identity not in seen
                 seen.add(identity)
             if first:
                 barrier.wait(timeout=5)
-    event.listen(engine, 'after_cursor_execute', after_select)
+    event.listen(engine, 'before_cursor_execute', before_conversation_lock)
     request = MarketInvestigationRequest(symbol='MU', as_of=NOW)
     first = dict(mode='auto', correlation_id='one')
     second = dict(first, **changed)
@@ -481,8 +481,8 @@ def test_concurrent_creation_collision_checks_all_effective_inputs(setup, change
         with ThreadPoolExecutor(2) as pool:
             results = list(pool.map(create, [first, second]))
     finally:
-        event.remove(engine, 'after_cursor_execute', after_select)
-    assert len(commit_collisions) == 1  # Exercise actual post-commit collision branch.
+        event.remove(engine, 'before_cursor_execute', before_conversation_lock)
+    assert not commit_collisions  # Conversation lock serializes membership and key lookup.
     if changed:
         assert sum(isinstance(result, FinancialConflict) for result in results) == 1
     else:

@@ -143,3 +143,21 @@ FinancialRelation stores separate source/target/correlation/type/envelope/idempo
 ## Evidence and limits
 
 W1 validation uses disposable SQLite databases and deterministic providers. Tests cover independent role contexts, two independent runs, checkpoint recovery, duplicate/concurrent claims, intervention fencing, phase-preserving pause, cancellation, reservations, active deadline, scoped artifacts, tool permissions/audit, fresh upgrade, 0003 upgrade and downgrade preserving General rows. PostgreSQL JSONB DDL is compiled separately. This does not establish live PostgreSQL/Redis/Celery restart behavior or external provider quality. Migration 0001 pins original table ownership; 0004 owns only four financial tables. Downgrade deletes financial history and is tested only on disposable databases.
+
+## Atomic cross-message admission (ADR-0003 additive seam)
+
+```python
+dispatcher.admit_cross_message(source_run_id: str, target_run_id: str,
+    *, expected_source_version: int, expected_target_version: int,
+    envelope: CrossMASEnvelope) -> dict
+```
+
+This API creates an immutable `cross_admitted` relation and audit events for both runs in one transaction. Only this API creates that reserved relation type. Its return fields match `relations`; W6 executes only admitted envelopes. Legacy `link_runs` remains a diagnostic seam, keeps its source-version replay semantics, and rejects the reserved type. All envelope-bearing relations require a nonblank, conversation-unique message ID, including diagnostic relations.
+
+Financial relation writers, cross-counter reservations, creation and retry membership acquire a no-op conversation-row UPDATE before run CAS. Admission checks both caller versions in stable run-ID order and leaves status, checkpoint, claim and lease untouched. Stale versions and terminal recipients reject new messages. Exact source/target/envelope replay of an admitted key returns its historical relation before version, terminal and TTL checks, without counters or events. Consumers must check the absolute deadline again; historical replay does not extend validity. Changed payloads and diagnostic key collisions conflict.
+
+Persisted counters are authoritative. All financial members of the conversation/correlation contribute to hop/follow-up totals; the smallest member ceiling applies to charged work. Creation/retry membership starts at commit. A lower-ceiling join can prevent further work without rewriting counters or revoking a zero-cost resolution. `RuntimeContext.consume_budget('hops'/'followups')` preserves claim requirements and uses this same correlation accounting and lock order. Round reservations keep their single-run path.
+
+An initial Market READY transfer charges one source hop. A Portfolio-to-Market `MARKET_EVIDENCE_REQUEST` charges one source hop and follow-up. Exactly one reverse READY or UNAVAILABLE may resolve that admitted request without another hop: causation must identify its unique message ID, exact reversed endpoints and correlation, creation cannot precede the request, and deadline cannot exceed it. READY requires the producing Market run's immutable artifact at the same schema/timepoint; completed producers may transfer final evidence. UNAVAILABLE has no artifact and charges no new work, including a terminal producer's diagnostic. Without causation it resolves no wait edge. `PORTFOLIO_IMPACT_REQUEST` is unsupported and rejects without mutation. Outstanding unresolved requests between nonterminal runs form the wait graph; new requests reject cycles. Diagnostic legacy relations neither authorize work nor resolve waiting requests.
+
+W6 additionally checks Portfolio holdings scope through its trusted immutable snapshot loader before admission and consumption. This shared seam validates run/envelope direction, absolute creation/deadline, schema, artifact ownership/timepoint, and any Market recipient symbol, but does not load Portfolio holdings. Envelope cross ceilings and counters are validated for work messages; they never grant budget authority. Failure rolls back both run versions, counters, relation and independent monotonic audit events. No schema, migration, General registry or infrastructure change is required. Local tests use disposable SQLite threads; PostgreSQL conversation-lock UPDATE is compiled, with no live Docker/PostgreSQL recovery claim.

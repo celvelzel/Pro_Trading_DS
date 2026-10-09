@@ -64,7 +64,7 @@ class FinancialMASDispatcher:
         with self.sessions() as session:
             return session.get(FinancialRun, run_id) is not None
 
-    def create(self, conversation_id: str, request: MarketInvestigationRequest | PortfolioReviewRequest, *, idempotency_key: str, mode='review', budget: RunBudget | None = None, correlation_id: str | None = None, _retry_parent_id: str | None = None) -> AgentRun:
+    def create(self, conversation_id: str, request: MarketInvestigationRequest | PortfolioReviewRequest, *, idempotency_key: str, mode='review', budget: RunBudget | None = None, correlation_id: str | None = None, _retry_parent_id: str | None = None, _retry_parent_version: int | None = None) -> AgentRun:
         if mode not in {'review', 'auto'}:
             raise ValueError('invalid mode')
         kind = 'market_investigation' if isinstance(request, MarketInvestigationRequest) else 'portfolio_rebalance'
@@ -80,6 +80,11 @@ class FinancialMASDispatcher:
                            'requested_correlation_id': correlation_id,
                            'retry_parent_id': _retry_parent_id}
         with self.sessions() as session:
+            self._lock_conversation(session, conversation_id)
+            if _retry_parent_id is not None:
+                parent, _ = self._load(session, _retry_parent_id)
+                if parent.conversation_id != conversation_id or parent.version != _retry_parent_version or parent.status not in TERMINAL:
+                    raise FinancialConflict('retry needs current terminal run')
             existing = session.scalar(select(FinancialRun).where(FinancialRun.conversation_id == conversation_id, FinancialRun.idempotency_key == idempotency_key))
             if existing:
                 if existing.creation_inputs != creation_inputs:
@@ -131,10 +136,37 @@ class FinancialMASDispatcher:
     def _elapsed(self, meta):
         return meta.active_seconds + (max(0, (self.clock() - aware(meta.active_since)).total_seconds()) if meta.active_since else 0)
 
+    @staticmethod
+    def _lock_conversation(session, conversation_id):
+        # No-op UPDATE is a write lock on both supported adapters. Never call
+        # after acquiring a run CAS lock: all financial cross writers use this order.
+        changed = session.execute(update(Conversation).where(
+            Conversation.id == conversation_id).values(updated_at=Conversation.updated_at),
+            execution_options={'synchronize_session': False}).rowcount
+        if changed != 1:
+            raise ValueError('conversation does not exist')
+
+    def _reserve_cross_budget(self, session, meta, counters):
+        members = session.scalars(select(FinancialRun).where(
+            FinancialRun.conversation_id == meta.conversation_id,
+            FinancialRun.correlation_id == meta.correlation_id)).all()
+        budgets = [RunBudget.model_validate(member.budget) for member in members]
+        budget = RunBudget.model_validate(meta.budget)
+        for counter in counters:
+            if sum(getattr(item, counter) for item in budgets) + 1 > min(
+                    getattr(item, 'max_' + counter) for item in budgets):
+                raise BudgetExhausted(counter + ' correlation budget exhausted')
+            setattr(budget, counter, getattr(budget, counter) + 1)
+        meta.budget = budget.model_dump()
+
     @contextmanager
-    def _mutation(self, run_id, *, version=None, token=None):
+    def _mutation(self, run_id, *, version=None, token=None, cross_lock=False):
         with self.sessions() as session:
             run, meta = self._load(session, run_id)
+            if cross_lock:
+                self._lock_conversation(session, run.conversation_id)
+                session.expire_all()
+                run, meta = self._load(session, run_id)
             expected = run.version if version is None else version
             if expected != run.version or (token is not None and (meta.claim_token != token or not meta.lease_until or aware(meta.lease_until) <= self.clock())):
                 raise FinancialConflict('stale version or worker claim')
@@ -229,6 +261,8 @@ class FinancialMASDispatcher:
     def link_runs(self, source_run_id: str, target_run_id: str, *, version: int,
                   relation_type: str, idempotency_key: str,
                   envelope: CrossMASEnvelope | None = None) -> dict:
+        if relation_type == 'cross_admitted':
+            raise ValueError('cross_admitted is reserved for admit_cross_message')
         if source_run_id == target_run_id:
             raise ValueError('relation needs distinct runs')
         if not relation_type or len(relation_type) > 32 or not idempotency_key or len(idempotency_key) > 128:
@@ -237,7 +271,7 @@ class FinancialMASDispatcher:
             envelope = CrossMASEnvelope.model_validate(envelope.model_dump())
         data = envelope.model_dump(mode='json') if envelope else {}
         try:
-            with self._mutation(source_run_id, version=version) as (session, source, source_meta):
+            with self._mutation(source_run_id, version=version, cross_lock=True) as (session, source, source_meta):
                 target, target_meta = self._load(session, target_run_id)
                 if source.conversation_id != target.conversation_id:
                     raise ValueError('cross-conversation relation denied')
@@ -274,6 +308,8 @@ class FinancialMASDispatcher:
                         target_request = self._request(target_meta)
                         if isinstance(target_request, MarketInvestigationRequest) and target_request.symbol not in artifact.symbols:
                             raise ValueError('artifact target symbol mismatch')
+                if envelope:
+                    self._unique_message_id(session, source.conversation_id, envelope.message_id)
                 row = FinancialRelation(id=str(uuid.uuid4()), conversation_id=source.conversation_id,
                     source_run_id=source_run_id, target_run_id=target_run_id,
                     correlation_id=source_meta.correlation_id, relation_type=relation_type,
@@ -286,21 +322,35 @@ class FinancialMASDispatcher:
         except _ExistingRelation as existing:
             return existing.snapshot
 
+    @staticmethod
+    def _unique_message_id(session, conversation_id, message_id):
+        if not message_id.strip():
+            raise ValueError('message ID must be nonblank')
+        rows = session.scalars(select(FinancialRelation).where(
+            FinancialRelation.conversation_id == conversation_id)).all()
+        if any(row.envelope.get('message_id') == message_id for row in rows):
+            raise FinancialConflict('duplicate conversation message ID')
+
+    def admit_cross_message(self, source_run_id: str, target_run_id: str, *,
+                            expected_source_version: int, expected_target_version: int,
+                            envelope: CrossMASEnvelope) -> dict:
+        from .cross_admission import admit_cross_message
+        return admit_cross_message(self, source_run_id, target_run_id,
+            expected_source_version=expected_source_version,
+            expected_target_version=expected_target_version, envelope=envelope)
+
     def retry(self, run_id: str, version: int, *, idempotency_key: str):
         with self.sessions() as session:
+            run, meta = self._load(session, run_id)
+            self._lock_conversation(session, run.conversation_id)
+            session.expire_all()
             run, meta = self._load(session, run_id)
             if run.version != version or run.status not in TERMINAL:
                 raise FinancialConflict('retry needs current terminal run')
             request = self._request(meta)
             budget = RunBudget.model_validate(meta.budget).model_copy(update={'model_calls': 0, 'tool_calls': 0, 'rounds': 0, 'hops': 0, 'followups': 0})
             conversation_id, mode, correlation_id = run.conversation_id, run.mode, meta.correlation_id
-        with self.sessions() as session:
-            existing = session.scalar(select(FinancialRun).where(FinancialRun.conversation_id == conversation_id, FinancialRun.idempotency_key == idempotency_key))
-            if existing:
-                existing_run = session.get(AgentRun, existing.run_id)
-                if existing_run.parent_run_id != run_id:
-                    raise FinancialConflict('retry key belongs to an existing non-retry run')
-        child = self.create(conversation_id, request, idempotency_key=idempotency_key, mode=mode, budget=budget, correlation_id=correlation_id, _retry_parent_id=run_id)
+        child = self.create(conversation_id, request, idempotency_key=idempotency_key, mode=mode, budget=budget, correlation_id=correlation_id, _retry_parent_id=run_id, _retry_parent_version=version)
         if child.id == run_id:
             raise FinancialConflict('retry must create a different run')
         if child.parent_run_id != run_id:
@@ -522,13 +572,17 @@ class RuntimeContext:
     def consume_budget(self, counter: str):
         if counter not in {'rounds', 'hops', 'followups'}:
             raise ValueError('unsupported budget counter')
-        with self.dispatcher._mutation(self.run_id, token=self.token) as (session, run, meta):
+        with self.dispatcher._mutation(self.run_id, token=self.token,
+                cross_lock=counter != 'rounds') as (session, run, meta):
             self._guard(run, meta)
-            budget = RunBudget.model_validate(meta.budget)
-            if getattr(budget, counter) >= getattr(budget, 'max_' + counter):
-                raise BudgetExhausted(counter + ' exhausted')
-            setattr(budget, counter, getattr(budget, counter) + 1)
-            meta.budget = budget.model_dump()
+            if counter != 'rounds':
+                self.dispatcher._reserve_cross_budget(session, meta, [counter])
+            else:
+                budget = RunBudget.model_validate(meta.budget)
+                if budget.rounds >= budget.max_rounds:
+                    raise BudgetExhausted('rounds exhausted')
+                budget.rounds += 1
+                meta.budget = budget.model_dump()
             self.dispatcher._event(session, run, meta, 'mas.budget_reserved', {'counter': counter})
 
     def complete(self, artifact):
