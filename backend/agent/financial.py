@@ -16,11 +16,16 @@ def build_financial_dispatcher(session_factory, *,
         enabled=("market_investigation", "portfolio_rebalance"),
         demo=True, providers=None, market_dependencies=None,
         event_dependencies=None, portfolio_dependencies=None,
-        portfolio_artifact_resolver=None, execution_profile=None, clock=None, lease_seconds=30):
+        portfolio_artifact_resolver=None, execution_profile=None, clock=None, lease_seconds=30,
+        market_mode="autonomous", portfolio_mode="full"):
     enabled = tuple(enabled)
     allowed = {"market_investigation", "portfolio_rebalance"}
     if len(set(enabled)) != len(enabled) or not set(enabled) <= allowed:
         raise ValueError("Unknown or duplicate financial workflow")
+    if market_mode not in {"autonomous", "fixed", "single"}:
+        raise ValueError("Unknown Market execution mode")
+    if portfolio_mode not in {"full", "fixed", "single", "no_verifier"}:
+        raise ValueError("Unknown Portfolio execution mode")
     if demo:
         if execution_profile not in (None, "synthetic-demo-v1"):
             raise ValueError("Demo assembly requires the reserved synthetic-demo-v1 profile")
@@ -59,6 +64,7 @@ def build_financial_dispatcher(session_factory, *,
                 raise ValueError("Explicit Market role providers required")
             market_providers = {role: SyntheticMarketModel(role) for role in roles}
         registry.register(create_market_driver(market_providers,
+            mode=market_mode,
             budget_reader=lambda run_id: RunBudget.model_validate(dispatcher.snapshot(run_id)["budget"])))
 
     if "portfolio_rebalance" in enabled:
@@ -80,5 +86,6 @@ def build_financial_dispatcher(session_factory, *,
                 raise ValueError("Explicit Portfolio role providers required")
             portfolio_providers = {role: SyntheticPortfolioModel(role) for role in roles}
         registry.register(PortfolioDriver(portfolio_providers, portfolio_dependencies,
-            artifact_store=ArtifactStore(session_factory), artifact_resolver=portfolio_artifact_resolver))
+            artifact_store=ArtifactStore(session_factory), artifact_resolver=portfolio_artifact_resolver,
+            mode=portfolio_mode))
     return dispatcher

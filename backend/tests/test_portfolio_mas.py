@@ -156,7 +156,7 @@ def test_unverified_malicious_proposal_never_feasible(tmp_path, attack):
     assert artifact(d, value)['status'] == 'insufficient_data'
 
 
-@pytest.mark.parametrize('mode,calls', [('full',5), ('no_verifier',4), ('single',1)])
+@pytest.mark.parametrize('mode,calls', [('full',5), ('fixed',5), ('no_verifier',4), ('single',1)])
 def test_baselines_identical_tools_data_budget(tmp_path, mode, calls):
     d, _, sessions, *_ = assemble(tmp_path, mode=mode)
     value, completed = run(d)
@@ -165,6 +165,23 @@ def test_baselines_identical_tools_data_budget(tmp_path, mode, calls):
     budget = d.snapshot(value.id)['budget']
     assert budget['model_calls'] == calls and budget['tool_calls'] == 6
     assert budget['max_model_calls'] == 16 and budget['max_tool_calls'] == 20
+
+
+def test_fixed_pipeline_is_single_pass_and_retains_verifier(tmp_path):
+    providers = {role:SyntheticPortfolioModel(role) for role in ROLES}
+    providers['coordinator'] = ScriptedFakeModel([
+        scripted('coordinator', {'MU':1, 'CASH':0})])
+    d, _, sessions, _, _, _ = assemble(tmp_path, providers=providers, mode='fixed')
+    value, completed = run(d, {'max_weight_by_symbol': {'MU': .6}})
+    assert completed.status == 'completed'
+    result = artifact(d, value)
+    budget = d.snapshot(value.id)['budget']
+    assert result['status'] == 'insufficient_data'
+    assert budget['rounds'] == 1 and budget['model_calls'] == 5
+    with sessions() as db:
+        roles = {row.role for row in db.scalars(select(FinancialInvocation).where(
+            FinancialInvocation.run_id == value.id, FinancialInvocation.kind == 'model'))}
+    assert roles == {'coordinator', 'opportunity', 'risk', 'constraint', 'verifier'}
 
 
 def test_cancel_during_role_and_deadline(tmp_path):

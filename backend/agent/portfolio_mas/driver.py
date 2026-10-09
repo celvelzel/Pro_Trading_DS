@@ -125,12 +125,12 @@ class PortfolioDriver:
     def __init__(self, providers: Mapping[str, ModelProvider], dependencies: PortfolioDependencies,
                  *, artifact_store: ArtifactStore | None = None,
                  artifact_resolver: MarketArtifactResolver | None = None,
-                 mode: Literal['full', 'single', 'no_verifier']='full',
+                 mode: Literal['full', 'fixed', 'single', 'no_verifier']='full',
                  yield_after_revision=False):
         self.dependencies = dependencies
         self.artifact_store = artifact_store
         self.artifact_resolver = artifact_resolver
-        if mode not in {'full', 'single', 'no_verifier'}:
+        if mode not in {'full', 'fixed', 'single', 'no_verifier'}:
             raise ValueError('Unknown evaluation mode')
         self.mode = mode
         self.yield_after_revision = yield_after_revision
@@ -282,7 +282,7 @@ class PortfolioDriver:
                         round_missing.append(review.role + '_rejected')
                 verification_task = verification_task.model_copy(update={'missing_checks': round_missing + ([] if simulation else ['simulation_unavailable'])})
             verified = True
-            if self.mode == 'full':
+            if self.mode in {'full', 'fixed'}:
                 verdict = await invoke('verifier', f'verifier:{round_no}', verification_task)
                 verified = verdict.action == 'approve' and not verdict.missing_checks and (not verdict.proposed_weights or verdict.proposed_weights == proposed)
             safe = check.status == 'pass' and comparison is not None and simulation is not None and not round_missing and weights_valid
@@ -298,6 +298,8 @@ class PortfolioDriver:
             if missing or (candidates and candidates.status != 'feasible'):
                 break
             if round_no == 0:
+                if self.mode == 'fixed':
+                    break
                 prior = proposed
                 if reserved_round < 1:
                     state.phase = 'revision_ready'

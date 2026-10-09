@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "fixture_id": "combined-w7-synthetic-demo-v1",
+  "synthetic_only": true,
+  "source_profile": "accepted W7 synthetic demo adapters",
+  "market": {
+    "symbol": "MU",
+    "sector_benchmark": "SOXX",
+    "as_of": "2026-09-29T20:05:00Z",
+    "adapter": "backend/agent/financial_demo.py:demo_market_dependencies"
+  },
+  "portfolio": {
+    "snapshot_id": "synthetic-mu-soxx-v1",
+    "as_of": "2026-09-29T20:05:00Z",
+    "user_constraints": {
+      "max_weight_by_symbol": {
+        "MU": 0.25
+      }
+    },
+    "adapters": [
+      "backend/agent/financial_demo.py:demo_snapshot_loader",
+      "backend/agent/financial_demo.py:demo_histories",
+      "backend/agent/financial_demo.py:demo_classifications"
+    ]
+  },
+  "purpose": "Separate Combined workflow smoke; excluded from 12 Market and 30 Portfolio case denominators."
+}

@@ -1,0 +1,77 @@
+{
+  "base_git_revision": "b49ddc3750cf5487d26316df527bf88d03a9bac8",
+  "completed_at": "2026-10-09T15:40:00.176745+00:00",
+  "completed_runs": {
+    "combined:synthetic-demo-v1": 2,
+    "market:autonomous": 12,
+    "market:fixed": 12,
+    "market:single": 12,
+    "portfolio:fixed": 30,
+    "portfolio:full": 30,
+    "portfolio:no_verifier": 30,
+    "portfolio:single": 30
+  },
+  "domain": "all",
+  "execution_command": "$env:PYTHONPATH='backend;.;lobster_quant'; python eval/run_financial_mas_w8.py --domain all --output-dir eval/results/financial-mas-w8-v1",
+  "fixture_data_hashes": {
+    "eval/fixtures/workflow_v1/market_history.json": "7657084d5feafe56e4483741600cab6477520cc2a9f5cec43eb5bf515b669c12",
+    "eval/market_cases.jsonl": "894253639657ff8ae08552b9aed5c8ac52f99296eae9f2d7d387cd6112ac514c",
+    "eval/portfolio_cases.jsonl": "f2fcc6a2cf4ede637b77d7069835557b737f49e392e8b460b3cdfad3beaae813"
+  },
+  "fixture_manifest_sha256": "6679b880298a6bbabc7ad623d6961e73a7e24923437abf2e88e134655becf9b7",
+  "fixture_source_hashes": {
+    "eval/fixtures/market/packs.json": "6c6b9ff2116fdb2f8652901c163db20e817b2f1982ec2b196967d57a2e4e16cd",
+    "eval/fixtures/portfolio/scenarios.json": "ad9d2ee55d4d24450943c9964456c8feb658556ac5b7384c4c646f042e1b9129"
+  },
+  "outputs_sha256": {
+    "combined-synthetic-demo-v1.jsonl": "95329aa739c048ab09aceb5179c32e2b5354ab306cf53990b5e4347262a32e52",
+    "market-autonomous.jsonl": "e3eff693de8f7f4254ee29cf3e3ea1dd39f28a43002f6b725588369fecbcdbaa",
+    "market-fixed.jsonl": "895b452a5710a35e322577d54d5030482f2104320c5d0fa352c36881e670a2a2",
+    "market-single.jsonl": "6811a2016423a1d5a35338c9bc77a90ece5c2b4f2e7259280fe8c324e3aa07cb",
+    "portfolio-fixed.jsonl": "ede39fd1fd0cb503c9720bbc4e05194609cecef679d20ec15be2757aedcd50ce",
+    "portfolio-full.jsonl": "51ee13a1850cf5bbc0b298868895a9fa4523caed5bc3a43688a7df11ec99acc3",
+    "portfolio-no_verifier.jsonl": "480b85a6996e4a6d2e503b85bf7b38d7262bbc17aca0c2b7ff98d48b59af2fea",
+    "portfolio-single.jsonl": "02212831ba39b397aeabee008c9308e8c6a0414b48ce1f4ba7dc7c62ae9e96b9",
+    "summary.json": "f848d33c33ed959e56ca8ba5cf235ad9289b6bfdcec500a972245035e6e79e13"
+  },
+  "profile": "w8-fixture-v1",
+  "python_version": "3.13.5",
+  "row_counts": {
+    "combined:synthetic-demo-v1": 1,
+    "market:autonomous": 12,
+    "market:fixed": 12,
+    "market:single": 12,
+    "portfolio:fixed": 30,
+    "portfolio:full": 30,
+    "portfolio:no_verifier": 30,
+    "portfolio:single": 30
+  },
+  "schema_version": 1,
+  "source_file_sha256": {
+    "backend/agent/financial.py": "00a516fc23aa55a03d5e5294b466511ff0d121739e98207a7a92ae62b68b2513",
+    "backend/agent/financial_demo.py": "e27e5e2f8c28fffa8f2bb506812ba66d6479eba61ef16650e822d4edf5f68d5a",
+    "backend/agent/market_mas/driver.py": "3ba592e3f318c773dbdd6edfb3de0b99a5102f63d81a0a1f387489d6026b4cde",
+    "backend/agent/market_mas/synthetic.py": "3f2d2d72d3eff807d6506c30334458e8849d2aa0f98ce98f833b84dce243abcd",
+    "backend/agent/portfolio_mas/driver.py": "f998fce83cca92f85ee619ef95ccd1d77a9b40e528fdb1143ed01855cab8d476",
+    "backend/agent/shared/contracts.py": "a4efc4c81998748a8e2f23c8d649918d45733068f56e5d02a63d9d2203143527",
+    "backend/agent/shared/dispatch.py": "c32fe9d4e6ce1a58af6a1ce1d841c9b9f991db55ab101b65aa0aba07d27d6693",
+    "backend/agent/shared/runtime.py": "28bf8d51dba467d2a974a920a8c19642ac9ab75cc7a2ba865860c1912a7dcafe",
+    "backend/agent/tools/allocation.py": "8f2ed852ab3d6ca0842a92abc59b8e3ba20b7bbdaae008b31f8757bb5801e1e8",
+    "backend/agent/tools/anomaly.py": "6834c0e30e115dab63602aef686dbb499b46b000933023e5cba760841de528f0",
+    "backend/agent/tools/market_events.py": "bc5d222144ebdea2eec20123acf5e4dfcf2c8d811afbcc58cd9771c1ce9606c9",
+    "backend/agent/tools/market_history.py": "5466bfd06c5c122fbb87488884280e5f6bd78ebc0ca8cc5863e438fca1293711",
+    "backend/agent/tools/portfolio_risk.py": "f30e9554ce5d0e9572223cd8b1e4290a7c6b7635bb883d096d9c2fa441590d5a",
+    "backend/agent/tools/portfolio_snapshot.py": "c8745ce16c6c02355571cbd7004c1aab7dfe648318a7c2d63823bbf845a2a01f",
+    "backend/db/models/agent.py": "5b2b9e5a3ae680d11e643cee33554a3223524994281367112edd9cc5cdc9c88f",
+    "backend/db/models/financial_mas.py": "fb03a2e195b4d8abe928da48a628651463f6affc08dad3e49f049dc3e8bafd25",
+    "eval/financial_fixtures.py": "1506b79db3bdb7833f014a48e03d0d2a59f68deee7fe3628569c4875c96a791b",
+    "eval/fixtures/combined/synthetic_demo_v1.json": "141ce0817fbbd0450227e3e429c7f7c08211eadf628217d4888f54770cbfb870",
+    "eval/market_cases.jsonl": "894253639657ff8ae08552b9aed5c8ac52f99296eae9f2d7d387cd6112ac514c",
+    "eval/portfolio_cases.jsonl": "f2fcc6a2cf4ede637b77d7069835557b737f49e392e8b460b3cdfad3beaae813",
+    "eval/run_financial_mas_w8.py": "aeeaf2080fe407e41f01d7b6714a8780b12db203738cb453b47b4b85b89330bd",
+    "lobster_quant/src/core/allocation_simulator.py": "924aef0b75f20b0f2f953923b41f8271a72b9294f6d585d289f0400ee54cd367",
+    "lobster_quant/src/core/portfolio_risk.py": "ac8aecfbf304bbbf531b32d31141d84daf0e647ff99a5dee75e8ae37ecdebaa1"
+  },
+  "started_at": "2026-10-09T15:38:52.629669+00:00",
+  "suite": "financial-mas-workflow-v1"
+}
