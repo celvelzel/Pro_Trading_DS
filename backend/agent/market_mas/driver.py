@@ -100,11 +100,15 @@ class MarketCoordinator:
             if evidence.id not in {e.id for e in state.evidence}:
                 state.evidence.append(evidence)
             if isinstance(output, MarketAnomalyOutput) and output.status != 'unavailable':
-                for field in ('return_pct', 'volume_ratio_20', 'excess_return_pct', 'relative_strength'):
+                # Return is already scaled to percent; excess is a difference
+                # between returns in percentage points. Ratios remain unscaled.
+                units = {'return_pct': 'percent', 'volume_ratio_20': 'ratio',
+                         'excess_return_pct': 'percentage_points', 'relative_strength': 'ratio'}
+                for field, unit in units.items():
                     value = getattr(output, field)
                     if value is not None:
                         fact = NumericFact(name=f'{check}.{field}', value=value,
-                            unit='percentage_points' if field.endswith('_pct') else 'ratio',
+                            unit=unit,
                             evidence_id=evidence.id, tool_result_id=ref.tool_result_id)
                         state.numeric_facts = [f for f in state.numeric_facts if f.name != fact.name] + [fact]
         if output.status != 'ok':

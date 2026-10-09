@@ -77,6 +77,53 @@ def test_roles_actual_tools_and_resolvable_numeric_audit(tmp_path):
     assert all(h['disposition'] == 'unverified' for h in artifact['hypotheses'])
 
 
+@pytest.mark.parametrize('close,expected_return,expected_excess,expected_strength', [
+    (200., 100., 75., .6),
+    (50., -50., -75., -.6),
+    (100., 0., -25., -.2),
+])
+def test_actual_tool_artifact_preserves_metric_values_and_units(
+        tmp_path, close, expected_return, expected_excess, expected_strength):
+    d, run, sessions, _, _, pack = assemble(tmp_path)
+    series = [market_history.HistorySeries.model_validate(s) for s in pack['series']]
+    asset = series[0]
+    benchmark = series[1]
+    # Independent known paths: asset return +100/-50/0 percent, benchmark +25.
+    for source, latest in ((asset, close), (benchmark, 125.)):
+        for bar in source.bars[:21]:
+            price = latest if bar is source.bars[20] else 100.
+            for field in ('open', 'high', 'low', 'close'):
+                setattr(bar, field, price)
+            bar.volume = 250. if bar is source.bars[20] else 100.
+    market_benchmark = benchmark.model_copy(deep=True, update={'symbol': 'SPY'})
+    tools = ToolRegistry()
+    dep = market_history.MarketDependencies(
+        market_history.FixtureHistoryBackend([asset, benchmark, market_benchmark]))
+    market_history.register_tools(tools, dep)
+    anomaly.register_tools(tools, dep)
+    tools.register(d.tools.get('get_event_evidence'))
+    d.tools = tools
+    assert finish(d, run).status == 'completed'
+    artifact = json.loads(d.get_run(run.id).final_answer)
+    facts = {fact['name']: fact for fact in artifact['numeric_facts']}
+    expected = {'return_pct': (expected_return, 'percent'),
+                'excess_return_pct': (expected_excess, 'percentage_points'),
+                'volume_ratio_20': (2.5, 'ratio'),
+                'relative_strength': (expected_strength, 'ratio')}
+    assert set(facts) == {f'{check}.{field}' for check in ('market', 'sector') for field in expected}
+    with sessions() as session:
+        for check in ('market', 'sector'):
+            for field, (value, unit) in expected.items():
+                fact = facts[f'{check}.{field}']
+                assert fact['value'] == pytest.approx(value)
+                assert fact['unit'] == unit
+                result = session.get(ToolResult, fact['tool_result_id'])
+                assert session.get(ToolCall, result.tool_call_id).run_id == run.id
+                output = anomaly.MarketAnomalyOutput.model_validate(result.data)
+                assert getattr(output, field) == fact['value']
+                assert fact['evidence_id'] == output.result_ref
+
+
 @pytest.mark.parametrize('check,expected', [('history', 'get_market_history'), ('events', 'get_event_evidence'), ('sector', 'calculate_market_anomaly')])
 def test_evidence_challenge_changes_next_actual_tool(tmp_path, check, expected):
     d, run, sessions, _, ps, _ = assemble(tmp_path, check=check)
