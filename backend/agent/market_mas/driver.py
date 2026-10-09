@@ -128,7 +128,9 @@ class MarketCoordinator:
         elif role == 'macro_sector':
             evidence = [e for e in evidence if e.source_type in ('market_tool', 'macro')]
             facts = [f for f in facts if f.name.startswith(('market.', 'sector.'))]
-        result = await ctx.invoke(role, key, InvestigationTask(role=role,
+        # Unit semantics are part of the task identity. Keep legacy invocations
+        # immutable and reserve corrected work under a distinct versioned key.
+        result = await ctx.invoke(role, f'{key}:units:v2', InvestigationTask(role=role,
             question='Investigate competing explanations and request the next missing check.',
             symbol=ctx.request.symbol, as_of=ctx.request.as_of, evidence=evidence,
             numeric_facts=facts, hypotheses=state.hypotheses, missing_checks=state.missing_checks))
@@ -155,6 +157,12 @@ class MarketCoordinator:
         return list(dict.fromkeys(c for result in current for c in result.missing_checks))
 
     async def execute(self, ctx, state: MarketState):
+        # Runtime restores a mutable copy of the checkpoint. Correct only known
+        # return facts; values and their persisted tool provenance are unchanged.
+        state.numeric_facts = [fact.model_copy(update={'unit': 'percent'})
+            if fact.name in ('market.return_pct', 'sector.return_pct')
+            and fact.unit == 'percentage_points' else fact
+            for fact in state.numeric_facts]
         if state.phase == 'investigate':
             ctx.consume_budget('rounds')
             state.phase = 'initial_tool'

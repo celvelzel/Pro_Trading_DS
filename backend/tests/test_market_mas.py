@@ -331,3 +331,108 @@ def test_reusable_synthetic_policy_separate_calls_and_contexts(tmp_path, case):
         calls = s.scalars(select(FinancialInvocation).where(FinancialInvocation.kind == 'model')).all()
         assert set(c.role for c in calls) == set(ROLES)
     assert json.loads(d.get_run(run.id).final_answer)['status'] == 'partial'
+
+
+@pytest.mark.parametrize('crash_key,exhausted', [(key, False) for key in [
+    'market:initial', 'coordinator:initial', 'price_volume:initial',
+    'macro_sector:initial', 'event:initial', 'critic:initial',
+    'check:1:history', 'coordinator:round:1', 'critic:round:1',
+]] + [('coordinator:initial', True)])
+def test_actual_legacy_driver_upgrade_result_before_checkpoint(tmp_path, monkeypatch, crash_key, exhausted):
+    import subprocess
+    import sys
+    import types
+    from datetime import timezone
+    from agent.shared.dispatch import RuntimeContext
+
+    # Immutable pre-unit-fix blob, rather than a simulated legacy checkpoint.
+    source = subprocess.check_output(['git', 'cat-file', 'blob',
+        'f0e408e6f06b79b7ba5e55c3f96bfab2fdf165fd'], text=True)
+    module = types.ModuleType('market_legacy_upgrade_fixture')
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    exec(compile(source, '<legacy-market-driver>', 'exec'), module.__dict__)
+    d, run, sessions, _, ps, _ = assemble(tmp_path, check='history', yield_steps=True)
+    if exhausted:
+        run = d.create('market', MarketInvestigationRequest(symbol='DEMO',
+            as_of='2026-09-29T20:10:00Z', sector_benchmark='SECTOR'),
+            mode='auto', idempotency_key='upgrade-exhausted',
+            budget=RunBudget(max_model_calls=1))
+    clock = [datetime(2026, 10, 9, tzinfo=timezone.utc)]
+    d.clock = lambda: clock[0]
+    legacy = module.MarketCoordinator(ps, yield_after_handoff=True)
+    legacy.budget_reader = lambda rid: RunBudget.model_validate(d.snapshot(rid)['budget'])
+    registry = WorkflowRegistry()
+    registry.register(legacy)
+    d.drivers = registry
+    class Crash(BaseException):
+        pass
+    original = RuntimeContext.record_result
+    def crash(self, key, output):
+        original(self, key, output)
+        if key == crash_key:
+            raise Crash()
+    monkeypatch.setattr(RuntimeContext, 'record_result', crash)
+    with pytest.raises(Crash):
+        finish(d, run)
+    before = d.snapshot(run.id)
+    with sessions() as session:
+        history = {row.invocation_key: (row.input_hash, row.output, row.attempts)
+            for row in session.scalars(select(FinancialInvocation)).all()}
+    clock[0] += timedelta(seconds=31)
+    current = MarketCoordinator(ps, yield_after_handoff=True)
+    registry = WorkflowRegistry()
+    registry.register(current)
+    restored = FinancialMASDispatcher(sessions, registry, d.tools, clock=d.clock)
+    current.budget_reader = lambda rid: RunBudget.model_validate(restored.snapshot(rid)['budget'])
+    if exhausted:
+        monkeypatch.setattr(RuntimeContext, 'record_result', original)
+        calls = sum(len(p.calls) for p in ps.values())
+        result = finish(restored, run)
+        assert result.status == 'failed' and result.final_answer is None
+        assert not restored.snapshot(run.id)['checkpoint']['artifact_ids']
+        assert restored.snapshot(run.id)['budget']['model_calls'] == 1
+        assert sum(len(p.calls) for p in ps.values()) == calls == 1
+        assert asyncio.run(restored.start(run.id)).status == 'failed'
+        with sessions() as session:
+            for key, expected in history.items():
+                row = session.scalar(select(FinancialInvocation).where(
+                    FinancialInvocation.run_id == run.id, FinancialInvocation.invocation_key == key))
+                assert (row.input_hash, row.output, row.attempts) == expected
+        return
+    # A second crash after corrected success proves v2 restart does not rebill.
+    corrected_key = crash_key + ':units:v2'
+    def crash_corrected(self, key, output):
+        original(self, key, output)
+        if key == corrected_key:
+            raise Crash()
+    monkeypatch.setattr(RuntimeContext, 'record_result', crash_corrected)
+    if crash_key not in ('market:initial', 'check:1:history'):
+        with pytest.raises(Crash):
+            finish(restored, run)
+        corrected_budget = restored.snapshot(run.id)['budget']
+        corrected_calls = sum(len(p.calls) for p in ps.values())
+        clock[0] += timedelta(seconds=31)
+        monkeypatch.setattr(RuntimeContext, 'record_result', original)
+        assert asyncio.run(restored.start(run.id)).status == 'executing'
+        assert restored.snapshot(run.id)['budget'] == corrected_budget
+        assert sum(len(p.calls) for p in ps.values()) == corrected_calls
+    else:
+        monkeypatch.setattr(RuntimeContext, 'record_result', original)
+    assert finish(restored, run).status == 'completed'
+    artifact = json.loads(restored.get_run(run.id).final_answer)
+    assert all(f['unit'] == 'percent' for f in artifact['numeric_facts']
+               if f['name'].endswith('.return_pct'))
+    assert restored.snapshot(run.id)['budget']['model_calls'] == 9 + (
+        crash_key not in ('market:initial', 'check:1:history'))
+    assert restored.snapshot(run.id)['budget']['tool_calls'] == 5
+    with sessions() as session:
+        for key, expected in history.items():
+            row = session.scalar(select(FinancialInvocation).where(
+                FinancialInvocation.run_id == run.id, FinancialInvocation.invocation_key == key))
+            assert (row.input_hash, row.output, row.attempts) == expected
+        for fact in artifact['numeric_facts']:
+            output = session.get(ToolResult, fact['tool_result_id'])
+            assert output.data[fact['name'].split('.')[1]] == fact['value']
+    # The persisted legacy checkpoint was not mutated by normalization.
+    if before['checkpoint']['state']['numeric_facts']:
+        assert before['checkpoint']['state']['numeric_facts'][0]['unit'] == 'percentage_points'
