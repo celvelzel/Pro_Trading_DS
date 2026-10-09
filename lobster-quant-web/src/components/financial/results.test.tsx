@@ -8,6 +8,24 @@ afterEach(cleanup)
 const market: MarketArtifact = { schema_version: 1, producing_run_id: 'run-market-actual', symbol: 'MU', as_of: '2026-10-08T00:00:00Z', status: 'partial', numeric_facts: [{ name: 'market.return_pct', value: 100, unit: 'percentage_points', evidence_id: 'e1', tool_result_id: 't1' }], hypotheses: [{ explanation: 'Company event association', support_ids: ['e1'], against_ids: ['e2'], disposition: 'supported' }], evidence: [{ id: 'e1', source_type: 'news', source_locator: 'javascript:alert(1)', published_at: null, available_at: null, observed_at: '2026-10-07T00:00:00Z', content_hash: 'hash1', excerpt: '<script>alert(1)</script>' }, { id: 'e2', source_type: 'filing', source_locator: 'https://example.com/filing', published_at: '2026-10-06T00:00:00Z', available_at: '2026-10-07T00:00:00Z', observed_at: '2026-10-07T00:00:00Z', content_hash: 'hash2', excerpt: 'counter evidence' }], limitations: ['sector data missing'] }
 const portfolio: PortfolioArtifact = { schema_version: 1, producing_run_id: 'run-portfolio-actual', snapshot_id: 'demo-sounding-name', as_of: market.as_of, current_weights: { MU: 0.8, CASH: 0.2 }, proposed_weights: {}, constraint_check: { status: 'unknown', violations: [], unknowns: ['missing classification'] }, risk_comparison: { before: { volatility: 0.25, maximum_drawdown: -0.1, concentration: 0.8, cash_weight: 0.2, tool_result_id: 'risk-before' }, after: { volatility: null, maximum_drawdown: null, concentration: null, cash_weight: null, tool_result_id: 'risk-after' } }, simulation: { tool_result_id: 'simulation-actual', adjustment: 'adjusted', rebalance_cadence: '1 common trading observation', fees_bps: 12, slippage_bps: 5, net_return: 0.05, assumptions: ['initial_purchase_cost_included'] }, evidence_ids: ['ref1'], limitations: ['insufficient history'], status: 'insufficient_data' }
 describe('financial results', () => {
+  it.each([1, -1])('preserves tiny %s-signed Market facts and ordinary magnitudes', sign => {
+    const tiny = sign * 1e-7
+    const number = sign > 0 ? '1E-7' : '-1E-7'
+    expect(formatValue(tiny, 'percent')).toBe(`${number}%`)
+    expect(formatValue(tiny, 'percentage')).toBe(`${number}%`)
+    expect(formatValue(tiny, 'percentage_points')).toBe(`${number} 个百分点`)
+    expect(formatValue(tiny, 'USD')).toBe(`${number} USD`)
+    expect(formatValue(tiny)).toBe(number)
+    expect(formatFact({ ...market.numeric_facts[0], name: 'sector.relative_strength', value: tiny, unit: 'ratio' })).toBe(`${number} ratio（原始比例）`)
+    expect(formatFact({ ...market.numeric_facts[0], name: 'market.volume_ratio_20', value: tiny, unit: 'ratio' })).toBe(`${number} ×`)
+    expect(formatValue(sign * 5e-5, 'percent')).toBe(`${sign > 0 ? '' : '-'}0.0001%`)
+    expect(formatValue(sign * 4.999e-5, 'percentage_points')).toBe(`${sign > 0 ? '' : '-'}4.999E-5 个百分点`)
+    expect(formatValue(sign * 5e-7, 'ratio')).toBe(`${sign > 0 ? '' : '-'}5E-5%`)
+  })
+  it.each(['', 'ratio', 'percent', 'percentage', 'percentage_points', 'USD'])('normalizes true negative zero in unit %s', unit => {
+    expect(formatValue(-0, unit)).toBe(formatValue(0, unit))
+    expect(formatValue(-0, unit)).not.toContain('-')
+  })
   it.each([
     [1e-7, '1E-5%'], [-1e-7, '-1E-5%'],
     [1e-12, '1E-10%'], [-1e-12, '-1E-10%'],

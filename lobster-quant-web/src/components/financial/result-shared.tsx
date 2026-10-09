@@ -8,12 +8,12 @@ const labels: Record<string, string> = { verified: '事实已核验', partial: '
 export function Status({ value }: { value: string }) { return <Badge variant="outline">{labels[value] ?? value} ({value})</Badge> }
 export function formatValue(value: number | null | undefined, unit = ''): string {
   if (value == null || !Number.isFinite(value)) return '未知'
-  const displayValue = unit === 'ratio' ? (value === 0 ? 0 : value * 100) : value
-  // Keep tiny nonzero risks, weights and returns distinguishable from true zero.
-  const tinyRatio = unit === 'ratio' && value !== 0 && Math.abs(value) < 1e-6
-  const number = new Intl.NumberFormat('en-US', tinyRatio
-    ? { notation: 'scientific', maximumSignificantDigits: 4 }
-    : { maximumFractionDigits: 4 }).format(displayValue)
+  const displayValue = value === 0 ? 0 : unit === 'ratio' ? value * 100 : value
+  // Four-decimal rounding must not erase finite nonzero facts in any unit.
+  const rounded = new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 }).format(displayValue)
+  const number = displayValue !== 0 && (rounded === '0' || rounded === '-0')
+    ? new Intl.NumberFormat('en-US', { notation: 'scientific', maximumSignificantDigits: 4 }).format(displayValue)
+    : rounded
   return unit === 'ratio' || unit === 'percent' || unit === 'percentage' ? `${number}%` : unit === 'percentage_points' ? `${number} 个百分点` : `${number}${unit ? ` ${unit}` : ''}`
 }
 export function formatFact(fact: NumericFact): string {
