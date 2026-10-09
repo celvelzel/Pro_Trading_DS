@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "corpus_version": "workflow-v1",
+  "scope": "fixture preparation only; W6/W7/W8 gates unreleased",
+  "source_hashes": {
+    "eval/fixtures/market/packs.json": "6c6b9ff2116fdb2f8652901c163db20e817b2f1982ec2b196967d57a2e4e16cd",
+    "eval/fixtures/portfolio/scenarios.json": "ad9d2ee55d4d24450943c9964456c8feb658556ac5b7384c4c646f042e1b9129"
+  },
+  "data_hashes": {
+    "eval/market_cases.jsonl": "894253639657ff8ae08552b9aed5c8ac52f99296eae9f2d7d387cd6112ac514c",
+    "eval/portfolio_cases.jsonl": "f2fcc6a2cf4ede637b77d7069835557b737f49e392e8b460b3cdfad3beaae813",
+    "eval/fixtures/workflow_v1/market_history.json": "7657084d5feafe56e4483741600cab6477520cc2a9f5cec43eb5bf515b669c12"
+  },
+  "counts": {
+    "market": 12,
+    "portfolio": 30
+  },
+  "budget": {
+    "max_model_calls": 16,
+    "max_tool_calls": 20,
+    "max_rounds": 3,
+    "max_active_seconds": 120
+  },
+  "actual_tokens": null,
+  "token_status": "unknown",
+  "gold_provenance": "reviewed w8-evaluation-preparation.md manual equations, never model outputs",
+  "float_absolute_tolerance": 1e-12,
+  "decimal_absolute_tolerance": "1e-20"
+}
