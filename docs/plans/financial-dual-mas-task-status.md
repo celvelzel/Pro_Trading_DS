@@ -85,4 +85,4 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 
 ## 新发现的恢复兼容性缺口
 
-W4-T7 重新打开：独立原始脚本和 post-fix reviewer 核验已保留； 的 Market 调用已成功持久化、checkpoint 尚未写入时，升级至 f945427 后 macro specialist 任务 hash 冲突，run 保持 executing。原始 stdout 保存在 ignored logs/financial-mas/market-upgrade-scout-reproduction.md；原 scout 脚本未留存，因此独立 financial-market-recovery worktree 必须重建完整复现并修复、接受独立 Review，不能把原同版本恢复 PASS 当作升级兼容证据。历史结果不可改写，全局 hash 校验不可放宽。
+W4-T7 重新打开：原只读 scout 输出表明，旧版 Market 的宏观 Specialist 结果先持久化、checkpoint 尚未写入时，f945427 单位标签修复导致恢复任务的 invocation hash 不匹配，run 保持 executing。原 scout 的临时 harness 未留存，完整 stdout 在 ignored logs/financial-mas/market-upgrade-scout-reproduction.md。独立 financial-market-recovery worktree 已基于真实旧 Git blob 重建并保留 `logs/financial-mas/reproduce_upgrade.py`、`upgrade-reproduction.log`、`recovery-validation.log` 和隔离 SQLite 前后快照；实现候选 975cfa9 为恢复调用加单位版本并把正确单位只应用到恢复中的可变 state，旧 invocation rows 保持不变。实施者报告 239 个 Market/金融运行时测试 PASS；Review 已通过其独立恶意恢复探针，正核对最终 HEAD 的完整测试命令/计数是否包含最后新增的预算耗尽用例。候选未合入，W4-T7/W6 仍不开 Gate。
