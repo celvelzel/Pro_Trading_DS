@@ -38,7 +38,7 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 | W4-T4 | DONE | Evidence Critic 独立核对消息发布时间、来源真实性与时间顺序，遇冲突给 `REQUEST_CHECK`；不根据新闻标题强行断定因果。 |
 | W4-T5 | DONE | Coordinator 基于 `missing_checks` 和预算决定下一次调查；明确区别“新 evidence 改变动作”与固定 waterfall。 |
 | W4-T6 | DONE | 汇总强类型 `MarketInvestigationArtifact`：事实、可能解释、反证、缺失证据、拒绝过度归因；所有数字有 tool citations。 |
-| W4-T7 | REOPENED | 最小自足入口独立运行、不依赖 Portfolio MAS。多轮、任务取消/超时、失败降级测试。 |
+| W4-T7 | DONE | 最小自足入口独立运行、不依赖 Portfolio MAS。多轮、任务取消/超时、失败降级测试。 |
 | W4-T8 | DEFERRED | 固定流水线和单 Agent + 相同工具的 baseline；用 case 测验证率、晚发布信息错误、工具/Token 成本。 |
 | W5-T1 | DONE | `backend/agent/portfolio_mas/` 定义独立 WorkflowDriver、Coordinator、state、prompts、specialists、verifier、finalizer。 |
 | W5-T2 | DONE | Opportunity Specialist 仅提出候选方向与定性理由，不凭空制造预期收益；Risk Specialist 通过工具审查集中度、相关性、回撤；Constraint Specialist 将用户条件归一化并查矛盾。 |
