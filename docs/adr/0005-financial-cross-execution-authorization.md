@@ -31,6 +31,11 @@ Introduce exported typed `FinancialExecutionAuthorization` in shared contracts:
 - `source_run_id` and `request_message_id`: required nonblank strings only for
   cross_followup; forbidden for independent.
 
+Validate strings before coercion: reject bytes, numbers, blank strings and
+surrounding whitespace rather than manufacturing aliases. Forbid extra fields
+and invalid purpose combinations. Stored non-None JSON is revalidated; malformed
+or unknown origin is not interpreted as legacy None.
+
 Add optional `execution_authorization=None` to dispatcher.create. Persist a
 validated non-None value in existing immutable creation_inputs JSON; include it
 in ordinary and concurrent full creation identity. None omits the key, preserving
@@ -66,12 +71,18 @@ Expose a stable denial exception/code for callers; do not silently return succes
 
 RuntimeContext guards must also honor the admitted absolute deadline during
 execution, including external wait bounds, before each new model/tool reservation,
-checkpoint and final artifact write. Expired in-flight work cannot persist a late
+immediately before starting the external invocation (including the interval
+after a reservation), after its return, checkpoint and final artifact write.
+Expired in-flight work cannot persist a late
 result or start another call. Record a fenced terminal expiry when still owned;
 pause/cancel/stale ownership takes precedence. Running synchronous I/O threads
 cannot be forcibly killed; their read-only execution may finish, but they cannot
 authorize or persist late runtime output. Existing active deadline remains an
 independent stricter bound where applicable, and cannot be reset by replay.
+Failure recording must not persist late output or turn a cross deadline into
+generic failed status. Non-work failure/expiry diagnostics may be persisted under
+current fencing; existing generic exception handling must preserve the explicit
+expiry outcome and cannot swallow a missing-admission denial as success.
 
 Historical admission replay does not authorize fresh expired execution. A
 previously selected Portfolio artifact retains the reviewed W6 historical-context
@@ -80,14 +91,19 @@ run does not acquire a follow-up deadline merely by sharing a correlation.
 
 ## Retry and independence
 
-Retry preserves the parent's execution authorization in creation identity; it
-must not silently become independent. A retry child may reuse only the exact
-original admitted logical request through validated immutable retry ancestry:
-same conversation, profile, correlation, domain, request and authorization, with
-the relation target equal to the original authorized ancestor. Detect cycles and
-bound traversal; reject before child creation if authorization cannot be proven.
-The original absolute deadline never extends. This does not create a new cross
-message, extra hop or follow-up. Ordinary legacy retries retain their old semantics.
+The MVP rejects ordinary retry of a cross_followup before creating any child,
+with explicit conflict and zero DML/provider/tool calls. Enforce this through both
+public retry and the retained create retry seam. A different idempotency key
+cannot create another eligible sibling using the same admitted REQUEST. Same-run
+checkpoint/lease recovery remains allowed within the original absolute TTL;
+replay never extends it. ADR-0003's exact REQUEST target and reverse READY or
+UNAVAILABLE source IDs remain unchanged. No child is authorized to resolve its
+parent's request, no response relation is rewritten, and no extra follow-up is
+silently granted.
+
+Independent initial Market/Portfolio retries inherit their explicit independent
+origin, retaining separate run IDs and accepted retry semantics. Ordinary legacy
+None direct-runtime retries retain their previous behavior and identity.
 
 After admission, the source's later completion/cancellation does not rewrite the
 target's independent lifecycle or immutable authorization. Target cancellation
@@ -102,7 +118,13 @@ not classify a relation-free run as standalone. A legacy ambiguous router run
 without origin cannot be silently upgraded or inferred; reject it, preserving
 historical rows. Existing standalone queue runs with None authorization and no
 explicit requested correlation remain supported by the trusted profile mapping.
-An explicit-correlation legacy run without origin is rejected by queue delivery;
+For a legacy None retry, validate a bounded (at most 32 parent edges), acyclic
+immutable retry ancestry: every parent exists and agrees on conversation,
+correlation, request, domain, execution profile and None origin; AgentRun parent
+and creation_inputs.retry_parent_id agree. The root must have no explicit
+requested correlation. The child's own explicit inherited correlation alone
+does not make it ambiguous. Reject mismatched, missing, cyclic or overdeep chains
+without mutations. An explicit-correlation legacy root without origin is rejected by queue delivery;
 no production W6 entrypoint has been deployed. Configured worker profiles remain
 unsupported unless an independently reviewed trusted mapping exists.
 
@@ -124,7 +146,9 @@ Required proofs: exact/concurrent creation identity, None compatibility; inert
 create/admit orphan through restore/advance/two worker entries; expiry between
 preflight and claim; expiry during a role/tool and before checkpoint/final write;
 no calls/reservations/late artifact; monotonic expiry/no-op replay; pending-review,
-pause/cancel/lease recovery; immutable retry origin and original TTL; all three
+pause/cancel/lease recovery; cross-followup retry rejection through both seams,
+independent origin inheritance and legitimate/adversarial legacy queue ancestry;
+all three
 actual-driver modes and unavailability; existing profile/admission/General tests.
 Use disposable SQLite and separately compiled PostgreSQL SQL; do not claim live
 infrastructure. Preserve all failure logs and holdings hashes. No real trades.
