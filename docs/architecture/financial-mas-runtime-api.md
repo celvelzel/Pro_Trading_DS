@@ -222,7 +222,15 @@ External waits use the stricter cross and existing active deadline. Late output
 cannot become a result or generic failed status. Still-owned work records fenced
 expiry; pause/cancel/stale ownership/expired lease wins. Fresh delivery can expire
 after an old lease expires. Read-only I/O threads cannot be forcibly stopped, but
-cannot authorize late runtime output. Reservations committed before expiry stay
+cannot authorize late runtime output. Cancellation-resistant async providers are
+retained until eventual completion with exception retrieval; cleanup does not await
+them or block the fenced expiry/intervention result. Such providers can retain
+resources indefinitely, but cannot persist late output or start subsequent work.
+This bounds resident-loop start/expiry completion, not total process shutdown:
+asyncio.run cancels and waits for pending tasks when closing its loop, so a provider
+that permanently refuses cancellation can still delay a worker using asyncio.run.
+Python cannot forcibly terminate such a coroutine or a running I/O thread.
+Reservations committed before expiry stay
 charged; incomplete audit rows stay reserved. External billing remains at least
 once after a crash, as in the existing runtime.
 

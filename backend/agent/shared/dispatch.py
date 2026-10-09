@@ -63,6 +63,9 @@ class FinancialMASDispatcher:
                 or execution_profile != execution_profile.strip()):
             raise FinancialExecutionProfileError('execution_profile must be a string of 1-128 characters without surrounding whitespace')
         self._execution_profile = execution_profile
+        # Retain cancellation-resistant external tasks until their eventual
+        # completion; they never hold up lifecycle/expiry persistence.
+        self._external_cleanup = set()
         if lease_seconds <= 0:
             raise ValueError('lease_seconds must be positive')
         self.sessions = session_factory
@@ -578,9 +581,19 @@ class RuntimeContext:
             if pending is not None:
                 if not pending.done():
                     pending.cancel()
-                # Retrieve a completed late exception even when the TTL guard
-                # overrides it, without allowing its output to be persisted.
-                await asyncio.gather(pending, return_exceptions=True)
+                # Cancellation is cooperative. Never await an external task
+                # here: a provider may ignore cancellation indefinitely.
+                self.dispatcher._external_cleanup.add(pending)
+
+                def retrieve(task):
+                    self.dispatcher._external_cleanup.discard(task)
+                    if not task.cancelled():
+                        task.exception()  # Retrieve late exceptions, discard output.
+
+                if pending.done():
+                    retrieve(pending)
+                else:
+                    pending.add_done_callback(retrieve)
             if not external_started and hasattr(awaitable, 'close'):
                 awaitable.close()
 

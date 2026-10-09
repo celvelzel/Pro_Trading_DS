@@ -644,3 +644,74 @@ def test_event_loop_scheduling_gap_cannot_start_provider_after_deadline(setup):
     assert asyncio.run(d.start(target.id)).status == 'expired'
     assert_expired(d, sessions, target, model_calls=1)
     assert calls(m, p) == [0, 0, 0, 0]
+
+
+
+@pytest.mark.parametrize('outcome', ['expiry', 'pause', 'cancel', 'stale'])
+def test_cancellation_resistant_async_provider_cannot_block_lifecycle(setup, monkeypatch, outcome):
+    from agent.llm import ModelResponse
+    d, sessions, m, p = setup
+    d.lease_seconds = 60
+    _, target, _ = pair(d)
+    async def scenario():
+        started, cancelled, release = asyncio.Event(), asyncio.Event(), asyncio.Event()
+        provider_calls, errors = [], []
+        class ResistantProvider:
+            async def complete(self, messages, *, request_id=None):
+                provider_calls.append(1)
+                started.set()
+                # Remain pending despite every cancellation until the harness
+                # releases us after verifying prompt fenced lifecycle return.
+                while not release.is_set():
+                    try:
+                        await release.wait()
+                    except asyncio.CancelledError:
+                        cancelled.set()
+                raise ValueError('late provider exception must be retrieved')
+        m.specialists._roles['investigator'] = SpecialistSpec('investigator', ResistantProvider(), 'test')
+        async def wait(tasks, *, timeout):
+            await started.wait()
+            if outcome == 'expiry':
+                d.clock = lambda: NOW + timedelta(seconds=30)
+            elif outcome == 'stale':
+                with sessions() as s:
+                    s.get(FinancialRun, target.id).claim_token = 'replacement-worker'
+                    s.commit()
+            else:
+                getattr(d, outcome)(target.id, d.get_run(target.id).version)
+            return set(), set(tasks)
+        monkeypatch.setattr(asyncio, 'wait', wait)
+        loop = asyncio.get_running_loop()
+        previous = loop.get_exception_handler()
+        loop.set_exception_handler(lambda loop, context: errors.append(context))
+        running = asyncio.create_task(d.start(target.id))
+        try:
+            result = await asyncio.wait_for(asyncio.shield(running), timeout=2)
+            await asyncio.wait_for(cancelled.wait(), timeout=2)
+            assert not release.is_set()
+            assert result.status == {'expiry': 'expired', 'pause': 'paused', 'cancel': 'cancelled', 'stale': 'executing'}[outcome]
+            assert provider_calls == [1] and calls(p) == [0, 0]
+            with sessions() as s:
+                rows = s.scalars(select(FinancialInvocation).where(FinancialInvocation.run_id == target.id)).all()
+                assert len(rows) == 1 and rows[0].status == 'reserved' and rows[0].output is None
+                assert not s.scalars(select(FinancialArtifact).where(FinancialArtifact.run_id == target.id)).all()
+                events = s.scalars(select(AgentEvent).where(AgentEvent.run_id == target.id)).all()
+                assert sum(e.event_type == 'mas.expired' for e in events) == int(outcome == 'expiry')
+                assert not any(e.event_type in {'mas.returned', 'mas.failure', 'mas.invocation_failed', 'mas.artifact_created'} for e in events)
+            before = database(sessions)
+            retained = list(d._external_cleanup)
+            assert len(retained) == 1 and not retained[0].done()
+            release.set()
+            await asyncio.gather(*retained, return_exceptions=True)
+            await asyncio.sleep(0)
+            assert not d._external_cleanup and errors == []
+            assert database(sessions) == before
+        finally:
+            # Only the harness releases the deliberately never-releasing fake;
+            # keep this cleanup even when testing a broken implementation.
+            release.set()
+            await asyncio.gather(running, *list(d._external_cleanup), return_exceptions=True)
+            loop.set_exception_handler(previous)
+    asyncio.run(scenario())
+    if outcome == 'expiry':
+        assert_expired(d, sessions, target, model_calls=1)
