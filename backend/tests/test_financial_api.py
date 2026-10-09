@@ -147,6 +147,7 @@ def test_combined_review_ordering_per_run_cas_and_actual_market_consumption(api,
     assert action(client, portfolio, 'approve').status_code == 200
     assert result(client, portfolio)['status'] == 'completed'
     assert 'market_evidence_unavailable' not in result(client, portfolio)['limitations']
+    assert 'SYSTEM_UNAVAILABLE' not in result(client, portfolio)['limitations']
     dispatcher, _ = financial._assembly(())
     relations = dispatcher.relations(portfolio)
     ready = next(r for r in relations if r['envelope'].get('message_type') == 'MARKET_EVIDENCE_READY')
@@ -196,7 +197,11 @@ def test_both_cancel_directions_reconcile_peer_without_approval(api, monkeypatch
     dispatcher, _ = financial._assembly(())
     if cancelled == 'market':
         assert any(r['envelope'].get('message_type') == 'SYSTEM_UNAVAILABLE' for r in dispatcher.relations(peer))
+        assert 'SYSTEM_UNAVAILABLE' in result(client, peer)['limitations']
+        assert 'SYSTEM_UNAVAILABLE' not in result(client, own)['limitations']
         if mode == 'auto': assert 'market_evidence_unavailable' in result(client, peer)['limitations']
+    else:
+        assert 'SYSTEM_UNAVAILABLE' not in result(client, peer)['limitations']
     with api[1]() as session:
         assert not list(session.scalars(select(AgentEvent).where(AgentEvent.run_id == peer,
             AgentEvent.event_type == 'mas.approve')))
@@ -234,19 +239,27 @@ def test_publish_failure_after_delivery_replays_without_duplicate_work(api, monk
         assert session.scalar(select(func.count()).select_from(FinancialInvocation)) == count
 
 
-def test_optional_transfer_failure_allows_bounded_portfolio_with_explicit_limitation(api, monkeypatch):
+@pytest.mark.parametrize('mode', ['review', 'auto'])
+def test_optional_transfer_failure_allows_bounded_portfolio_with_explicit_limitation(api, monkeypatch, mode):
     client, _ = api
     from agent.integration import CrossMASRouter
     def unavailable(*args, **kwargs):
         raise ValueError('optional transfer unavailable')
     monkeypatch.setattr(CrossMASRouter, 'transfer', unavailable)
-    pair = create(client, mode='review')
-    assert action(client, pair['market_run_id'], 'approve').status_code == 200
+    pair = create(client, mode=mode)
+    if mode == 'review':
+        assert action(client, pair['market_run_id'], 'approve').status_code == 200
     assert result(client, pair['market_run_id'])['status'] == 'completed'
-    assert action(client, pair['portfolio_run_id'], 'approve').status_code == 200
+    if mode == 'review':
+        assert action(client, pair['portfolio_run_id'], 'approve').status_code == 200
     portfolio = result(client, pair['portfolio_run_id'])
     assert portfolio['status'] == 'completed'
     assert 'market_evidence_unavailable' in portfolio['limitations']
+    dispatcher, _ = financial._assembly(())
+    assert not any(r['relation_type'] == 'cross_admitted' and r['target_run_id'] == pair['portfolio_run_id']
+        and r['envelope'].get('message_type') == 'SYSTEM_UNAVAILABLE'
+        for r in dispatcher.relations(pair['portfolio_run_id']))
+    assert 'SYSTEM_UNAVAILABLE' not in portfolio['limitations']
 
 
 def test_public_result_openapi_discriminates_exact_artifacts_by_mas_kind(api):

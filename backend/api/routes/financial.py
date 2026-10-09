@@ -113,8 +113,14 @@ def _result(dispatcher, run_id):
         except (KeyError, ValueError) as exc:
             raise HTTPException(409, 'Invalid immutable artifact') from exc
     limitations = list(artifact.limitations) if artifact else []
+    relations = dispatcher.relations(run_id)
+    if any(relation['relation_type'] == 'cross_admitted'
+            and relation['target_run_id'] == run_id
+            and relation['envelope'].get('message_type') == 'SYSTEM_UNAVAILABLE'
+            for relation in relations):
+        limitations.append('SYSTEM_UNAVAILABLE')
     if (snapshot['mas_kind'] == 'portfolio_rebalance' and snapshot['status'] in TERMINAL
-            and any(r['relation_type'] == 'combined' for r in dispatcher.relations(run_id))
+            and any(r['relation_type'] == 'combined' for r in relations)
             and not _has_market_evidence(dispatcher, snapshot)):
         limitations.append('market_evidence_unavailable')
     try:
