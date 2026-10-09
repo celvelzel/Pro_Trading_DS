@@ -14,7 +14,7 @@
         "cross_admitted": 1
       },
       "run_count": 2,
-      "wall_ms": 1050.6031
+      "wall_ms": 918.9831
     },
     "market:autonomous": {
       "comparator": "adaptive autonomous workflow",
@@ -57,9 +57,9 @@
         },
         "latency_ms": {
           "denominator": 12,
-          "max": 681.6772,
-          "mean": 565.3335333333333,
-          "median": 616.6917000000001
+          "max": 680.8266,
+          "mean": 564.7218583333333,
+          "median": 620.6320499999999
         },
         "metric_scoring_coverage": {
           "case_count": 12,
@@ -150,9 +150,9 @@
         },
         "latency_ms": {
           "denominator": 12,
-          "max": 392.063,
-          "mean": 365.5566,
-          "median": 367.0711
+          "max": 452.9019,
+          "mean": 367.12375000000003,
+          "median": 364.12604999999996
         },
         "metric_scoring_coverage": {
           "case_count": 12,
@@ -243,9 +243,9 @@
         },
         "latency_ms": {
           "denominator": 12,
-          "max": 289.2391,
-          "mean": 214.055025,
-          "median": 206.2405
+          "max": 308.7047,
+          "mean": 217.40435,
+          "median": 209.1245
         },
         "metric_scoring_coverage": {
           "case_count": 12,
@@ -320,9 +320,9 @@
         },
         "latency_ms": {
           "denominator": 30,
-          "max": 641.4446,
-          "mean": 486.8991066666667,
-          "median": 508.52665
+          "max": 514.4493,
+          "mean": 410.25898666666666,
+          "median": 431.02905
         },
         "metric_scoring_coverage": {
           "case_count": 30,
@@ -401,9 +401,9 @@
         },
         "latency_ms": {
           "denominator": 30,
-          "max": 556.7176,
-          "mean": 435.71295,
-          "median": 457.2736
+          "max": 519.6843,
+          "mean": 407.61774,
+          "median": 427.00205
         },
         "metric_scoring_coverage": {
           "case_count": 30,
@@ -482,9 +482,9 @@
         },
         "latency_ms": {
           "denominator": 30,
-          "max": 692.7036,
-          "mean": 465.16363333333334,
-          "median": 490.7827
+          "max": 501.8913,
+          "mean": 376.5641166666667,
+          "median": 394.12955
         },
         "metric_scoring_coverage": {
           "case_count": 30,
@@ -563,9 +563,9 @@
         },
         "latency_ms": {
           "denominator": 30,
-          "max": 552.7209,
-          "mean": 306.59307333333334,
-          "median": 335.49835
+          "max": 320.0583,
+          "mean": 258.0859633333333,
+          "median": 286.57495
         },
         "metric_scoring_coverage": {
           "case_count": 30,

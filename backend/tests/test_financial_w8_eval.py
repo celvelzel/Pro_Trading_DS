@@ -146,6 +146,7 @@ def test_pre_execution_failure_remains_distinct_and_counts_zero_credit(tmp_path,
     assert failed["failure_stage"] == "pre_execution"
     assert failed["evaluation_status"] == "unscored"
     assert failed["actual_workflow_executed"] is False and failed["run_id"] is None
+    assert failed["run_error_code"] is None and failed["execution_error"]["type"] == "RuntimeError"
     assert completed["run_status"] == "completed" and completed["evaluation_status"] == "scored"
     assert metrics["terminal_completed"] == 1 and metrics["terminal_failed_or_other"] == 1
     assert metrics["counters_total"]["model_calls"] == 5
@@ -189,6 +190,9 @@ def test_capture_failure_retains_completed_run_context_and_persisted_evidence(tm
     assert captured_failure["counters"]["tool_calls"] > 0
     assert captured_failure["wall_ms"] is not None
     assert captured_failure["actual_artifact"] is not None
+    assert captured_failure["run_error_code"] is None
+    assert captured_failure["capture_error"]["type"] == "RuntimeError"
+    assert captured_failure["execution_error"] is None
     assert len(captured_failure["persisted"]["artifacts"]) == 1
     assert len(captured_failure["persisted"]["events"]) > 0
     assert metrics["metric_scoring_coverage"]["unscored_case_count"] == 1
@@ -231,6 +235,63 @@ def test_snapshot_capture_failure_after_create_keeps_run_identity(tmp_path, monk
     assert row["run_budget"]["max_model_calls"] is not None
     assert row["counters"]["model_calls"] == 0
     assert summary["market:fixed"]["metrics"]["metric_scoring_coverage"]["unscored_case_count"] == 1
+
+
+def test_completed_start_snapshot_failure_recovers_budget_cost_and_run_error(tmp_path, monkeypatch):
+    market_cases, _ = w8.fixtures.load_cases()
+    original_factory = w8._new_dispatcher
+    finished = False
+
+    def fail_snapshot_after_completion(session_factory, case, domain, mode):
+        dispatcher = original_factory(session_factory, case, domain, mode)
+        original_start = dispatcher.start
+        original_snapshot = dispatcher.snapshot
+
+        async def start_then_mark_finished(run_id):
+            nonlocal finished
+            result = await original_start(run_id)
+            if result.status == "completed":
+                finished = True
+            return result
+
+        def snapshot_after_start(run_id):
+            if finished:
+                raise RuntimeError("injected post-completion snapshot failure")
+            return original_snapshot(run_id)
+
+        dispatcher.start = start_then_mark_finished
+        dispatcher.snapshot = snapshot_after_start
+        return dispatcher
+
+    monkeypatch.setattr(w8, "_new_dispatcher", fail_snapshot_after_completion)
+    output = tmp_path / "post-completion-snapshot-error"
+    engine, _ = database(tmp_path / "post-completion-snapshot-error.sqlite3")
+    try:
+        summary = w8.run_domain("market", ("fixed",), market_cases[:1], output, verbose=False)
+    finally:
+        engine.dispose()
+    row = w8.json.loads((output / "market-fixed.jsonl").read_text().splitlines()[0])
+    aggregate = summary["market:fixed"]["metrics"]
+    persisted_budget = row["persisted"]["financial_run"]["budget"]
+
+    assert row["failure_stage"] == "execution_capture"
+    assert row["evaluation_status"] == "unscored"
+    assert row["actual_workflow_executed"] is True
+    assert row["run_id"] and row["conversation_id"]
+    assert row["run_status"] == "completed"
+    assert row["run_error_code"] is None
+    assert row["capture_error"] == {
+        "type": "RuntimeError", "message": "injected post-completion snapshot failure"}
+    assert row["execution_error"] is None
+    assert row["run_budget"] == persisted_budget
+    assert row["run_budget"]["model_calls"] == 5
+    assert row["counters"]["model_calls"] == persisted_budget["model_calls"] == 5
+    assert row["counters"]["tool_calls"] == persisted_budget["tool_calls"]
+    assert row["counters"]["persisted_model_invocations"] == 5
+    assert row["wall_ms"] is not None
+    assert row["actual_artifact"] is not None
+    assert sum(invocation["kind"] == "model" for invocation in row["persisted"]["invocations"]) == 5
+    assert aggregate["counters_total"]["model_calls"] == 5
 
 
 def test_portfolio_input_determined_denominators_come_from_fixture_after_scoring_error(tmp_path, monkeypatch):

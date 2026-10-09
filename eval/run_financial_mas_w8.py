@@ -591,10 +591,11 @@ def _run_one(case, domain, mode, session_factory, execution_context=None):
                 raise
             context["run_status"] = completed.status
             context["run_error_code"] = completed.error_code
-            context["failure_stage"] = "runtime"
+            context["failure_stage"] = "execution_capture"
             snapshot = dispatcher.snapshot(run.id)
             context["run_budget"] = snapshot.get("budget", {})
             context["counters"] = _budget_counters(context["run_budget"])
+            context["failure_stage"] = "runtime"
             if completed.status in TERMINAL:
                 break
     finally:
@@ -879,6 +880,14 @@ def run_domain(domain, modes, cases, output_dir, verbose=True):
                                 persisted = {}
                         counters = dict(execution_context.get("counters") or _budget_counters({}))
                         if persisted:
+                            budget = (persisted.get("financial_run") or {}).get("budget") or {}
+                            if budget:
+                                execution_context["run_budget"] = budget
+                                counters.update(_budget_counters(budget))
+                            persisted_run = persisted.get("run") or {}
+                            execution_context["run_status"] = persisted_run.get("status",
+                                execution_context.get("run_status"))
+                            execution_context["run_error_code"] = persisted_run.get("error_code")
                             counters.update({
                                 "persisted_model_invocations": sum(row["kind"] == "model" for row in persisted["invocations"]),
                                 "persisted_tool_invocations": sum(row["kind"] == "tool" for row in persisted["invocations"]),
@@ -896,6 +905,9 @@ def run_domain(domain, modes, cases, output_dir, verbose=True):
                             except (TypeError, json.JSONDecodeError):
                                 actual_artifact = None
                         row_status = execution_context.get("run_status") or "harness_error"
+                        failure_stage = (execution_context.get("failure_stage")
+                            or ("execution_capture" if run_id else "pre_execution"))
+                        runner_error = {"type": type(exc).__name__, "message": str(exc)}
                         row = {"schema_version": SCHEMA_VERSION, "suite": "financial-mas-workflow-v1",
                             "profile": PROFILE, "domain": domain, "strategy": mode,
                             "comparator": (MARKET_COMPARATOR_LABELS if domain == "market" else PORTFOLIO_COMPARATOR_LABELS)[mode],
@@ -907,11 +919,12 @@ def run_domain(domain, modes, cases, output_dir, verbose=True):
                                 if domain == "portfolio" else {}),
                             "actual_workflow_executed": bool(execution_context.get("actual_workflow_executed")),
                             "run_status": row_status,
-                            "failure_stage": (execution_context.get("failure_stage")
-                                or ("execution_capture" if run_id else "pre_execution")),
+                            "failure_stage": failure_stage,
                             "evaluation_status": "unscored",
                             "evaluation_error": None,
-                            "run_error_code": f"{type(exc).__name__}: {exc}",
+                            "run_error_code": execution_context.get("run_error_code"),
+                            "capture_error": runner_error if failure_stage == "execution_capture" else None,
+                            "execution_error": runner_error if failure_stage != "execution_capture" else None,
                             "conversation_id": execution_context.get("conversation_id"),
                             "run_id": run_id, "run_budget": execution_context.get("run_budget", {}),
                             "wall_ms": execution_context.get("wall_ms"), "counters": counters,

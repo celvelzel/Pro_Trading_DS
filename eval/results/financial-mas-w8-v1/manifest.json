@@ -1,6 +1,6 @@
 {
-  "base_git_revision": "b10dc90acf36c34baf14cb976d71cb689fe19c92",
-  "completed_at": "2026-10-09T15:56:45.425134+00:00",
+  "base_git_revision": "da6fa9eb9658e1947b39d9a8a6b0167f09eeda51",
+  "completed_at": "2026-10-09T16:05:13.005673+00:00",
   "completed_runs": {
     "combined:synthetic-demo-v1": 2,
     "market:autonomous": 12,
@@ -24,15 +24,15 @@
     "eval/fixtures/portfolio/scenarios.json": "ad9d2ee55d4d24450943c9964456c8feb658556ac5b7384c4c646f042e1b9129"
   },
   "outputs_sha256": {
-    "combined-synthetic-demo-v1.jsonl": "08afb084b350e5733485665529325c71d6c08abf8a99fe0f2b3263c9b23b5fed",
-    "market-autonomous.jsonl": "678bc2ab1a607b37b6f695d0d7e011f5e71e8666730a0bb0369fdebaa1dce721",
-    "market-fixed.jsonl": "443e003d7b7362be0e7072132cae51fc1879b5dc15baba4b830cb4fa62fd4cf5",
-    "market-single.jsonl": "6c4e8266c662873587c8a54bdeb817a5bf2eb3ac4b611419fc85c3c1c11e32f2",
-    "portfolio-fixed.jsonl": "3b91e2a93d6b8fe50b32d3ba5e91e54b45c26439c9017c712b8c79d5e3a8b723",
-    "portfolio-full.jsonl": "a94b96808f8ee78fd095a5a6cc5f53aae96c3858e00cfb62fae6d28003702db0",
-    "portfolio-no_verifier.jsonl": "ad2a7e85abfcb17d5f089e2ca3a51c7c48df5ad636b3b09f79414f9aa1cc8347",
-    "portfolio-single.jsonl": "d04702f7572fa2b7636a2c206950c840ad01df2a3899e91c8fdf83f0c0cf039d",
-    "summary.json": "8b287be596a8a316b8048a11d6390146ddd819cdaf42b6dc641cb8e898023d59"
+    "combined-synthetic-demo-v1.jsonl": "ac03e990155916b880ce83d074cc2d77ccfba9edc43987c8aa9e02815cd191a8",
+    "market-autonomous.jsonl": "1abeb94fd9ae2f77194e2bf8cffccc08bf6a34a837bbada7739d94d2cc591b4a",
+    "market-fixed.jsonl": "f8be0ac90c3265626c71730663fe42cd0ef6e63f0d929fd67e69f60833aedb5c",
+    "market-single.jsonl": "e35fd6194058f1c847fae15d0284c802c038fa168e50fa2bfddade050db7fc34",
+    "portfolio-fixed.jsonl": "b5a8f26cb25baf0be832317ba1a7242b3e067633f2ac4016d52f1d9d10943f4c",
+    "portfolio-full.jsonl": "9f7a63210626ef9930ad40cec7a880e4cac458321f41af2b6b313d518a6ae929",
+    "portfolio-no_verifier.jsonl": "f22086f42fbd239f5c2e2c9fc13886660e39e97f45d4b6173bff7ad66083852a",
+    "portfolio-single.jsonl": "41c180b658141248583c0772e5f8fa29ea369cf9bef29fdae1278f7842327916",
+    "summary.json": "858a81d3c66ff632ee0ab51f0467bbe08d684335e196ff7478983f50e05fdba3"
   },
   "profile": "w8-fixture-v1",
   "python_version": "3.13.5",
@@ -68,10 +68,10 @@
     "eval/fixtures/combined/synthetic_demo_v1.json": "141ce0817fbbd0450227e3e429c7f7c08211eadf628217d4888f54770cbfb870",
     "eval/market_cases.jsonl": "894253639657ff8ae08552b9aed5c8ac52f99296eae9f2d7d387cd6112ac514c",
     "eval/portfolio_cases.jsonl": "f2fcc6a2cf4ede637b77d7069835557b737f49e392e8b460b3cdfad3beaae813",
-    "eval/run_financial_mas_w8.py": "5e8a66a189cf42f903e5e098372ec83627483e98bab0230eb3fd5e66a62cf6c4",
+    "eval/run_financial_mas_w8.py": "b160df7b5221096a9dcd091d1fd535aa8540928eb3b5516a34a9ee1d2ef5daa3",
     "lobster_quant/src/core/allocation_simulator.py": "924aef0b75f20b0f2f953923b41f8271a72b9294f6d585d289f0400ee54cd367",
     "lobster_quant/src/core/portfolio_risk.py": "ac8aecfbf304bbbf531b32d31141d84daf0e647ff99a5dee75e8ae37ecdebaa1"
   },
-  "started_at": "2026-10-09T15:55:34.101467+00:00",
+  "started_at": "2026-10-09T16:04:09.458308+00:00",
   "suite": "financial-mas-workflow-v1"
 }
