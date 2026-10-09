@@ -1,6 +1,6 @@
 # ADR-0004: Persist financial execution profile across worker delivery
 
-- Status: Proposed; bootstrap integration blocked pending design and implementation review.
+- Status: Design accepted by independent review at ae478e0; bootstrap integration blocked pending implementation review.
 - Date: 2026-10-08
 - Scope: application assembly and additive financial runtime provenance identity.
 
