@@ -1,8 +1,23 @@
-# 双金融 MAS 暂停交接（2026-10-09）
+# 双金融 MAS 续接交接（2026-10-10）
 
-**续接状态：用户已明确恢复原任务。** 下文暂停快照不再构成停止执行指令；当前阶段以 execution ledger 为准。主仓库分支为 `codex/financial-dual-mas`；本次续接审计启动点是 `1e7771cf1ba401ba47fb3abcbd555c41e9d5f7ca`，即 W6 代码验收点 `a0d29f9` 后的 W6 Gate 文档提交。W7 API/UI 契约 v1 已在 `a635d8a` 冻结并经独立 Review PASS。两个隔离 W7 worktree 已从契约/台账检查点 `604cf5d` 创建：backend/API-worker 与 frontend/UI 各有独立分支，`backend/main.py` 由主 Agent 集成。W6 路由完整独立 Review PASS；确切代码提交的专项 252 passed / 260.85s、Full Backend 716 passed / 438.09s。README 保留用户原有 15 行未提交修改。W7 编码进行中，浏览器 E2E 和 W8 同预算 baseline、实际工作流评测仍未完成，完整 63 项状态见 financial-dual-mas-task-status.md。W6 测试证据是 SQLite、合成 provider 与实际 Celery task 函数的新进程调用，不代表 Redis/broker/PostgreSQL 或实盘 provider 验收。
+**当前续接状态：** 主仓库 `C:/Develop/canvas/Pro_Trading_DS` 位于 `codex/financial-dual-mas`，代码 HEAD 为 `57a0888`，已完成本轮根目录回归和评测。W0–W7 的既有验收仍保留；W8 follow-up `7f8e9a8` 经独立 Review PASS 后集成。W8 targeted tests 63 passed、Backend 全量 795 passed；canonical v2 重放为 187 行/188 个已完成运行，10/10 输出哈希、23/23 源码哈希及 fixture hashes 均通过。Market single citation 18/18、timing denominator 8 且零违规；Portfolio 无独立 risk critic comparator 30 例、90 model calls，并保留适用场景的确定性风险/约束检查。W4-T8 与 W5-T8 已关闭。W8 Gate 仍 BLOCKED，唯一计划内阻塞是 unsupported-causal-claims 指标未评分。用户明确决定保持 Market artifact 契约冻结，不得增加 causal schema 字段。README 顶部原有用户修改保留；只纳入本次 MAS 功能的独立下方 bullets。
 
-**本次续接完整性审计**：W0–W6 已接受提交仍是当前 HEAD 的祖先；没有发现缺失的已接受前置任务。`financial-domain-ui` 当前 HEAD 已从旧快照的 `e4ab4e9` 前进到 `bead3db`，其六个 owned 结果组件/类型文件与主分支内容一致；分支仍保留，不需要重新合入。`financial-cross-repair` 的 W6 候选 worktree 干净且精确停在 `a0d29f9`。`financial-market-recovery` 有未跟踪 `workspace/`，`financial-mas-quant` 保留两个既有支持文件改动；均未清理或覆盖。下面的暂停期列表与 TODO 是历史记录，当前 worktree 状态和续接步骤以本段及 execution ledger 为准。
+**本次续接完整性审计：** 已核对主分支、评测 worker worktree、Agent 状态、最新测试日志、v2 manifest/raw rows 和 README 两处独立改动。reviewer 对 `7f8e9a8` 的完整 follow-up 给出 PASS；该代码已集成于 `57a0888`，candidate worktree 保持干净且未归档。安全 worker `3b666a6` 及先前 W8 commits 仍在分支历史。v2 canonical results 已从成功的根目录重放复制并通过逐文件 hash/source/fixture 验证。旧 W7/W8 交接快照保留在下方，仅供历史追溯，不作为当前 TODO。
+
+## 当前 W8 交接与下一步
+
+评测实现文件 ownership 及审查结果：`financial-w8-eval` worker 负责 `eval/run_financial_mas_w8.py`、Portfolio/Market comparator 相关 driver/factory/test、评测说明；完整 follow-up `7f8e9a8` 经独立 Reviewer PASS 并集成为 `57a0888`。根目录 targeted eval/Portfolio/bootstrap suites 为 63 passed；隔离 worker 与根目录 replay 均通过。安全 worker 在 `financial-w8-security` 负责 `backend/tests/test_financial_w8_security.py` 与 `docs/architecture/financial-w8-security-recovery-evidence.md`；安全证据范围修订提交 `3b666a6` 与原安全测试一并集成，security/recovery joined suite 515 passed。两个 worker worktree 保留，未归档/清理。
+
+根目录验证和可复现实验产物：`logs/financial-mas/w8-followup-targeted-root.log`（63 passed）、`logs/financial-mas/w8-followup-full-backend-root.log`（795 passed）、`logs/financial-mas/w8-security-focused-root.log`（1 passed）。v2 原始 replay 位于 `logs/financial-mas/w8-root-replay-v2-20261010/`，控制台日志为同名 `.log`；tracked canonical summary/raw set 位于 `eval/results/financial-mas-w8-v2/`，v1 `eval/results/financial-mas-w8-v1/` 原样保留。v2 有 187 行：36 Market、150 Portfolio、1 Combined 记录（2 个 Combined run）；10/10 output SHA-256、23/23 source SHA-256、fixture hashes 均通过。所有 domain case 已评分，无失败/未评分 case；Market causal metric 单独为 unscored。全程 synthetic providers + disposable SQLite，无 public API、real provider、broker/order 或 holdings write。
+
+当前只剩一项计划内 Gate 阻塞：
+
+1. W8-T4 的 `unsupported_causal_claims` 目前不可评分，因为冻结 `MarketInvestigationArtifact` 没有单独的 causal-assertion 字段。用户已选择维持冻结契约。禁止从 hypothesis `support/against/unverified` 推断 causality，也不能报作 0 个 unsupported claims；当前计划下该指标保持未评分，W8 Gate 不通过。只有用户今后明确调整这一决定/计划后，才能重新评估版本化契约。
+Market `single` 已在根目录验证 18/18 citations、timing denominator 8 且零违规，W4-T8 已关闭；Portfolio `no_independent_risk_critic` 已在 30 例上完成 90 model calls，省略风险审查/verifier model roles 并保留适用场景的 deterministic risk/constraint gates，W5-T8 已关闭。运行时不持久化 token usage，保持 `null`。
+
+机械检查已通过：W8 targeted 63 passed；Backend 全量 795 passed；security/recovery 515 passed；W7 frontend 212 tests、TypeScript、owned-area ESLint、production build、Chromium API E2E 7/7 均有既有通过证据。前端在 W8 未变更。W8 Gate 按用户明确决定保持 BLOCKED：`unsupported_causal_claims.scorable=false`，不根据 hypothesis disposition 推断因果，不更改冻结 schema。PostgreSQL server、Redis service、Celery broker 和 live provider 不在本机证据范围。
+
+当前已完成本轮可在冻结契约下完成的实现、Review、根目录全量测试、v2 重放与成果记录；交接文档和结果集经最终独立 Review PASS 并已提交，未 push。README 原有顶部 15 行继续保留在未暂存工作区，提交只包含本次三个 MAS bullets。后续若计划或契约获得新的显式授权，再评估 causal assertion schema 与相应版本化迁移/兼容评测；在那之前保持 causal metric 未评分和 W8 Gate BLOCKED。不得仅凭其它指标全绿宣称 Gate PASS，也不得借助真实资金、自动下单或真实持仓。
 
 **以下为原暂停时历史快照，已被上方恢复状态和执行台账更新。** 当时用户要求子 Agent 完成后暂停主 Agent；当前恢复指令已撤销该停止要求。本记录保留历史，不应用作当前调度状态。完整需求见 financial-dual-mas-implementation.md，历史 Gate 证据见 financial-dual-mas-execution.md。
 

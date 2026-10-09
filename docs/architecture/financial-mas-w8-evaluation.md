@@ -13,7 +13,14 @@ python eval/run_financial_mas_w8.py --domain all --output-dir logs/financial-mas
 
 The output directory must be empty. The runner refuses an existing nonempty destination so previous evidence is preserved. It verifies the workflow-v1 fixture manifest, creates an isolated temporary SQLite database, assembles the accepted dispatcher with `demo=False` and the explicit `w8-fixture-v1` profile, creates each run, and calls the persisted runtime's `start` path. It exports the stored AgentRun, FinancialRun, invocations, tool calls/results, events, artifacts, and relations to per-case JSONL records before the temporary database is removed.
 
-The canonical W8 v1 result set remains 36 Market rows, 120 Portfolio rows, and one separate Combined smoke. Follow-up comparisons can add strategy rows from the same unchanged 12/30 fixture sets; they belong in a new output directory and must not overwrite the canonical v1 evidence.
+The immutable canonical W8 v1 result set contains 36 Market rows, 120 Portfolio rows, and one separate Combined smoke. The accepted v2 follow-up adds the Market `single` evidence-backed citation/timing comparison and a fifth Portfolio strategy, `no_independent_risk_critic`, without changing fixtures or overwriting v1. Its raw results and manifest are tracked at `eval/results/financial-mas-w8-v2/`; the run is bound to source revision `57a0888303363ff75f652c9eeebfc37b8739fed5` and contains 36 Market rows, 150 Portfolio rows, and one Combined record with two completed runs (187 rows, 188 runs total). Recreate it in a new empty directory with:
+
+```powershell
+$env:PYTHONPATH="backend;.;lobster_quant"
+python eval/run_financial_mas_w8.py --domain all --output-dir logs/financial-mas/<new-run-name>
+```
+
+The root v2 replay scored all 186 domain cases, with zero execution or scoring errors; all 10 output hashes and 23 source hashes matched. Market `single` had 18/18 valid citation positions and a timing denominator of 8 with zero violations. The new risk-critic ablation completed 30 cases with 90 model calls while retaining deterministic risk and allocation gates. Token usage remains unavailable and is recorded as `null`. Unsupported causal claims remain explicitly unscorable under the frozen artifact contract.
 
 No public API or real provider is used. Market evidence and Portfolio snapshots/histories are immutable synthetic adapters; model roles use deterministic no-network synthetic providers. The runner verifies that every registered tool is read-only and has no side effect. It does not read user holdings, call a broker, submit orders, or modify a portfolio. Token usage is explicitly `null` because the runtime does not persist token counts.
 

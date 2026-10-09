@@ -1,6 +1,6 @@
 # 双金融 MAS 逐项接手台账
 
-核对日期：2026-10-09；原中断续接基线：`624f4b2`；本轮连续性审计启动 HEAD：`1e7771c`；W7 contract v1 冻结提交：`a635d8a`。共 63 项，逐项对应原计划。独立连续性审计确认 19 个已接受集成检查点及 owned 文件未丢失；README 用户修改保留。W7 contract v1 与实现均已独立 Review PASS，W7 Acceptance Gate 于 `2c83826` 集成后通过。W8 已开放；fixtures 仍只代表输入准备，真实工作流基准尚未执行。原计划定义不变，本表补充执行状态。
+核对日期：2026-10-10；本轮连续性审计 HEAD：`57a0888`；W7 contract v1 冻结提交：`a635d8a`。共 63 项，逐项对应原计划。W0–W7 已接受检查点仍在当前分支历史中。W8 comparator follow-up `7f8e9a8` 经独立 Review PASS 后集成于 `57a0888`；根目录全量 Backend 795 passed，v2 replay 187 行/188 个已完成运行，10/10 输出哈希、23/23 源码哈希通过。W4-T8 与 W5-T8 已闭环。用户已决定保持 Market artifact 契约冻结，unsupported-causal-claims 保持未评分，故 Gate 不通过。README 顶部用户原有改动仍保留，不纳入本次提交。原计划定义不变，本表补充最新执行状态。
 
 DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所有任务完成。CANDIDATE 表示仅在未合并分支实现，不能作为依赖已就绪的依据。FIXTURE_DONE 仅指评测输入准备，未执行工作流。PARTIAL、DEFERRED、IN_PROGRESS、OPEN 均仍需完成。
 
@@ -39,7 +39,7 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 | W4-T5 | DONE | Coordinator 基于 `missing_checks` 和预算决定下一次调查；明确区别“新 evidence 改变动作”与固定 waterfall。 |
 | W4-T6 | DONE | 汇总强类型 `MarketInvestigationArtifact`：事实、可能解释、反证、缺失证据、拒绝过度归因；所有数字有 tool citations。 |
 | W4-T7 | DONE | 最小自足入口独立运行、不依赖 Portfolio MAS。多轮、任务取消/超时、失败降级测试。 |
-| W4-T8 | DEFERRED | 固定流水线和单 Agent + 相同工具的 baseline；用 case 测验证率、晚发布信息错误、工具/Token 成本。 |
+| W4-T8 | DONE | `fixed` 与 `single` 在相同 12 个 fixture 上实际评测；Market `single` 有效 citations 为 18/18，timing 分母 8、违规 0。Token usage 未被运行时持久化，保持 `null`，不推断为零。 |
 | W5-T1 | DONE | `backend/agent/portfolio_mas/` 定义独立 WorkflowDriver、Coordinator、state、prompts、specialists、verifier、finalizer。 |
 | W5-T2 | DONE | Opportunity Specialist 仅提出候选方向与定性理由，不凭空制造预期收益；Risk Specialist 通过工具审查集中度、相关性、回撤；Constraint Specialist 将用户条件归一化并查矛盾。 |
 | W5-T3 | DONE | Coordinator 提交候选配置至 `validate_allocation` 和 `AllocationSimulator`；Verifier 不允许绕过确定性检查。 |
@@ -47,7 +47,7 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 | W5-T5 | DONE | 严格以**输入持仓快照 ID**为参考，保存 proposal snapshot 而非修改仓库中实际持仓；支持无 M-MAS 的纯配置需求。 |
 | W5-T6 | DONE | `PortfolioProposalArtifact`：before/after、实际计算值、violations、不可测限制、历史模拟假设、风险取舍、人工审阅所需信息。 |
 | W5-T7 | DONE | 独立测试：M-MAS API 不可用时 P-MAS 仍完成、价缺失时拒绝无依据提案、用户矛盾条件、重复执行不双写。 |
-| W5-T8 | DEFERRED | baseline：单 Agent + 同样工具；不含独立风险 Critic 的 multi-agent；比较 hard-constraint violations、infeasible detection、cost/latency。 |
+| W5-T8 | DONE | 独立 `no_independent_risk_critic` comparator 在 30 个 Portfolio fixtures 上完成；移除 risk-review 与 verifier model roles，保留 Constraint Specialist、确定性 risk calculation、allocation validation 与安全门。`no_verifier` 仍是不同的 verifier 消融。 |
 | W6-T1 | DONE | 统一 `CrossMASRequest/Response` 与 immutable artifact store，M/P 只依赖 shared contracts，不调用对方内部 Python agent classes；已集成 `a0d29f9`。 |
 | W6-T2 | DONE | 同时运行时每个 MAS 创建**不同 run_id**；使用 `correlation_id` 链接；保留 parent/cross relation 的持久化图，禁止借用旧的 `parent_run_id` 重新定义旧 retry 语义。 |
 | W6-T3 | DONE | MVP 支持 P→M 请求进一步证据和用户组合任务 M→P 传调查 artifact；跨请求声明 `as_of`、scope、授权、预算及 TTL，并要求反向回复关联精确 REQUEST。 |
@@ -63,26 +63,29 @@ DONE 表示该任务已接受的源码或准备成果；不代表整个阶段所
 | W7-T6 | DONE | schema/response 校验、SSE replay/reconnect/dedup、加载/错误/partial、可访问性及 General regression 有 unit/browser 覆盖；212 前端单测、TS、lint、build 与 7 条 Chromium 真实 API E2E 通过。 |
 | W7 contract v1 | DESIGN_PASS | `docs/architecture/financial-mas-w7-api-ui-contract.md`：独立 Review PASS（2026-10-09），契约冻结。 |
 | Gate W7 | PASS | 独立 backend/frontend Review PASS；backend scoped suite 129 passed，router registration 1 passed；frontend 212 unit、TypeScript、owned-file ESLint、production build 通过；真实本地 API + 浏览器 7/7 E2E 通过。Evidence 与范围见下方 W7 Gate 记录。 |
-| W8-T1 | FIXTURE_DONE | `eval/market_cases.jsonl`：10–15 个固定事件证据问题；题目分布包括行业共振、错误时序、假新闻、缺证据、未来资料禁止引用。只验可核事实，不将主观“下跌原因”作为唯一真值。 |
-| W8-T2 | FIXTURE_DONE | `eval/portfolio_cases.jsonl`：20–30 个约束场景；每例 gold constraint validity、expected failure kind、reference math。 |
-| W8-T3 | PARTIAL | 同样数据快照、同样工具与尽可能相同调用预算下：single-agent / fixed pipeline / fully autonomous MAS；可加 verifier ablation。 |
-| W8-T4 | OPEN | 指标 M：Evidence citation precision、timing violations、unsupported causal claims、tool/LLM count、latency、partial result correctness。 |
-| W8-T5 | PARTIAL | 指标 P：hard constraint violation rate、infeasibility detection、risk-calculation accuracy、data-missing safety、simulated net-value consistency。 |
-| W8-T6 | PARTIAL | 安全：prompt injection in event text；工具白名单；异常与失败降级；跨会话引用不可串用；异常输入；价格过期拒绝；无秘密泄露；不能触发 portfolio 写 API。 |
-| W8-T7 | PARTIAL | 并发 / 持久化：重复 Celery 投递、cancel/resume/checkpoint restore、乐观锁 409、单调 seq、migration upgrade/downgrade（安全范围内）、缺 Redis inline 执行可用性。 |
-| W8-T8 | PARTIAL | 整理 README/ADR/演示脚本/可复现实验，记录真实性：没有实盘、没有验证因果、后验模拟不等于未来收益。 |
+| W8-T1 | DONE | 12 个 Market 证据案例；固定事件时序、行业共振、错误时序、假新闻、缺证据和未来资料边界。逐例参加实际运行与评分。 |
+| W8-T2 | DONE | 30 个 Portfolio 约束案例；独立 gold、输入可判 infeasible、reference math 和场景边界均参加实际运行与评分。 |
+| W8-T3 | DONE | canonical v2 共 187 条原始记录：Market 3 种策略 × 12、Portfolio 5 种策略 × 30、Combined 独立 smoke（2 个已完成 run）；所有 comparator 使用同域 fixture 与默认预算上限。 |
+| W8-T4 | PARTIAL | Citation、时序、事实/出处、调用成本、延迟、partial correctness 均已实现；unsupported causal claims 因冻结 artifact schema 无因果断言字段而不可评分，禁止按 hypothesis disposition 推断。Market single 的 citation/timing 分母现已有效。 |
+| W8-T5 | DONE | 30 例 × Portfolio 5 种策略均完成；约束安全、输入可判 infeasible、风险计算、missing-data safety、持久化模拟净值一致性均输出分母和逐例结果。 |
+| W8-T6 | DONE | 安全/异常边界 joined suite 515 passed；provider 异常文本不泄漏回归 1 passed；W7 浏览器 E2E 另验证无 portfolio 写请求及持仓文件未变化。均为 synthetic/local scope。 |
+| W8-T7 | DONE | duplicate delivery、cancel/resume、checkpoint、CAS/version、单调事件、migration 和 Redis 缺失时本地 inline 路径纳入 SQLite/直接 task 的 joined suite（515 passed）及全 Backend（795 passed）；不代表真实 Redis/broker/PostgreSQL。 |
+| W8-T8 | DONE | 评测脚本、指标范围、README 能力说明、可复现命令、安全边界和限制均有持久文档。 |
+| Gate W8 | BLOCKED | 全 Backend 795 passed、W8 security/recovery 515 passed、canonical v2 重放 187 行/188 runs 且所有 domain cases 均评分、前端 212 + TS/lint/build、W7 浏览器 7/7 均有证据。唯一明确阻塞是 W8-T4 `unsupported_causal_claims` 按用户选择维持未评分；Market single citation/timing 与 Portfolio 无独立 Risk Critic comparator 已闭环。 |
 
 W7 实现从 `604cf5d` 开始，后端与前端分别在 `financial-w7-backend`、`financial-w7-frontend` managed worktree 开发；主 Agent 单独集成 `backend/main.py`。已集成提交 `36e72c3`、`79e11e3`、`6ec9b71`、`d782b36`、`5c21269`、`d7b2461`、`2c83826`；精确实现树均经独立 Review。原有 README 15 行用户修改仍未暂存或改写。
 
 ## 未完成任务的具体接手边界
 
 - W1-T3/T6：原 W1 阶段保留的金融 lifecycle 与 SSE/UI 缺口已由 W7 typed API、Financial SSE/Timeline 补齐，并在 W7 Gate 完成后关闭。
-- W4-T8、W5-T8：已有部分 baseline/ablation hooks，尚无同工具同预算的强单 Agent、Portfolio 固定流水线及实际比较报告；执行债务归 W8，不能以 hook 测试代替。
+- W4-T8、W5-T8：已在独立评测 worktree 完成、独立 Review PASS、集成并在根目录重放。Market single citation 为 18/18、timing denominator 为 8 且零违规；Portfolio `no_independent_risk_critic` 30 例、90 model calls，不调用 risk/verifier model roles，并保留适用场景的 deterministic risk/constraint gates。Token usage 仍记 null。
 - W6：路由与来源授权最终提交 `a0d29f9` 已快进集成；独立 Review 对 `dc09ae4..a0d29f9` 完整四文件差异 PASS。Review 揭示并修复两项缺口：router 不得把无授权的 legacy root 推断为 independent；follow-up 回复必须解析确切准入 REQUEST，不可降级成无因果新 READY。确切提交上的 252 项专项（260.85s）和完整 Backend（716 项，438.09s）通过；10 个 fresh-process 实际 worker 入口、legacy-origin 与 reverse-relation 定向矩阵均通过。原始日志及中断/失败候选记录保留在隔离 worktree 的 `logs/financial-mas/w6-repair-*`。W6 Gate 已释放 W7；证据限于 SQLite/合成 provider 和真实 Celery task 函数调用，不代表 Redis/broker/PostgreSQL 或实盘 provider 验收。
 - W7：已完成并通过 Gate。真实 API 服务绑定隔离 SQLite `logs/financial-mas/w7-real-api-e2e-agent.db`、关闭 Redis；使用 synthetic snapshot。Chromium E2E 7/7（Market-only、Portfolio-only、Combined 双 run、Portfolio 页两个入口、Analysis 标的入口、General 兼容），无路由 mock。Portfolio 入口 E2E 对 positions/cash 文件存在性与 SHA-256 前后相同作断言，并断言无 portfolio 写请求；实际 `positions.json` SHA-256 为 `4F53CDA18C2BAA0C0354BB5F9A3ECBE5ED12AB4D8E11BA873C2F11161202B945`，`cash.json` 测试前后均不存在。真实服务已关闭、3000/8001 端口已释放。此项是 synthetic/local validation，不是 PostgreSQL、Redis/Celery broker、外部 provider 或生产部署验证。
-- W8-T1/T2：eval/market_cases.jsonl 12 例、eval/portfolio_cases.jsonl 30 例及独立 Decimal gold 已准备；所有 fixture actual_workflow_executed=false。七个测试函数展开为 46 项用例，不能声称已跑 42 个真实工作流。
-- W8-T3/T4/T5：执行实际工作流与同预算基线/消融，保存逐例原始结果、调用计数、工具引用和确定性质量指标；现有工具数值 gold 不是工作流质量。
-- W8-T6/T7/T8：已有安全、恢复、迁移片段证据，整合后仍需完整安全/恢复/inline/E2E 与可复现实验。Docker engine 不可用，不能声称已验证真实 PostgreSQL/Redis/Celery。
+- W8-T1/T2/T3/T5：fixtures 已用于 186 个 Market/Portfolio 策略 run（36 Market、150 Portfolio，含五个 Portfolio comparator），另有两个独立 Combined run；187 行原始记录、summary 和 manifest 保存在 canonical v2。输入不再是 fixture-only。
+- W8-T4：`unsupported_causal_claims.scorable=false` 是当前明确阻塞。`MarketInvestigationArtifact` 没有独立 causal-assertion 字段；不得把 support/against/unverified 解释成因果断言。要关闭须先审查并版本化契约/ADR，再补兼容测试与重跑评测。
+- W5-T8：`portfolio:no_verifier` 保留 risk model review，只作为 verifier ablation；新的 `no_independent_risk_critic` 是独立 comparator，两个策略不可混称。
+- W8-T6/T7：本地 synthetic/SQLite 防护与恢复矩阵已通过，详细范围在 `docs/architecture/financial-w8-security-recovery-evidence.md`。Docker engine 不可用，真实 PostgreSQL、Redis/Celery broker 仍未验收；不得将直接 task/inline 结果说成 broker 验证。
+- W8-T8：本 README 新增独立双 MAS、只读边界和评测说明入口；精确 benchmark 命令与可评分范围见 `docs/architecture/financial-mas-w8-evaluation.md`。历史 fixture-only 记录仅描述当时状态，已由本次 Gate 记录覆盖。
 
 最新 Gate 和原始测试证据见 [执行台账](financial-dual-mas-execution.md)，暂停时历史快照见 [交接记录](financial-dual-mas-handoff.md)。完整原计划仍是验收依据。
 
@@ -100,4 +103,4 @@ The E2E API used disposable SQLite `logs/financial-mas/w7-real-api-e2e-agent.db`
 
 ## W8 continuation scope
 
-Independent read-only W8 audits confirm W8-T1/T2 are fixture preparation only (12 Market + 30 Portfolio cases; every `actual_workflow_executed` remains false). W4-T8/W5-T8 and W8-T3/T4/T5 remain incomplete: baseline hooks are not a quality comparison, there is no actual per-case workflow runner, and no aggregated MAS metrics or raw W8 results exist. W8-T6/T7 have useful unit/integration slices but no joined W8 adversarial/recovery run; secret-leak aggregation is absent. SQLite migration and direct worker-task tests do not prove PostgreSQL, broker, or Redis operation; Docker is still unavailable. Continue with real fixture-backed MAS runs, comparable baselines/ablations, metric calculations, per-case raw evidence, security/recovery matrix, and reproducible scripts/results before declaring W8 PASS.
+Historical W8 audit from before runner implementation: fixtures were prepared but no runtime rows existed. Superseding status is recorded in the 2026-10-10 W8 Gate section of `financial-dual-mas-execution.md`; the original finding is retained here only as an audit timestamp, not as current status.

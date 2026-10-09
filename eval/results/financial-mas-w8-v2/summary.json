@@ -1,0 +1,712 @@
+{
+  "actual_workflow_execution": true,
+  "broker_or_order_calls": false,
+  "domain_summary": {
+    "combined:synthetic-demo-v1": {
+      "artifacts_persisted": 2,
+      "both_terminal_completed": true,
+      "case_count": 1,
+      "distinct_run_ids": 2,
+      "raw_results": "combined-synthetic-demo-v1.jsonl",
+      "relation_type_counts": {
+        "artifact_selection": 1,
+        "combined": 1,
+        "cross_admitted": 1
+      },
+      "run_count": 2,
+      "wall_ms": 760.4668
+    },
+    "market:autonomous": {
+      "comparator": "adaptive autonomous workflow",
+      "metrics": {
+        "artifact_evidence_provenance": {
+          "denominator": 36,
+          "numerator": 36,
+          "value": 1.0
+        },
+        "artifact_status_accuracy": {
+          "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+          "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "case_count": 12,
+        "counters_total": {
+          "model_calls": 96,
+          "persisted_model_invocations": 96,
+          "persisted_tool_invocations": 54,
+          "persisted_tool_results": 54,
+          "rounds": 30,
+          "tool_calls": 54
+        },
+        "event_association_supported_disposition_count": 0,
+        "event_eligible_count_accuracy": {
+          "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+          "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "evidence_citation_precision": {
+          "denominator": 7,
+          "numerator": 7,
+          "value": 1.0
+        },
+        "latency_ms": {
+          "denominator": 12,
+          "max": 559.1405,
+          "mean": 480.20015,
+          "median": 528.9023
+        },
+        "metric_scoring_coverage": {
+          "case_count": 12,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 12,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
+        },
+        "numeric_fact_accuracy": {
+          "denominator": 72,
+          "failure_policy": "unscored case facts receive zero credit against fixture-derived gold denominator",
+          "numerator": 72,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "numeric_fact_provenance": {
+          "denominator": 96,
+          "numerator": 96,
+          "value": 1.0
+        },
+        "partial_result_correctness": {
+          "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+          "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "terminal_completed": 12,
+        "terminal_failed_or_other": 0,
+        "timing_violations": {
+          "count": 0,
+          "denominator": 7
+        },
+        "token_usage": {
+          "available": false,
+          "total": null
+        },
+        "unsupported_causal_claims": {
+          "count": null,
+          "denominator": 0,
+          "reason": "Final structured artifact has no causal-assertion field; do not infer causality from hypothesis disposition.",
+          "scorable": false
+        }
+      },
+      "raw_results": "market-autonomous.jsonl"
+    },
+    "market:fixed": {
+      "comparator": "fixed specialist sequence without dynamic routing",
+      "metrics": {
+        "artifact_evidence_provenance": {
+          "denominator": 32,
+          "numerator": 32,
+          "value": 1.0
+        },
+        "artifact_status_accuracy": {
+          "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+          "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "case_count": 12,
+        "counters_total": {
+          "model_calls": 60,
+          "persisted_model_invocations": 60,
+          "persisted_tool_invocations": 36,
+          "persisted_tool_results": 36,
+          "rounds": 12,
+          "tool_calls": 36
+        },
+        "event_association_supported_disposition_count": 0,
+        "event_eligible_count_accuracy": {
+          "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+          "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "evidence_citation_precision": {
+          "denominator": 7,
+          "numerator": 7,
+          "value": 1.0
+        },
+        "latency_ms": {
+          "denominator": 12,
+          "max": 419.477,
+          "mean": 330.571875,
+          "median": 317.8292
+        },
+        "metric_scoring_coverage": {
+          "case_count": 12,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 12,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
+        },
+        "numeric_fact_accuracy": {
+          "denominator": 72,
+          "failure_policy": "unscored case facts receive zero credit against fixture-derived gold denominator",
+          "numerator": 72,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "numeric_fact_provenance": {
+          "denominator": 96,
+          "numerator": 96,
+          "value": 1.0
+        },
+        "partial_result_correctness": {
+          "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+          "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "terminal_completed": 12,
+        "terminal_failed_or_other": 0,
+        "timing_violations": {
+          "count": 0,
+          "denominator": 7
+        },
+        "token_usage": {
+          "available": false,
+          "total": null
+        },
+        "unsupported_causal_claims": {
+          "count": null,
+          "denominator": 0,
+          "reason": "Final structured artifact has no causal-assertion field; do not infer causality from hypothesis disposition.",
+          "scorable": false
+        }
+      },
+      "raw_results": "market-fixed.jsonl"
+    },
+    "market:single": {
+      "comparator": "single coordinator model with deterministic tools and citations from persisted task evidence",
+      "metrics": {
+        "artifact_evidence_provenance": {
+          "denominator": 32,
+          "numerator": 32,
+          "value": 1.0
+        },
+        "artifact_status_accuracy": {
+          "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+          "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "case_count": 12,
+        "counters_total": {
+          "model_calls": 12,
+          "persisted_model_invocations": 12,
+          "persisted_tool_invocations": 36,
+          "persisted_tool_results": 36,
+          "rounds": 12,
+          "tool_calls": 36
+        },
+        "event_association_supported_disposition_count": 0,
+        "event_eligible_count_accuracy": {
+          "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+          "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "evidence_citation_precision": {
+          "denominator": 18,
+          "numerator": 18,
+          "value": 1.0
+        },
+        "latency_ms": {
+          "denominator": 12,
+          "max": 182.8766,
+          "mean": 177.460525,
+          "median": 177.20075
+        },
+        "metric_scoring_coverage": {
+          "case_count": 12,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 12,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
+        },
+        "numeric_fact_accuracy": {
+          "denominator": 72,
+          "failure_policy": "unscored case facts receive zero credit against fixture-derived gold denominator",
+          "numerator": 72,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "numeric_fact_provenance": {
+          "denominator": 96,
+          "numerator": 96,
+          "value": 1.0
+        },
+        "partial_result_correctness": {
+          "denominator": 12,
+          "failure_policy": "unscored case rows receive zero credit against the full fixture denominator",
+          "numerator": 12,
+          "scored_case_count": 12,
+          "unscored_case_count": 0,
+          "value": 1.0
+        },
+        "terminal_completed": 12,
+        "terminal_failed_or_other": 0,
+        "timing_violations": {
+          "count": 0,
+          "denominator": 8
+        },
+        "token_usage": {
+          "available": false,
+          "total": null
+        },
+        "unsupported_causal_claims": {
+          "count": null,
+          "denominator": 0,
+          "reason": "Final structured artifact has no causal-assertion field; do not infer causality from hypothesis disposition.",
+          "scorable": false
+        }
+      },
+      "raw_results": "market-single.jsonl"
+    },
+    "portfolio:fixed": {
+      "comparator": "one-pass fixed specialist sequence with verifier",
+      "metrics": {
+        "case_count": 30,
+        "counters_total": {
+          "model_calls": 150,
+          "persisted_model_invocations": 150,
+          "persisted_tool_invocations": 140,
+          "persisted_tool_results": 140,
+          "rounds": 30,
+          "tool_calls": 140
+        },
+        "hard_constraint_violation_safety": {
+          "denominator": 30,
+          "unsafe_feasible_declarations": 0
+        },
+        "infeasibility_detection": {
+          "false_negative": 0,
+          "false_positive": 0,
+          "gold_negative_denominator": 11,
+          "gold_positive_denominator": 2,
+          "true_positive": 2
+        },
+        "latency_ms": {
+          "denominator": 30,
+          "max": 469.3168,
+          "mean": 351.46521,
+          "median": 374.5142
+        },
+        "metric_scoring_coverage": {
+          "case_count": 30,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 30,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
+        },
+        "missing_data_safety": {
+          "denominator": 8,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+          "safe": 8,
+          "scorable": true,
+          "unsafe_feasible_declarations": 0,
+          "unscored_eligible_cases": 0,
+          "value": 1.0
+        },
+        "risk_calculation_accuracy": {
+          "computable_fields": 88,
+          "coverage": 1.0,
+          "denominator": 88,
+          "max_absolute_error": 1.1102230246251565e-16,
+          "numerator": 88,
+          "value": 1.0
+        },
+        "simulation_net_value_consistency": {
+          "denominator": 60,
+          "feasible_artifacts": 20,
+          "feasible_artifacts_with_simulation": 20,
+          "final_net_return_matches": 20,
+          "numerator": 60,
+          "runs_with_final_simulation": 20,
+          "value": 1.0
+        },
+        "status_accuracy_on_input_determined_cases": {
+          "denominator": 10,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+          "numerator": 10,
+          "scorable": true,
+          "scored_eligible_cases": 10,
+          "unscored_eligible_cases": 0,
+          "value": 1.0
+        },
+        "terminal_completed": 30,
+        "terminal_failed_or_other": 0,
+        "token_usage": {
+          "available": false,
+          "total": null
+        }
+      },
+      "raw_results": "portfolio-fixed.jsonl"
+    },
+    "portfolio:full": {
+      "comparator": "full autonomous workflow",
+      "metrics": {
+        "case_count": 30,
+        "counters_total": {
+          "model_calls": 150,
+          "persisted_model_invocations": 150,
+          "persisted_tool_invocations": 140,
+          "persisted_tool_results": 140,
+          "rounds": 30,
+          "tool_calls": 140
+        },
+        "hard_constraint_violation_safety": {
+          "denominator": 30,
+          "unsafe_feasible_declarations": 0
+        },
+        "infeasibility_detection": {
+          "false_negative": 0,
+          "false_positive": 0,
+          "gold_negative_denominator": 11,
+          "gold_positive_denominator": 2,
+          "true_positive": 2
+        },
+        "latency_ms": {
+          "denominator": 30,
+          "max": 479.6771,
+          "mean": 346.7937166666667,
+          "median": 368.87350000000004
+        },
+        "metric_scoring_coverage": {
+          "case_count": 30,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 30,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
+        },
+        "missing_data_safety": {
+          "denominator": 8,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+          "safe": 8,
+          "scorable": true,
+          "unsafe_feasible_declarations": 0,
+          "unscored_eligible_cases": 0,
+          "value": 1.0
+        },
+        "risk_calculation_accuracy": {
+          "computable_fields": 88,
+          "coverage": 1.0,
+          "denominator": 88,
+          "max_absolute_error": 1.1102230246251565e-16,
+          "numerator": 88,
+          "value": 1.0
+        },
+        "simulation_net_value_consistency": {
+          "denominator": 60,
+          "feasible_artifacts": 20,
+          "feasible_artifacts_with_simulation": 20,
+          "final_net_return_matches": 20,
+          "numerator": 60,
+          "runs_with_final_simulation": 20,
+          "value": 1.0
+        },
+        "status_accuracy_on_input_determined_cases": {
+          "denominator": 10,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+          "numerator": 10,
+          "scorable": true,
+          "scored_eligible_cases": 10,
+          "unscored_eligible_cases": 0,
+          "value": 1.0
+        },
+        "terminal_completed": 30,
+        "terminal_failed_or_other": 0,
+        "token_usage": {
+          "available": false,
+          "total": null
+        }
+      },
+      "raw_results": "portfolio-full.jsonl"
+    },
+    "portfolio:no_independent_risk_critic": {
+      "comparator": "adaptive multi-agent ablation without model risk review or risk-critic verifier; deterministic risk and constraint gates retained",
+      "metrics": {
+        "case_count": 30,
+        "counters_total": {
+          "model_calls": 90,
+          "persisted_model_invocations": 90,
+          "persisted_tool_invocations": 140,
+          "persisted_tool_results": 140,
+          "rounds": 30,
+          "tool_calls": 140
+        },
+        "hard_constraint_violation_safety": {
+          "denominator": 30,
+          "unsafe_feasible_declarations": 0
+        },
+        "infeasibility_detection": {
+          "false_negative": 0,
+          "false_positive": 0,
+          "gold_negative_denominator": 11,
+          "gold_positive_denominator": 2,
+          "true_positive": 2
+        },
+        "latency_ms": {
+          "denominator": 30,
+          "max": 406.8014,
+          "mean": 288.2502533333333,
+          "median": 312.33285
+        },
+        "metric_scoring_coverage": {
+          "case_count": 30,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 30,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
+        },
+        "missing_data_safety": {
+          "denominator": 8,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+          "safe": 8,
+          "scorable": true,
+          "unsafe_feasible_declarations": 0,
+          "unscored_eligible_cases": 0,
+          "value": 1.0
+        },
+        "risk_calculation_accuracy": {
+          "computable_fields": 88,
+          "coverage": 1.0,
+          "denominator": 88,
+          "max_absolute_error": 1.1102230246251565e-16,
+          "numerator": 88,
+          "value": 1.0
+        },
+        "simulation_net_value_consistency": {
+          "denominator": 60,
+          "feasible_artifacts": 20,
+          "feasible_artifacts_with_simulation": 20,
+          "final_net_return_matches": 20,
+          "numerator": 60,
+          "runs_with_final_simulation": 20,
+          "value": 1.0
+        },
+        "status_accuracy_on_input_determined_cases": {
+          "denominator": 10,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+          "numerator": 10,
+          "scorable": true,
+          "scored_eligible_cases": 10,
+          "unscored_eligible_cases": 0,
+          "value": 1.0
+        },
+        "terminal_completed": 30,
+        "terminal_failed_or_other": 0,
+        "token_usage": {
+          "available": false,
+          "total": null
+        }
+      },
+      "raw_results": "portfolio-no_independent_risk_critic.jsonl"
+    },
+    "portfolio:no_verifier": {
+      "comparator": "verifier ablation of the adaptive full workflow",
+      "metrics": {
+        "case_count": 30,
+        "counters_total": {
+          "model_calls": 120,
+          "persisted_model_invocations": 120,
+          "persisted_tool_invocations": 140,
+          "persisted_tool_results": 140,
+          "rounds": 30,
+          "tool_calls": 140
+        },
+        "hard_constraint_violation_safety": {
+          "denominator": 30,
+          "unsafe_feasible_declarations": 0
+        },
+        "infeasibility_detection": {
+          "false_negative": 0,
+          "false_positive": 0,
+          "gold_negative_denominator": 11,
+          "gold_positive_denominator": 2,
+          "true_positive": 2
+        },
+        "latency_ms": {
+          "denominator": 30,
+          "max": 2536.417,
+          "mean": 556.3798666666667,
+          "median": 345.37415
+        },
+        "metric_scoring_coverage": {
+          "case_count": 30,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 30,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
+        },
+        "missing_data_safety": {
+          "denominator": 8,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+          "safe": 8,
+          "scorable": true,
+          "unsafe_feasible_declarations": 0,
+          "unscored_eligible_cases": 0,
+          "value": 1.0
+        },
+        "risk_calculation_accuracy": {
+          "computable_fields": 88,
+          "coverage": 1.0,
+          "denominator": 88,
+          "max_absolute_error": 1.1102230246251565e-16,
+          "numerator": 88,
+          "value": 1.0
+        },
+        "simulation_net_value_consistency": {
+          "denominator": 60,
+          "feasible_artifacts": 20,
+          "feasible_artifacts_with_simulation": 20,
+          "final_net_return_matches": 20,
+          "numerator": 60,
+          "runs_with_final_simulation": 20,
+          "value": 1.0
+        },
+        "status_accuracy_on_input_determined_cases": {
+          "denominator": 10,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+          "numerator": 10,
+          "scorable": true,
+          "scored_eligible_cases": 10,
+          "unscored_eligible_cases": 0,
+          "value": 1.0
+        },
+        "terminal_completed": 30,
+        "terminal_failed_or_other": 0,
+        "token_usage": {
+          "available": false,
+          "total": null
+        }
+      },
+      "raw_results": "portfolio-no_verifier.jsonl"
+    },
+    "portfolio:single": {
+      "comparator": "single coordinator model with deterministic tools",
+      "metrics": {
+        "case_count": 30,
+        "counters_total": {
+          "model_calls": 30,
+          "persisted_model_invocations": 30,
+          "persisted_tool_invocations": 140,
+          "persisted_tool_results": 140,
+          "rounds": 30,
+          "tool_calls": 140
+        },
+        "hard_constraint_violation_safety": {
+          "denominator": 30,
+          "unsafe_feasible_declarations": 0
+        },
+        "infeasibility_detection": {
+          "false_negative": 0,
+          "false_positive": 0,
+          "gold_negative_denominator": 11,
+          "gold_positive_denominator": 2,
+          "true_positive": 2
+        },
+        "latency_ms": {
+          "denominator": 30,
+          "max": 344.123,
+          "mean": 226.06999666666667,
+          "median": 249.64845
+        },
+        "metric_scoring_coverage": {
+          "case_count": 30,
+          "evaluation_error_count": 0,
+          "harness_error_count": 0,
+          "scored_case_count": 30,
+          "scored_fraction": 1.0,
+          "unscored_case_count": 0
+        },
+        "missing_data_safety": {
+          "denominator": 8,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+          "safe": 8,
+          "scorable": true,
+          "unsafe_feasible_declarations": 0,
+          "unscored_eligible_cases": 0,
+          "value": 1.0
+        },
+        "risk_calculation_accuracy": {
+          "computable_fields": 88,
+          "coverage": 1.0,
+          "denominator": 88,
+          "max_absolute_error": 1.1102230246251565e-16,
+          "numerator": 88,
+          "value": 1.0
+        },
+        "simulation_net_value_consistency": {
+          "denominator": 60,
+          "feasible_artifacts": 20,
+          "feasible_artifacts_with_simulation": 20,
+          "final_net_return_matches": 20,
+          "numerator": 60,
+          "runs_with_final_simulation": 20,
+          "value": 1.0
+        },
+        "status_accuracy_on_input_determined_cases": {
+          "denominator": 10,
+          "failure_policy": "unscored eligible rows receive zero credit against the fixture-derived denominator",
+          "numerator": 10,
+          "scorable": true,
+          "scored_eligible_cases": 10,
+          "unscored_eligible_cases": 0,
+          "value": 1.0
+        },
+        "terminal_completed": 30,
+        "terminal_failed_or_other": 0,
+        "token_usage": {
+          "available": false,
+          "total": null
+        }
+      },
+      "raw_results": "portfolio-single.jsonl"
+    }
+  },
+  "fixture_manifest_sha256": "6679b880298a6bbabc7ad623d6961e73a7e24923437abf2e88e134655becf9b7",
+  "holdings_write_calls": false,
+  "profile": "w8-fixture-v1",
+  "public_api_used": false,
+  "real_provider_used": false,
+  "schema_version": 1,
+  "suite": "financial-mas-workflow-v1",
+  "synthetic_only": true
+}
