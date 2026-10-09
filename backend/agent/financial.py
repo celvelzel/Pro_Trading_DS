@@ -24,7 +24,7 @@ def build_financial_dispatcher(session_factory, *,
         raise ValueError("Unknown or duplicate financial workflow")
     if market_mode not in {"autonomous", "fixed", "single"}:
         raise ValueError("Unknown Market execution mode")
-    if portfolio_mode not in {"full", "fixed", "single", "no_verifier"}:
+    if portfolio_mode not in {"full", "fixed", "single", "no_verifier", "no_independent_risk_critic"}:
         raise ValueError("Unknown Portfolio execution mode")
     if demo:
         if execution_profile not in (None, "synthetic-demo-v1"):

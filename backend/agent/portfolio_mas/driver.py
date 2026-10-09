@@ -107,6 +107,12 @@ class SyntheticPortfolioModel:
             summary='Synthetic deterministic demonstration only.', proposed_weights=weights))
 
 
+class DisabledRiskReviewProvider:
+    """Fail-closed tool principal for runs that omit model risk review."""
+    async def complete(self, messages, *, request_id=None):
+        raise RuntimeError('independent risk review is disabled for this evaluation mode')
+
+
 def shared_check(check: a.ConstraintCheck) -> ConstraintCheck:
     return ConstraintCheck(status=check.status, unknowns=list(check.unknowns), violations=[
         ConstraintViolation(constraint=c.check, actual=float(c.actual) if c.actual is not None else None,
@@ -125,12 +131,12 @@ class PortfolioDriver:
     def __init__(self, providers: Mapping[str, ModelProvider], dependencies: PortfolioDependencies,
                  *, artifact_store: ArtifactStore | None = None,
                  artifact_resolver: MarketArtifactResolver | None = None,
-                 mode: Literal['full', 'fixed', 'single', 'no_verifier']='full',
+                 mode: Literal['full', 'fixed', 'single', 'no_verifier', 'no_independent_risk_critic']='full',
                  yield_after_revision=False):
         self.dependencies = dependencies
         self.artifact_store = artifact_store
         self.artifact_resolver = artifact_resolver
-        if mode not in {'full', 'fixed', 'single', 'no_verifier'}:
+        if mode not in {'full', 'fixed', 'single', 'no_verifier', 'no_independent_risk_critic'}:
             raise ValueError('Unknown evaluation mode')
         self.mode = mode
         self.yield_after_revision = yield_after_revision
@@ -138,10 +144,17 @@ class PortfolioDriver:
         self.classifications = a.AllocationInput(weights={'CASH': 1}, classifications=dependencies.classifications).classifications
         self.specialists = SpecialistRegistry()
         for role in PROMPTS:
+            if mode == 'no_independent_risk_critic' and role == 'verifier':
+                # This specialist has no tool capability and is not invoked.
+                continue
             if mode == 'single' and role != 'coordinator':
                 provider = providers['coordinator']  # tools retain their narrow role permissions
             else:
                 provider = providers.get(role)
+            if mode == 'no_independent_risk_critic' and role == 'risk' and provider is None:
+                # Runtime tool authorization is keyed by role. Retain a fail-closed
+                # principal for deterministic risk tools without a model reviewer.
+                provider = DisabledRiskReviewProvider()
             if provider is None and not (mode == 'no_verifier' and role == 'verifier'):
                 raise ValueError('Missing independently configured provider: ' + role)
             if provider is not None:
@@ -152,6 +165,8 @@ class PortfolioDriver:
         refs = []
         limitations = ['Virtual proposal only; no holdings/cash writes or trading.',
                        'Risk is a historical constant-weight proxy; simulation is retrospective, not a return forecast.']
+        if self.mode == 'no_independent_risk_critic':
+            limitations.append('W8 ablation omits independent model risk review and risk-critic verifier; deterministic risk and constraint gates remain active.')
 
         async def tool(role, key, name, payload, model):
             env = await ctx.tool(role, key, name, payload)
@@ -274,9 +289,10 @@ class PortfolioDriver:
             verification_task = task.model_copy(update=dict(selected_weights=proposed, check=check, risk=comparison,
                 simulation=simulation, evidence_ids=list(refs), missing_checks=round_missing + ([] if simulation else ['simulation_unavailable'])))
             if self.mode != 'single':
-                risk_review = await invoke('risk', f'risk:{round_no}', verification_task)
+                risk_review = (await invoke('risk', f'risk:{round_no}', verification_task)
+                               if self.mode != 'no_independent_risk_critic' else None)
                 constraint_review = await invoke('constraint', f'constraint:{round_no}', verification_task)
-                for review in (risk_review, constraint_review):
+                for review in ((risk_review,) if risk_review else ()) + (constraint_review,):
                     round_missing.extend(review.missing_checks)
                     if review.action == 'reject':
                         round_missing.append(review.role + '_rejected')
@@ -314,7 +330,10 @@ class PortfolioDriver:
             check = ConstraintCheck(status='fail', violations=[ConstraintViolation(
                 constraint='feasible_candidate_capacity', reason=reason) for reason in candidates.reasons])
         if status == 'insufficient_data' and check.status == 'pass':
-            check = ConstraintCheck(status='unknown', unknowns=round_missing or ['independent_verifier_rejected'])
+            reason = ('proposal_not_safe_without_independent_risk_critic'
+                      if self.mode == 'no_independent_risk_critic'
+                      else 'independent_verifier_rejected')
+            check = ConstraintCheck(status='unknown', unknowns=round_missing or [reason])
         state.phase = 'final'
         ctx.checkpoint(state, action='verdict', evidence_ids=list(refs))
         return PortfolioProposalArtifact(producing_run_id=ctx.run_id, snapshot_id=req.portfolio_snapshot_id,

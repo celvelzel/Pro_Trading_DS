@@ -31,6 +31,7 @@ from db.models import AgentEvent, AgentRun, Conversation, FinancialArtifact
 from db.models.financial_mas import FinancialInvocation, FinancialRelation, FinancialRun
 from db.models.agent import ToolCall, ToolResult
 from agent.financial import build_financial_dispatcher
+from agent.llm import ModelResponse
 from agent.market_mas import SyntheticMarketModel
 from agent.market_mas.driver import ROLES as MARKET_ROLES
 from agent.portfolio_mas import PortfolioDependencies, SyntheticPortfolioModel
@@ -49,14 +50,39 @@ import financial_fixtures as fixtures
 SCHEMA_VERSION = 1
 PROFILE = "w8-fixture-v1"
 MARKET_MODES = ("autonomous", "fixed", "single")
-PORTFOLIO_MODES = ("full", "fixed", "single", "no_verifier")
+PORTFOLIO_MODES = ("full", "fixed", "single", "no_verifier", "no_independent_risk_critic")
 PORTFOLIO_ROLES = tuple(PORTFOLIO_PROMPTS)
 PORTFOLIO_COMPARATOR_LABELS = {
     "full": "full autonomous workflow",
     "fixed": "one-pass fixed specialist sequence with verifier",
     "single": "single coordinator model with deterministic tools",
     "no_verifier": "verifier ablation of the adaptive full workflow",
+    "no_independent_risk_critic": "adaptive multi-agent ablation without model risk review or risk-critic verifier; deterministic risk and constraint gates retained",
 }
+
+
+class SyntheticSingleMarketModel(SyntheticMarketModel):
+    """One-call evaluation policy that cites only evidence in its actual task."""
+
+    async def complete(self, messages, *, request_id=None):
+        response = await super().complete(messages, request_id=request_id)
+        task = json.loads(messages[-1]["content"].removeprefix("<task_data>").removesuffix("</task_data>"))
+        evidence = task["evidence"]
+        event_evidence = [item for item in evidence if item["source_type"] != "market_tool"]
+        challenged = [item for item in event_evidence if any(word in (item.get("excerpt") or "").lower()
+            for word in ("rumor", "denied", "contradict", "unverified", "ignore", "instruction"))]
+        # A single coordinator has no independent event specialist, but can cite
+        # the exact immutable evidence it received. Keep the hypothesis explicitly
+        # unverified; no fixture gold or expected score enters this response.
+        cited = event_evidence or evidence
+        payload = dict(response.payload)
+        payload["hypotheses"] = ([{
+            "explanation": "Company event association" if event_evidence else "Unknown factors",
+            "support_ids": [item["id"] for item in cited if item not in challenged],
+            "against_ids": [item["id"] for item in challenged],
+            "disposition": "unverified",
+        }] if cited else [])
+        return ModelResponse.model_validate({**response.model_dump(), "payload": payload})
 INDEPENDENT_STATUS_REASONS = {
     "classification_missing_or_bounded_search_inconclusive",
     "min_cash_exceeds_cash_cap",
@@ -72,7 +98,7 @@ INDEPENDENT_STATUS_REASONS = {
 MARKET_COMPARATOR_LABELS = {
     "autonomous": "adaptive autonomous workflow",
     "fixed": "fixed specialist sequence without dynamic routing",
-    "single": "single coordinator model with deterministic tools",
+    "single": "single coordinator model with deterministic tools and citations from persisted task evidence",
 }
 MARKET_NUMERIC_FACT_GOLD_FIELDS = {
     "market.return_pct": "return_pct",
@@ -487,6 +513,8 @@ def _new_dispatcher(session_factory, case, domain, mode):
     if domain == "market":
         history, events = fixtures.market_dependencies(case)
         models = {role: SyntheticMarketModel(role) for role in MARKET_ROLES}
+        if mode == "single":
+            models["coordinator"] = SyntheticSingleMarketModel("coordinator")
         kwargs = {
             "enabled": ("market_investigation",),
             "providers": {"market_investigation": models},

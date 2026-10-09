@@ -56,13 +56,64 @@ def test_builder_selects_explicit_baselines_and_keeps_defaults(tmp_path):
         fixed_market = w8._new_dispatcher(sessions, market_cases[0], "market", "fixed")
         fixed_portfolio = w8._new_dispatcher(sessions, portfolio_cases[0], "portfolio", "fixed")
         single_portfolio = w8._new_dispatcher(sessions, portfolio_cases[0], "portfolio", "single")
+        no_risk_critic_portfolio = w8._new_dispatcher(sessions, portfolio_cases[0],
+            "portfolio", "no_independent_risk_critic")
         assert defaults.drivers.get("market_investigation").mode == "autonomous"
         assert defaults_portfolio.drivers.get("portfolio_rebalance").mode == "full"
         assert fixed_market.drivers.get("market_investigation").mode == "fixed"
         assert fixed_portfolio.drivers.get("portfolio_rebalance").mode == "fixed"
         assert single_portfolio.drivers.get("portfolio_rebalance").mode == "single"
+        assert no_risk_critic_portfolio.drivers.get("portfolio_rebalance").mode == "no_independent_risk_critic"
     finally:
         engine.dispose()
+
+
+def test_market_single_cites_only_persisted_task_evidence_and_scores_timing(tmp_path):
+    market_cases, _ = w8.fixtures.load_cases()
+    case = next(case for case in market_cases if case.events)
+    engine, sessions = database(tmp_path / "single-market-citations.sqlite3")
+    try:
+        row = w8._run_one(case, "market", "single", sessions)
+    finally:
+        engine.dispose()
+
+    artifact = row["actual_artifact"]
+    persisted = row["persisted"]
+    metrics = row["metrics"]
+    hypotheses = artifact["hypotheses"]
+    citations = [ref for hypothesis in hypotheses
+        for ref in hypothesis.get("support_ids", []) + hypothesis.get("against_ids", [])]
+    persisted_event_ids = {event["id"] for _, tool_result in
+        w8._tool_results_by_name(persisted).get("get_event_evidence", [])
+        for event in (tool_result.get("data") or {}).get("evidence", [])}
+
+    assert row["run_status"] == "completed"
+    assert row["counters"]["model_calls"] == row["counters"]["persisted_model_invocations"] == 1
+    assert [call["role"] for call in persisted["invocations"] if call["kind"] == "model"] == ["coordinator"]
+    assert citations and set(citations) <= persisted_event_ids
+    assert metrics["evidence_citation_precision"] == {
+        "numerator": len(citations), "denominator": len(citations), "value": 1.0}
+    assert metrics["timing_violation_denominator"] == len(set(citations) & persisted_event_ids) > 0
+
+
+def test_no_risk_critic_eval_records_distinct_roles_cost_and_quality(tmp_path):
+    _, portfolio_cases = w8.fixtures.load_cases()
+    engine, sessions = database(tmp_path / "no-risk-critic.sqlite3")
+    try:
+        row = w8._run_one(portfolio_cases[0], "portfolio", "no_independent_risk_critic", sessions)
+    finally:
+        engine.dispose()
+
+    invocation_roles = [item["role"] for item in row["persisted"]["invocations"]
+        if item["kind"] == "model"]
+    tool_names = [item["tool_name"] for item in row["persisted"]["tool_calls"]]
+    assert row["run_status"] == "completed"
+    assert row["comparator"] == w8.PORTFOLIO_COMPARATOR_LABELS["no_independent_risk_critic"]
+    assert row["counters"]["model_calls"] == 3
+    assert set(invocation_roles) == {"coordinator", "opportunity", "constraint"}
+    assert "calculate_portfolio_risk" in tool_names and "validate_allocation" in tool_names
+    assert row["metrics"]["risk_calculation_accuracy"]["value"] == 1
+    assert row["metrics"]["simulation_net_value_consistency"]["value"] == 1
 
 
 def test_combined_smoke_exports_two_runs_and_persisted_relations(tmp_path):

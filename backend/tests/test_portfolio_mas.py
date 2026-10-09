@@ -156,7 +156,8 @@ def test_unverified_malicious_proposal_never_feasible(tmp_path, attack):
     assert artifact(d, value)['status'] == 'insufficient_data'
 
 
-@pytest.mark.parametrize('mode,calls', [('full',5), ('fixed',5), ('no_verifier',4), ('single',1)])
+@pytest.mark.parametrize('mode,calls', [('full',5), ('fixed',5), ('no_verifier',4), ('single',1),
+                                        ('no_independent_risk_critic',3)])
 def test_baselines_identical_tools_data_budget(tmp_path, mode, calls):
     d, _, sessions, *_ = assemble(tmp_path, mode=mode)
     value, completed = run(d)
@@ -165,6 +166,66 @@ def test_baselines_identical_tools_data_budget(tmp_path, mode, calls):
     budget = d.snapshot(value.id)['budget']
     assert budget['model_calls'] == calls and budget['tool_calls'] == 6
     assert budget['max_model_calls'] == 16 and budget['max_tool_calls'] == 20
+
+
+def test_no_independent_risk_critic_omits_model_reviews_but_keeps_deterministic_gates(tmp_path):
+    tmp_path.mkdir(exist_ok=True)
+    providers = {role:SyntheticPortfolioModel(role) for role in ROLES
+                 if role not in {'risk', 'verifier'}}
+    d, driver, sessions, *_ = assemble(tmp_path, providers=providers,
+        mode='no_independent_risk_critic')
+    assert driver.specialists.get('constraint')
+    assert driver.specialists.get('risk').allowed_tools == frozenset({'calculate_portfolio_risk'})
+    with pytest.raises(KeyError):
+        driver.specialists.get('verifier')
+    value, completed = run(d)
+    assert completed.status == 'completed'
+    assert artifact(d, value)['status'] == 'feasible'
+    assert any('omits independent model risk review' in text for text in artifact(d, value)['limitations'])
+    with sessions() as db:
+        invocations = db.scalars(select(FinancialInvocation).where(
+            FinancialInvocation.run_id == value.id, FinancialInvocation.kind == 'model')).all()
+        tool_calls = db.scalars(select(ToolCall).where(ToolCall.run_id == value.id)).all()
+        tool_results = db.scalars(select(ToolResult)).all()
+    assert {row.role for row in invocations} == {'coordinator', 'opportunity', 'constraint'}
+    assert sum(call.tool_name == 'calculate_portfolio_risk' for call in tool_calls) == 2
+    assert sum(call.tool_name == 'validate_allocation' for call in tool_calls) == 1
+    assert any(row.role == 'constraint' for row in invocations)
+    assert all(result.data.get('status') == 'ok' for result in tool_results
+               if result.tool_call_id and any(call.id == result.tool_call_id
+                   and call.tool_name == 'calculate_portfolio_risk' for call in tool_calls))
+
+
+def test_no_independent_risk_critic_deterministic_constraint_gate_cannot_be_bypassed(tmp_path):
+    providers = {role:SyntheticPortfolioModel(role) for role in ROLES}
+    providers['coordinator'] = ScriptedFakeModel([
+        scripted('coordinator', {'MU':1, 'CASH':0}),
+        scripted('coordinator', {'MU':1, 'CASH':0})])
+    d, _, sessions, *_ = assemble(tmp_path, providers=providers,
+        mode='no_independent_risk_critic')
+    value, completed = run(d, {'max_weight_by_symbol': {'MU':.6}})
+    assert completed.status == 'completed'
+    result = artifact(d, value)
+    assert result['status'] == 'insufficient_data'
+    assert result['constraint_check']['status'] == 'fail'
+    with sessions() as db:
+        validation_calls = db.scalars(select(ToolCall).where(
+            ToolCall.run_id == value.id, ToolCall.tool_name == 'validate_allocation')).all()
+        validation_results = db.scalars(select(ToolResult).where(
+            ToolResult.tool_call_id.in_([call.id for call in validation_calls]))).all()
+    assert validation_calls and any(row.data['status'] == 'fail' for row in validation_results)
+
+
+def test_no_verifier_remains_distinct_and_keeps_independent_risk_review(tmp_path):
+    tmp_path.mkdir(exist_ok=True)
+    d, _, sessions, *_ = assemble(tmp_path, mode='no_verifier')
+    value, completed = run(d)
+    assert completed.status == 'completed'
+    with sessions() as db:
+        roles = {row.role for row in db.scalars(select(FinancialInvocation).where(
+            FinancialInvocation.run_id == value.id, FinancialInvocation.kind == 'model'))}
+    assert roles == {'coordinator', 'opportunity', 'risk', 'constraint'}
+    assert d.snapshot(value.id)['budget']['model_calls'] == 4
 
 
 def test_fixed_pipeline_is_single_pass_and_retains_verifier(tmp_path):

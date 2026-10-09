@@ -13,6 +13,8 @@ python eval/run_financial_mas_w8.py --domain all --output-dir logs/financial-mas
 
 The output directory must be empty. The runner refuses an existing nonempty destination so previous evidence is preserved. It verifies the workflow-v1 fixture manifest, creates an isolated temporary SQLite database, assembles the accepted dispatcher with `demo=False` and the explicit `w8-fixture-v1` profile, creates each run, and calls the persisted runtime's `start` path. It exports the stored AgentRun, FinancialRun, invocations, tool calls/results, events, artifacts, and relations to per-case JSONL records before the temporary database is removed.
 
+The canonical W8 v1 result set remains 36 Market rows, 120 Portfolio rows, and one separate Combined smoke. Follow-up comparisons can add strategy rows from the same unchanged 12/30 fixture sets; they belong in a new output directory and must not overwrite the canonical v1 evidence.
+
 No public API or real provider is used. Market evidence and Portfolio snapshots/histories are immutable synthetic adapters; model roles use deterministic no-network synthetic providers. The runner verifies that every registered tool is read-only and has no side effect. It does not read user holdings, call a broker, submit orders, or modify a portfolio. Token usage is explicitly `null` because the runtime does not persist token counts.
 
 Each strategy receives the same request, fixture adapter, and default `RunBudget` ceilings within its domain. Actual call counts are read from persisted budget counters and cross-checked against persisted invocation rows. Latency is measured around runtime execution; it is environment-dependent and is not a model-quality score.
@@ -21,11 +23,14 @@ Each strategy receives the same request, fixture adapter, and default `RunBudget
 |---|---|---|
 | Market | `autonomous` | Accepted adaptive coordinator/specialist workflow |
 | Market | `fixed` | Same specialists and tools, no dynamic follow-up routing |
-| Market | `single` | One coordinator model call path with the same deterministic tools |
+| Market | `single` | One coordinator model call path with the same deterministic tools; its synthetic response cites only evidence IDs supplied in that persisted model invocation |
 | Portfolio | `full` | Accepted adaptive workflow with independent verifier |
 | Portfolio | `fixed` | One-pass fixed specialist sequence, deterministic checks, and verifier; no revision round |
 | Portfolio | `single` | One coordinator model call path with the same deterministic tools |
 | Portfolio | `no_verifier` | Verifier ablation of the adaptive workflow; this is not the fixed baseline |
+| Portfolio | `no_independent_risk_critic` | Adaptive multi-agent ablation that omits both the independent risk-review model role and the risk-critic verifier; it retains the Opportunity, Coordinator, and Constraint specialists plus deterministic risk calculations and allocation/constraint gates |
+
+`no_verifier` and `no_independent_risk_critic` are distinct. The former still invokes the independent `risk` model review; the latter omits both that review and the verifier, whose independent review also includes risk. The latter comparator is used only by the explicit W8 evaluation profile and does not change the application default or API workflow selection. Persisted invocation roles and counters are the evidence for its actual model cost.
 
 The default application modes remain Market `autonomous` and Portfolio `full`. The comparison is a synthetic runtime-conformance experiment, not a strong real-LLM benchmark. Synthetic providers do not establish real-model reasoning or market-data quality.
 
@@ -34,7 +39,7 @@ The default application modes remain Market `autonomous` and Portfolio `full`. T
 Market metrics are computed per case and aggregated by summing their numerators and denominators:
 
 - Event eligibility count and artifact status correctness use all 12 Market cases.
-- Evidence citation precision uses explicit hypothesis `support_ids` and `against_ids`. Its denominator is the count of those citation positions; the numerator counts references resolving to evidence or result references in persisted ToolResult rows. Embedded artifact evidence is scored separately for provenance, so it cannot validate itself.
+- Evidence citation precision uses explicit hypothesis `support_ids` and `against_ids`. Its denominator is the count of those citation positions; the numerator counts references resolving to evidence or result references in persisted ToolResult rows. Embedded artifact evidence is scored separately for provenance, so it cannot validate itself. For `market:single`, the one coordinator response references IDs from its actual supplied evidence board; the runner does not add citations after the model response.
 - Numeric fact accuracy uses the fixture's six deterministic gold facts per case. Each fact is compared at absolute tolerance `1e-9`; missing facts remain in the denominator.
 - Timing violations count cited fixture events with missing `published_at`/`available_at` or either timestamp later than the request `as_of`. The denominator is the number of cited event references, not the entire evidence board.
 - Unsupported causal claims are reported as not scorable. The persisted final schema has unverified hypotheses but no distinct causal-assertion field; a `supported` hypothesis disposition alone is not treated as a causal claim.
