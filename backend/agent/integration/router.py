@@ -14,7 +14,8 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from agent.shared import (ArtifactRef, ArtifactStore, BudgetExhausted,
-    CrossMASEnvelope, FinancialConflict, FinancialModel,
+    CrossMASEnvelope, FinancialConflict, FinancialModel, FinancialExecutionAuthorization,
+    FinancialExecutionAuthorizationError,
     MarketInvestigationArtifact, MarketInvestigationRequest,
     PortfolioReviewRequest, RunBudget)
 from agent.tools.portfolio_snapshot import SnapshotRecord, SnapshotLoader
@@ -81,6 +82,8 @@ class CrossMASRouter:
         snapshot = self.dispatcher.snapshot(run_id)
         if snapshot['execution_profile'] != self.execution_profile:
             raise ValueError('Run execution profile differs from router assembly')
+        if snapshot['execution_authorization'] is None:
+            raise FinancialExecutionAuthorizationError('Router requires explicit persisted execution origin')
         return snapshot
 
     def _scope(self, request: PortfolioReviewRequest):
@@ -102,7 +105,8 @@ class CrossMASRouter:
             try:
                 run = self.dispatcher.create(request.conversation_id, value,
                     idempotency_key=_key(request.idempotency_key, domain), mode=request.mode,
-                    budget=budget, correlation_id=corr)
+                    budget=budget, correlation_id=corr,
+                    execution_authorization=FinancialExecutionAuthorization(purpose='independent'))
             except KeyError:
                 result.limitations.append(domain + '_peer_undeployed')
                 continue
@@ -123,6 +127,7 @@ class CrossMASRouter:
     def restore(self, run_id: str) -> CrossMASResponse:
         """Recover normal paired identities without in-memory router bookkeeping."""
         own = self._snapshot(run_id)
+        self.dispatcher.validate_queue_eligibility(run_id)
         result = CrossMASResponse(conversation_id=own['conversation_id'], correlation_id=own['correlation_id'])
         field = 'market_run_id' if own['mas_kind'] == 'market_investigation' else 'portfolio_run_id'
         setattr(result, field, run_id)
@@ -158,6 +163,13 @@ class CrossMASRouter:
               *, expected_source_version: int, expected_target_version: int):
         """Scope guard plus the sole atomic executable admission seam."""
         source, target = self._snapshot(source_run_id), self._snapshot(target_run_id)
+        authorization = source['execution_authorization']
+        if authorization['purpose'] == 'cross_followup':
+            self.dispatcher.validate_queue_eligibility(source_run_id)
+            if (target_run_id != authorization['source_run_id']
+                    or envelope.causation_id != authorization['request_message_id']
+                    or envelope.message_type not in {'MARKET_EVIDENCE_READY', 'SYSTEM_UNAVAILABLE'}):
+                raise FinancialExecutionAuthorizationError('Follow-up reply requires exact reverse REQUEST authority')
         portfolio = source if source['mas_kind'] == 'portfolio_rebalance' else target
         market = target if source['mas_kind'] == 'portfolio_rebalance' else source
         scope = self._scope(PortfolioReviewRequest.model_validate(portfolio['request']))
@@ -175,6 +187,19 @@ class CrossMASRouter:
 
     def transfer(self, market_run_id: str, portfolio_run_id: str, *, request_relation=None):
         source, target = self._snapshot(market_run_id), self._snapshot(portfolio_run_id)
+        authorization = source['execution_authorization']
+        if authorization['purpose'] == 'cross_followup':
+            self.dispatcher.validate_queue_eligibility(market_run_id)
+            requests = [relation for relation in self.dispatcher.relations(market_run_id)
+                if relation['relation_type'] == 'cross_admitted'
+                and relation['source_run_id'] == authorization['source_run_id'] == portfolio_run_id
+                and relation['target_run_id'] == market_run_id
+                and relation['envelope'].get('message_type') == 'MARKET_EVIDENCE_REQUEST'
+                and relation['envelope'].get('message_id') == authorization['request_message_id']]
+            if len(requests) != 1 or request_relation != requests[0]:
+                raise FinancialExecutionAuthorizationError('Follow-up transfer requires exact admitted REQUEST')
+        elif request_relation is not None:
+            raise FinancialExecutionAuthorizationError('Independent transfer cannot impersonate REQUEST resolution')
         key = _key(market_run_id, portfolio_run_id, 'reply' if request_relation else 'initial')
         existing = self._existing(market_run_id, key)
         if existing:
@@ -204,6 +229,8 @@ class CrossMASRouter:
         This is fresh evidence work, never retry ancestry or history mutation.
         """
         source = self._snapshot(portfolio_run_id)
+        if source['execution_authorization']['purpose'] != 'independent':
+            raise FinancialExecutionAuthorizationError('Further evidence requires explicit independent source')
         key = _key(portfolio_run_id, idempotency_key, 'further')
         existing = self._existing(portfolio_run_id, key)
         if existing:
@@ -214,7 +241,9 @@ class CrossMASRouter:
             # even when replaying an already admitted historical request.
             self.dispatcher.create(source['conversation_id'], market_request,
                 idempotency_key=_key(key, 'market'), mode=mode, budget=_fresh_budget(source),
-                correlation_id=source['correlation_id'])
+                correlation_id=source['correlation_id'],
+                execution_authorization=FinancialExecutionAuthorization(purpose='cross_followup',
+                    source_run_id=portfolio_run_id, request_message_id=_message_id(key)))
             envelope = CrossMASEnvelope.model_validate(existing['envelope'])
         else:
             if (source['status'] in TERMINAL or source['budget']['model_calls']
@@ -229,7 +258,9 @@ class CrossMASRouter:
                 raise BudgetExhausted('Cross request disabled by user budget')
             run = self.dispatcher.create(source['conversation_id'], market_request,
                 idempotency_key=_key(key, 'market'), mode=mode, budget=budget,
-                correlation_id=source['correlation_id'])
+                correlation_id=source['correlation_id'],
+                execution_authorization=FinancialExecutionAuthorization(purpose='cross_followup',
+                    source_run_id=portfolio_run_id, request_message_id=_message_id(key)))
             target = self._snapshot(run.id)
             envelope = self._envelope(source, target, key, 'MARKET_EVIDENCE_REQUEST')
         return self.admit(portfolio_run_id, target['run_id'], envelope,
@@ -326,6 +357,7 @@ class CrossMASRouter:
             if current['status'] in TERMINAL or current['status'] in {'waiting_user', 'paused'}:
                 return current
             try:
+                self.dispatcher.validate_queue_eligibility(run_id)
                 await asyncio.wait_for(self.dispatcher.start(run_id), timeout=peer_timeout)
             except (TimeoutError, KeyError):
                 return self._snapshot(run_id)
@@ -344,6 +376,7 @@ class CrossMASRouter:
                              (result.portfolio_run_id, 'portfolio_rebalance')):
             if run_id:
                 own = self._snapshot(run_id)
+                self.dispatcher.validate_queue_eligibility(run_id)
                 if (own['conversation_id'] != result.conversation_id or own['correlation_id'] != result.correlation_id
                         or own['mas_kind'] != kind):
                     raise ValueError('Response conversation/correlation/kind mismatch')

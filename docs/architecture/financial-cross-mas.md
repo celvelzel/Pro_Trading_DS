@@ -1,7 +1,7 @@
 # Financial cross-MAS routing
 
 Status: W6 implementation submitted for future independent review, based on
-reviewed runtime/profile/bootstrap `8abda96`. W6 Gate is **not accepted** and
+reviewed runtime/profile/bootstrap and ADR-0005 authorization. W6 Gate is **not accepted** and
 application factory/API/worker integration remains owned by the coordinator.
 
 ## Historical admission block, now closed
@@ -167,21 +167,40 @@ atomic graph/correlation-membership and resolution-race coverage.
 
 Creating a further-evidence run and admitting its request are separate public
 transactions. A concurrent admission loser can leave an unadmitted queued Market
-run; `advance` never delivers it because it follows admitted REQUEST relations
-only. No scheduler should dispatch unadmitted follow-up creation as accepted
-cross work. Same-key retry reconstructs the original run. No public atomic
-creation-and-admission API is claimed.
+run. Every initial Market-only, Portfolio-only and Combined run explicitly stores
+`FinancialExecutionAuthorization(purpose='independent')`. Every follow-up stores
+`cross_followup`, its exact Portfolio source and the deterministic REQUEST
+message ID before target creation. Missing relations never imply independence.
+All router snapshot paths reject absent stored origin, including legacy
+uncorrelated roots that the shared runtime deliberately supports for compatibility.
+Further-evidence sources must explicitly store `independent` purpose.
+Follow-up transfer requires the exact persisted admitted REQUEST relation and
+reverses its endpoints with its exact message ID as causation. Missing, forged
+or other-target REQUEST arguments fail before mutation; independent transfers
+cannot impersonate REQUEST resolution. The public router admission wrapper also
+rejects a follow-up reply with missing/wrong causation or receiver.
+Restore and scheduler preflight call public `validate_queue_eligibility`; denied
+orphans cannot restore, advance or execute through either actual worker entry.
+Admission binds the exact target/source/message/conversation/correlation/domain,
+execution profile and as_of. The shared atomic `start` claim is authoritative:
+expiry after a successful preflight transitions to `expired` with zero model or
+tool calls. Same-key retry reconstructs the original run and marker. No public
+atomic creation-and-admission API is claimed.
 
-No live provider, PostgreSQL/Redis/Celery restart, real holdings, real trading,
+Fresh process tests persist router-created targets in SQLite, exit, and invoke
+the actual Celery task functions (`run_agent` and `resume_agent_job`) in a new
+interpreter. Trusted synthetic provider instrumentation checks independent
+completion, denied orphan zero persistence changes, expired target zero calls,
+duplicate delivery and single-domain absent-peer imports. This is process restart
+and real task-entry evidence, not broker or Redis delivery evidence.
+
+No live provider, PostgreSQL/Redis/broker-backed Celery restart, real holdings, real trading,
 application-route wiring, W7 or W8 acceptance is claimed. Independent W6 review
-and coordinator integration are outstanding; the user's pause takes effect after
-the implementation handoff and validation. Raw logs and validation metadata are
+and coordinator integration are outstanding. The earlier pause was revoked and
+this task continues; Gate remains unaccepted until independent review and
+coordinator integration. Raw logs and validation metadata are
 retained in ignored `logs/financial-mas/w6-*` in this worktree.
 
-Local validation on 2026-10-09 used absolute repository root, backend and
-lobster_quant directories in PYTHONPATH: 31 dedicated Cross-MAS tests passed;
-the combined Cross-MAS/admission/profile suite passed 117 tests in 93.02 seconds;
-full Backend passed 522 tests in 266.20 seconds. `compileall` for integration and
-the staged diff whitespace check passed. These are worker validation results,
-not independent Gate acceptance. No quant/frontend suite was rerun because their
-source is unchanged by this owned patch.
+The original candidate's 31/117/522 counts predate ADR-0005 runtime integration
+and do not validate this repair. Current repair counts and exact commands are
+retained in `logs/financial-mas/w6-repair-*`; independent review is still required.

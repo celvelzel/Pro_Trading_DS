@@ -21,7 +21,8 @@ from agent.portfolio_mas import PortfolioDriver, PortfolioDependencies, Syntheti
 from agent.market_mas import SyntheticMarketModel
 from agent.shared import (ArtifactStore, BudgetExhausted, CrossMASEnvelope,
     FinancialConflict, MarketInvestigationRequest, PortfolioReviewRequest, RunBudget,
-    WorkflowRegistry, FinancialMASDispatcher)
+    WorkflowRegistry, FinancialMASDispatcher, FinancialExecutionAuthorization,
+    FinancialExecutionAuthorizationError)
 from db.base import Base
 from db.models import (Conversation, AgentRun, AgentEvent, FinancialArtifact,
     FinancialInvocation, ToolResult, ToolCall)
@@ -94,6 +95,8 @@ def test_three_actual_workflows_artifacts_audits_and_no_writes(assembly, workflo
     artifact_ids = []
     for run_id in (pair.market_run_id, pair.portfolio_run_id):
         if run_id:
+            assert d.snapshot(run_id)['execution_authorization'] == {
+                'purpose': 'independent', 'source_run_id': None, 'request_message_id': None}
             result = completed_artifact(d, run_id)
             artifact_ids.extend(d.snapshot(run_id)['checkpoint']['artifact_ids'])
             assert result['producing_run_id'] == run_id
@@ -424,7 +427,8 @@ def test_new_receiver_cannot_reuse_expired_selected_context(assembly):
     assert router.artifact_resolver(pair.portfolio_run_id, 'c', inputs().portfolio)
     now[0] += timedelta(seconds=31)
     receiver = d.create('c', inputs().portfolio, idempotency_key='new-independent-receiver',
-        mode='auto', correlation_id=pair.correlation_id)
+        mode='auto', correlation_id=pair.correlation_id,
+        execution_authorization=FinancialExecutionAuthorization(purpose='independent'))
     assert router.artifact_resolver(receiver.id, 'c', inputs().portfolio) is None
     old = CrossMASEnvelope.model_validate(relation['envelope']).model_copy(
         update={'message_id': 'expired-for-new', 'idempotency_key': 'expired-for-new'})
@@ -484,3 +488,273 @@ print('isolated actual domain PASS')
         capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'isolated actual domain PASS' in result.stdout
+
+
+def database_state(sessions):
+    with sessions() as db:
+        return {table.name: sorted(repr(tuple(row)) for row in db.execute(select(table)))
+                for table in Base.metadata.sorted_tables}
+
+
+def test_denied_router_orphan_cannot_restore_advance_or_start(assembly, monkeypatch):
+    d, router, sessions, _, _ = assembly
+    pair = router.create(inputs(workflow='portfolio'))
+    def denied(*args, **kwargs):
+        raise FinancialConflict('fixture admission denied')
+    monkeypatch.setattr(d, 'admit_cross_message', denied)
+    with pytest.raises(FinancialConflict):
+        router.request_further_evidence(pair.portfolio_run_id, inputs().market,
+            idempotency_key='denied', mode='auto')
+    with sessions() as db:
+        orphan = next(run.id for run in db.scalars(select(AgentRun))
+                      if run.id != pair.portfolio_run_id)
+    origin = d.snapshot(orphan)['execution_authorization']
+    assert origin['purpose'] == 'cross_followup'
+    assert origin['source_run_id'] == pair.portfolio_run_id
+    assert origin['request_message_id']
+    assert not d.relations(orphan)
+    forged = pair.model_copy(update={'market_run_id': orphan, 'portfolio_run_id': None})
+    before = database_state(sessions)
+    for action in (lambda: router.restore(orphan),
+                   lambda: asyncio.run(router.advance(forged)),
+                   lambda: asyncio.run(d.start(orphan))):
+        with pytest.raises(FinancialExecutionAuthorizationError):
+            action()
+        assert database_state(sessions) == before
+        assert d.snapshot(orphan)['budget']['model_calls'] == 0
+        assert d.snapshot(orphan)['budget']['tool_calls'] == 0
+
+
+def test_router_preflight_expiry_before_atomic_claim(assembly, monkeypatch):
+    d, router, sessions, now, _ = assembly
+    pair = router.create(inputs(workflow='portfolio'))
+    relation = router.request_further_evidence(pair.portfolio_run_id, inputs().market,
+        idempotency_key='claim-race', mode='auto')
+    target = relation['target_run_id']
+    origin = d.snapshot(target)['execution_authorization']
+    assert origin['request_message_id'] == relation['envelope']['message_id']
+    original = d.validate_queue_eligibility
+    def expire_after_preflight(run_id):
+        original(run_id)
+        if run_id == target:
+            now[0] += timedelta(seconds=31)
+    monkeypatch.setattr(d, 'validate_queue_eligibility', expire_after_preflight)
+    result = asyncio.run(router._deliver(target, 1, 30))
+    assert result['status'] == 'expired'
+    assert result['error_code'] == 'cross_execution_expired'
+    assert result['budget']['model_calls'] == result['budget']['tool_calls'] == 0
+    assert not result['checkpoint'].get('artifact_ids')
+    expired = database_state(sessions)
+    assert asyncio.run(d.start(target)).status == 'expired'
+    assert database_state(sessions) == expired
+
+
+@pytest.mark.parametrize('entry', ['run_agent', 'resume_agent_job'])
+@pytest.mark.parametrize('case', ['market', 'portfolio', 'combined', 'orphan', 'expired'])
+def test_router_targets_actual_worker_after_process_restart(tmp_path, entry, case):
+    from backend.tests.test_financial_bootstrap import process
+    process(f'''
+        import json
+        from pathlib import Path
+        from datetime import datetime, timedelta, timezone
+        from db.base import Base
+        import db.models
+        from db.session import sync_engine, sync_session_factory
+        from db.repositories.agent import create_conversation
+        from agent.financial import build_financial_dispatcher
+        from agent.financial_demo import DEMO_AS_OF, DEMO_SNAPSHOT_ID, demo_snapshot_loader
+        from agent.integration import CrossMASRouter, CrossMASRequest
+        from agent.shared import ArtifactStore, MarketInvestigationRequest, PortfolioReviewRequest, FinancialConflict
+        Base.metadata.create_all(sync_engine())
+        with sync_session_factory() as db:
+            c=create_conversation(db, 'Router restart fixture'); db.commit(); cid=c.id
+        d=build_financial_dispatcher(sync_session_factory)
+        then=datetime.now(timezone.utc)-timedelta(minutes=2)
+        if '{case}'=='expired': d.clock=lambda:then
+        r=CrossMASRouter(d, ArtifactStore(sync_session_factory), demo_snapshot_loader,
+            execution_profile='synthetic-demo-v1', ttl_seconds=30,
+            clock=(lambda:then) if '{case}'=='expired' else None)
+        market=MarketInvestigationRequest(symbol='MU', sector_benchmark='SOXX', as_of=DEMO_AS_OF)
+        portfolio=PortfolioReviewRequest(portfolio_snapshot_id=DEMO_SNAPSHOT_ID, as_of=DEMO_AS_OF)
+        pair=r.create(CrossMASRequest(conversation_id=cid, idempotency_key='restart', mode='auto',
+            market=market if '{case}' in ('market','combined') else None,
+            portfolio=portfolio if '{case}'!='market' else None))
+        ids=[rid for rid in (pair.market_run_id,pair.portfolio_run_id) if rid]
+        if '{case}' in ('orphan','expired'):
+            if '{case}'=='orphan':
+                def denied(*args,**kwargs): raise FinancialConflict('denied fixture')
+                d.admit_cross_message=denied
+                try: r.request_further_evidence(pair.portfolio_run_id,market,idempotency_key='follow',mode='auto')
+                except FinancialConflict: pass
+                from sqlalchemy import select
+                from db.models import AgentRun
+                with sync_session_factory() as db:
+                    ids=[run.id for run in db.scalars(select(AgentRun))
+                         if run.id!=pair.portfolio_run_id and
+                         d.snapshot(run.id)['execution_authorization']['source_run_id']==pair.portfolio_run_id]
+            else:
+                relation=r.request_further_evidence(pair.portfolio_run_id,market,idempotency_key='follow',mode='auto')
+                ids=[relation['target_run_id']]
+                assert relation in d.relations(ids[0])
+        assert len(ids)==len(set(ids))
+        assert len(ids)==(2 if '{case}'=='combined' else 1)
+        Path('targets.json').write_text(json.dumps(ids))
+    ''', tmp_path)
+    output = process(f'''
+        import json, sys
+        from pathlib import Path
+        from sqlalchemy import select
+        from db.base import Base
+        import db.models
+        from db.session import sync_session_factory
+        from agent.shared import FinancialMASDispatcher, FinancialExecutionAuthorizationError
+        from workers.agent_tasks import run_agent, resume_agent_job
+        from agent.tools.executor import ToolExecutor
+        calls={{'models':0,'tools':0}}
+        kinds=['market'] if '{case}' in ('market','orphan','expired') else ['portfolio'] if '{case}'=='portfolio' else ['market','portfolio']
+        for kind in kinds:
+            if kind=='market':
+                from agent.market_mas.synthetic import SyntheticMarketModel
+                provider=SyntheticMarketModel
+            else:
+                from agent.portfolio_mas.driver import SyntheticPortfolioModel
+                provider=SyntheticPortfolioModel
+            original=provider.complete
+            def observe(original):
+                async def complete(self,*args,**kwargs):
+                    calls['models']+=1
+                    return await original(self,*args,**kwargs)
+                return complete
+            provider.complete=observe(original)
+        original_tool=ToolExecutor.execute
+        async def execute(self,*args,**kwargs):
+            calls['tools']+=1
+            return await original_tool(self,*args,**kwargs)
+        ToolExecutor.execute=execute
+        d=FinancialMASDispatcher(sync_session_factory)
+        expected={{'models':0,'tools':0}}
+        def state():
+            with sync_session_factory() as db:
+                return {{table.name: sorted(repr(tuple(row)) for row in db.execute(select(table))) for table in Base.metadata.sorted_tables}}
+        for rid in json.loads(Path('targets.json').read_text()):
+            before=state()
+            def deliver():
+                return run_agent.run(rid) if '{entry}'=='run_agent' else resume_agent_job.run(rid,'restart-fixture')
+            if '{case}'=='orphan':
+                try: deliver()
+                except FinancialExecutionAuthorizationError: pass
+                else: raise AssertionError('denied orphan executed')
+                assert state()==before
+            else:
+                result=deliver()
+                assert result['status']==('expired' if '{case}'=='expired' else 'completed'),d.snapshot(rid)
+                snapshot=d.snapshot(rid)
+                assert snapshot['execution_authorization']['purpose']==('cross_followup' if '{case}'=='expired' else 'independent')
+                if '{case}'=='expired':
+                    assert snapshot['budget']['model_calls']==snapshot['budget']['tool_calls']==0
+                else:
+                    assert snapshot['checkpoint']['artifact_ids']
+                    assert snapshot['budget']['model_calls']>0 and snapshot['budget']['tool_calls']>0
+                    expected['models']+=snapshot['budget']['model_calls']
+                    expected['tools']+=snapshot['budget']['tool_calls']
+                saved=state(); saved_calls=dict(calls)
+                deliver()
+                assert state()==saved and calls==saved_calls
+        if '{case}' in ('orphan','expired'): assert calls=={{'models':0,'tools':0}},calls
+        assert calls==expected,(calls,expected)
+        if len(kinds)==1:
+            absent='agent.portfolio_mas' if kinds==['market'] else 'agent.market_mas'
+            assert absent not in sys.modules, absent
+        print('restart actual worker {entry} {case} PASS',calls)
+    ''', tmp_path)
+    assert 'PASS' in output
+
+
+@pytest.mark.parametrize('domain', ['market', 'portfolio'])
+def test_router_rejects_legacy_origin_without_inference(assembly, domain):
+    from agent.integration import CrossMASResponse
+    d, router, sessions, _, _ = assembly
+    request = inputs().market if domain == 'market' else inputs().portfolio
+    legacy = d.create('c', request, idempotency_key='legacy-' + domain, mode='auto')
+    snapshot = d.snapshot(legacy.id)
+    assert snapshot['execution_authorization'] is None
+    assert not d.relations(legacy.id)
+    # Shared runtime intentionally supports legacy uncorrelated roots. The
+    # new router has the stricter explicit-origin contract and cannot infer it.
+    d.validate_queue_eligibility(legacy.id)
+    response = CrossMASResponse(conversation_id='c', correlation_id=snapshot['correlation_id'],
+        **{domain + '_run_id': legacy.id})
+    before = database_state(sessions)
+    for action in (lambda: router.restore(legacy.id),
+                   lambda: asyncio.run(router.advance(response)),
+                   lambda: asyncio.run(router._deliver(legacy.id, 1, 30)),
+                   lambda: router.request_further_evidence(legacy.id, inputs().market,
+                       idempotency_key='legacy-follow', mode='auto')):
+        with pytest.raises(FinancialExecutionAuthorizationError):
+            action()
+        assert database_state(sessions) == before
+        assert d.snapshot(legacy.id)['budget']['model_calls'] == 0
+        assert d.snapshot(legacy.id)['budget']['tool_calls'] == 0
+
+
+def test_router_followup_source_requires_independent_origin(assembly):
+    d, router, sessions, _, _ = assembly
+    independent = router.create(inputs(workflow='portfolio'))
+    source = d.create('c', inputs().portfolio, idempotency_key='cross-marked-source',
+        mode='auto', correlation_id=independent.correlation_id,
+        execution_authorization=FinancialExecutionAuthorization(purpose='cross_followup',
+            source_run_id=independent.portfolio_run_id, request_message_id='unadmitted-source'))
+    before = database_state(sessions)
+    with pytest.raises(FinancialExecutionAuthorizationError, match='independent source'):
+        router.request_further_evidence(source.id, inputs().market,
+            idempotency_key='cross-source-follow', mode='auto')
+    assert database_state(sessions) == before
+
+
+def test_followup_reply_cannot_be_reclassified_as_initial_transfer(assembly):
+    d, router, sessions, _, _ = assembly
+    pair = router.create(inputs(workflow='portfolio'))
+    request = router.request_further_evidence(pair.portfolio_run_id, inputs().market,
+        idempotency_key='exact-reverse', mode='auto')
+    follow = request['target_run_id']
+    assert asyncio.run(d.start(follow)).status == 'completed'
+    another = router.create(inputs(workflow='portfolio', key='other-receiver'))
+    before = database_state(sessions)
+    forged = dict(request, target_run_id=another.portfolio_run_id)
+    bad_envelope = dict(request['envelope'], message_id='wrong-request')
+    wrong_message = dict(request, envelope=bad_envelope)
+    for receiver, relation in ((pair.portfolio_run_id, None),
+                               (pair.portfolio_run_id, forged),
+                               (pair.portfolio_run_id, wrong_message),
+                               (another.portfolio_run_id, request)):
+        with pytest.raises(FinancialExecutionAuthorizationError):
+            router.transfer(follow, receiver, request_relation=relation)
+        assert database_state(sessions) == before
+    # The public router admission wrapper must reject the same null-cause
+    # downgrade, not merely the convenience transfer method.
+    source, target = d.snapshot(follow), d.snapshot(pair.portfolio_run_id)
+    direct = router._envelope(source, target, 'forged-initial', 'SYSTEM_UNAVAILABLE')
+    with pytest.raises(FinancialExecutionAuthorizationError):
+        router.admit(follow, pair.portfolio_run_id, direct,
+            expected_source_version=source['version'], expected_target_version=target['version'])
+    assert database_state(sessions) == before
+    reply = router.transfer(follow, pair.portfolio_run_id, request_relation=request)
+    assert reply['source_run_id'] == request['target_run_id']
+    assert reply['target_run_id'] == request['source_run_id']
+    assert reply['envelope']['causation_id'] == request['envelope']['message_id']
+    assert reply['envelope']['deadline_at'] == request['envelope']['deadline_at']
+    assert d.snapshot(follow)['budget']['hops'] == 0
+    accepted = database_state(sessions)
+    assert router.transfer(follow, pair.portfolio_run_id, request_relation=request) == reply
+    assert database_state(sessions) == accepted
+
+
+def test_independent_transfer_cannot_resolve_followup_request(assembly):
+    d, router, sessions, _, _ = assembly
+    pair = router.create(inputs())
+    request = router.request_further_evidence(pair.portfolio_run_id, inputs().market,
+        idempotency_key='not-independent-resolution', mode='auto')
+    before = database_state(sessions)
+    with pytest.raises(FinancialExecutionAuthorizationError):
+        router.transfer(pair.market_run_id, pair.portfolio_run_id, request_relation=request)
+    assert database_state(sessions) == before
