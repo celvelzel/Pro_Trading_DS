@@ -36,6 +36,9 @@ def test_w8_runner_exports_actual_persisted_market_and_portfolio_runs(tmp_path):
     assert market["counters"]["token_usage"] is None
     assert len(market["persisted"]["artifacts"]) == 1
     assert market["metrics"]["eligible_event_count"]["correct"] is True
+    causal = market['metrics']['unsupported_causal_claims']
+    assert causal['scorable'] is False and causal['count'] is None
+    assert causal['denominator'] == 0 and 'Not applicable' in causal['reason']
 
     assert portfolio["actual_workflow_executed"] is True
     assert portfolio["run_status"] == "completed"

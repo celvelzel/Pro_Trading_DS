@@ -49,7 +49,21 @@ Market metrics are computed per case and aggregated by summing their numerators 
 - Evidence citation precision uses explicit hypothesis `support_ids` and `against_ids`. Its denominator is the count of those citation positions; the numerator counts references resolving to evidence or result references in persisted ToolResult rows. Embedded artifact evidence is scored separately for provenance, so it cannot validate itself. For `market:single`, the one coordinator response references IDs from its actual supplied evidence board; the runner does not add citations after the model response.
 - Numeric fact accuracy uses the fixture's six deterministic gold facts per case. Each fact is compared at absolute tolerance `1e-9`; missing facts remain in the denominator.
 - Timing violations count cited fixture events with missing `published_at`/`available_at` or either timestamp later than the request `as_of`. The denominator is the number of cited event references, not the entire evidence board.
-- Unsupported causal claims are reported as not scorable. The persisted final schema has unverified hypotheses but no distinct causal-assertion field; a `supported` hypothesis disposition alone is not treated as a causal claim.
+- `unsupported_causal_claims` is **not applicable to the current structured output**. Market Investigation investigates potential contributing factors; it does not identify causes. The frozen `MarketInvestigationArtifact` v1 has no causal assertion field. Preserve historical `scorable=false`, `count=null`, `denominator=0` records; this denominator is not a zero-claims score. Never infer causal assertions from `supported` disposition. This metric is excluded from the applicable W8 acceptance conditions, not awarded zero or perfect credit.
+
+## Revised acceptance contract (2026-10-10)
+
+The final report distinguishes **Verified Facts**, **Hypotheses / Potential Contributing Factors**, **Supporting Evidence**, **Counter-evidence**, and **Limitations / Uncertainty**. These are presentation categories over the existing v1 fields, not new schema fields. Verified Facts means deterministic tool values with provenance; external-source authenticity remains uncertain. A supported hypothesis is an association with supporting evidence, never an established cause. Time ordering, event eligibility and correlation alone cannot establish causality. Evidence excerpts are attributed source material, not verified report conclusions.
+
+The generator keeps specialist prose in persisted audit records only, accepts only the bounded competing explanation vocabulary, and merges support/against references without upgrading hypothesis disposition. API result serialization returns the immutable typed artifact and does not promote raw specialist summaries to facts. UI labels retain uncertainty even for historical `supported` hypotheses and render supporting evidence and counter-evidence distinctly.
+
+Acceptance requires:
+
+1. Frozen v1 schema and W4–W7 contracts remain unchanged; no new agent, protocol, risk tolerance or holdings write path.
+2. Citation Precision (`evidence_citation_precision`), Temporal Validity (cited-event timing violations), Factual Accuracy (`numeric_fact_accuracy`), provenance and partial-result correctness retain their existing gold, tolerances and denominators. Portfolio risk and constraint checks retain their original requirements.
+3. Incremental synthetic regression covers positive causal overclaims in specialist prose, positive overclaims attempting to replace bounded hypotheses, and negative statements such as “无法证明 X 导致 Y”. Raw audit prose may contain claims; the final artifact/API must not promote them. Negated prose must not fail a run merely because it contains a causal verb. No general natural-language causal accuracy score is claimed.
+4. UI explicitly separates the five report categories and does not label a supported association as confirmed causality. Relevant backend/API/evaluation and frontend regressions, type checks, changed-area lint and build show no new failure. Existing canonical benchmark, raw results and prior broader integration/security/E2E evidence are retained; use only necessary incremental evaluation, without rerunning the entire benchmark.
+5. Independent Reviewer accepts the revised contract, patch and test evidence before W8 Gate may become PASS. PASS is limited to synthetic/local validation; live providers, PostgreSQL, Redis/broker and causal identification remain outside the evidence.
 
 Portfolio metrics use the following denominators:
 

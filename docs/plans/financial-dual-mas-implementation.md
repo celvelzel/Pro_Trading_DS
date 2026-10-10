@@ -299,13 +299,13 @@ flowchart LR
 1. `eval/market_cases.jsonl`：10–15 个固定事件证据问题；题目分布包括行业共振、错误时序、假新闻、缺证据、未来资料禁止引用。只验可核事实，不将主观“下跌原因”作为唯一真值。
 2. `eval/portfolio_cases.jsonl`：20–30 个约束场景；每例 gold constraint validity、expected failure kind、reference math。
 3. 同样数据快照、同样工具与尽可能相同调用预算下：single-agent / fixed pipeline / fully autonomous MAS；可加 verifier ablation。
-4. 指标 M：Evidence citation precision、timing violations、unsupported causal claims、tool/LLM count、latency、partial result correctness。
+4. 指标 M：Evidence citation precision、timing violations、numeric fact accuracy、tool/LLM count、latency、partial result correctness。`unsupported_causal_claims` 对冻结 v1 的结构化输出不适用，历史记录保持未评分/null，不记 0；以过度因果归因的报告/API/UI 增量回归约束表达边界，具体标准见 `docs/architecture/financial-mas-w8-evaluation.md`。
 5. 指标 P：hard constraint violation rate、infeasibility detection、risk-calculation accuracy、data-missing safety、simulated net-value consistency。
 6. 安全：prompt injection in event text；工具白名单；异常与失败降级；跨会话引用不可串用；异常输入；价格过期拒绝；无秘密泄露；不能触发 portfolio 写 API。
 7. 并发 / 持久化：重复 Celery 投递、cancel/resume/checkpoint restore、乐观锁 409、单调 seq、migration upgrade/downgrade（安全范围内）、缺 Redis inline 执行可用性。
 8. 整理 README/ADR/演示脚本/可复现实验，记录真实性：没有实盘、没有验证因果、后验模拟不等于未来收益。
 
-**Gate W8**：单测 + integration + offline reproducible E2E + frontend tests + build 均无新增失败，保留 benchmark 原始结果和评估脚本。
+**Gate W8**：单测 + integration + offline reproducible E2E + frontend tests + build 均无新增失败，保留 benchmark 原始结果和评估脚本。2026-10-10 修订：保留已完成的 canonical 与完整回归证据，仅执行必要增量检查；最终报告区分已核事实、可能影响因素、支持证据、反证和不确定性。不可评分的 causal 指标不再作为 blocker，也不计零分或满分；必须在独立 Reviewer 接受修订契约、代码及测试结果后才能 PASS。
 
 ## 4. 多 Coding Agent 编排与 ownership
 

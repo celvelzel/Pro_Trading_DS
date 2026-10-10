@@ -1,5 +1,9 @@
 # 双金融 MAS 续接交接（2026-10-10）
 
+**最新状态：W8 Gate PASS。** 用户授权修订指标适用性，修订契约、表达边界回归和增量证据经独立 Reviewer PASS。Backend 增量 177、UI 28、TypeScript/ESLint、production build 与 9/9 持久化运行通过；此前完整回归、canonical v1/v2 和冻结 artifact v1 保留。unsupported_causal_claims 继续为 null/未评分，并从当前结构化输出适用验收条件中排除，不计零或满分。最新依据见 `financial-dual-mas-execution.md` 的 W8 rationalization acceptance 和 `../architecture/financial-w8-rationalization-evidence.md`。按用户要求推送功能分支并提交到 main 的 PR，由用户在 GitHub 合并。README 原有顶部 15 行继续保留在未提交工作区。
+
+**以下为适用性修订之前的历史交接快照，BLOCKED 状态已由上述 PASS 记录取代。**
+
 **当前续接状态：** 主仓库 `C:/Develop/canvas/Pro_Trading_DS` 位于 `codex/financial-dual-mas`，代码 HEAD 为 `57a0888`，已完成本轮根目录回归和评测。W0–W7 的既有验收仍保留；W8 follow-up `7f8e9a8` 经独立 Review PASS 后集成。W8 targeted tests 63 passed、Backend 全量 795 passed；canonical v2 重放为 187 行/188 个已完成运行，10/10 输出哈希、23/23 源码哈希及 fixture hashes 均通过。Market single citation 18/18、timing denominator 8 且零违规；Portfolio 无独立 risk critic comparator 30 例、90 model calls，并保留适用场景的确定性风险/约束检查。W4-T8 与 W5-T8 已关闭。W8 Gate 仍 BLOCKED，唯一计划内阻塞是 unsupported-causal-claims 指标未评分。用户明确决定保持 Market artifact 契约冻结，不得增加 causal schema 字段。README 顶部原有用户修改保留；只纳入本次 MAS 功能的独立下方 bullets。
 
 **本次续接完整性审计：** 已核对主分支、评测 worker worktree、Agent 状态、最新测试日志、v2 manifest/raw rows 和 README 两处独立改动。reviewer 对 `7f8e9a8` 的完整 follow-up 给出 PASS；该代码已集成于 `57a0888`，candidate worktree 保持干净且未归档。安全 worker `3b666a6` 及先前 W8 commits 仍在分支历史。v2 canonical results 已从成功的根目录重放复制并通过逐文件 hash/source/fixture 验证。旧 W7/W8 交接快照保留在下方，仅供历史追溯，不作为当前 TODO。

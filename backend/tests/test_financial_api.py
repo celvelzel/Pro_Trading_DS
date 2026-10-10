@@ -68,6 +68,29 @@ def action(client, run_id, name, version=None):
     return client.post(f'/api/financial/runs/{run_id}/{name}', json={'expected_version': version})
 
 
+def test_market_api_exposes_typed_hypotheses_without_model_causal_prose(api, monkeypatch):
+    from agent.market_mas import SyntheticMarketModel
+    original = SyntheticMarketModel.complete
+    claim = '公告确定导致股价下跌。'
+
+    async def complete(self, *args, **kwargs):
+        response = await original(self, *args, **kwargs)
+        return response.model_copy(update={'payload': {**response.payload, 'summary': claim}})
+
+    monkeypatch.setattr(SyntheticMarketModel, 'complete', complete)
+    client, sessions = api
+    run_id = create(client, 'market')['runs'][0]['run_id']
+    data = result(client, run_id)
+    assert data['status'] == 'completed'
+    assert data['artifact']['schema_version'] == 1
+    assert claim not in json.dumps(data, ensure_ascii=False)
+    assert all(h['disposition'] == 'unverified' for h in data['artifact']['hypotheses'])
+    with sessions() as session:
+        rows = session.scalars(select(FinancialInvocation).where(
+            FinancialInvocation.run_id == run_id, FinancialInvocation.kind == 'model')).all()
+        assert rows and all(row.output['summary'] == claim for row in rows)
+
+
 @pytest.mark.parametrize('workflow', ENDPOINTS)
 @pytest.mark.parametrize('mode', ['auto', 'review'])
 def test_three_workflows_real_ids_initial_dispatch_and_idempotency(api, workflow, mode):

@@ -61,6 +61,44 @@ def finish(d, run):
     raise AssertionError('did not finish bounded execution')
 
 
+@pytest.mark.parametrize('mode', ['autonomous', 'fixed', 'single'])
+@pytest.mark.parametrize('summary', [
+    'The announcement caused the price decline. Causality is confirmed.',
+    '公告导致股价下跌，因果关系已确定。',
+    'Cannot prove that the announcement caused the price decline.',
+    '无法证明 X 导致 Y；先后发生不能证明因果关系。',
+])
+def test_model_causal_prose_is_audit_only_including_negation(tmp_path, mode, summary):
+    d, run, sessions, _, ps, _ = assemble(tmp_path, mode=mode)
+    for role, provider in ps.items():
+        provider.responses = [ModelResponse(kind='result', payload={
+            'role': role, 'action': 'finding', 'summary': summary,
+            'hypotheses': [{'explanation': 'Company event association',
+                            'disposition': 'supported'}]})]
+    assert finish(d, run).status == 'completed'
+    artifact = json.loads(d.get_run(run.id).final_answer)
+    assert summary not in json.dumps(artifact, ensure_ascii=False)
+    assert all(h['disposition'] == 'unverified' for h in artifact['hypotheses'])
+    assert all(f['tool_result_id'] for f in artifact['numeric_facts'])
+    assert 'Associations are unverified hypotheses; no confirmed causality.' in artifact['limitations']
+    with sessions() as session:
+        outputs = session.scalars(select(FinancialInvocation).where(
+            FinancialInvocation.run_id == run.id, FinancialInvocation.kind == 'model')).all()
+        assert outputs and all(row.output['summary'] == summary for row in outputs)
+
+
+@pytest.mark.parametrize('explanation', [
+    'The announcement caused the price decline.', '公告确定导致下跌。',
+])
+def test_causal_assertion_cannot_replace_bounded_hypothesis(tmp_path, explanation):
+    d, run, _, _, ps, _ = assemble(tmp_path, mode='single')
+    ps['coordinator'].responses = [ModelResponse(kind='result', payload={
+        'role': 'coordinator', 'action': 'finding', 'summary': 'unsupported claim',
+        'hypotheses': [{'explanation': explanation, 'disposition': 'supported'}]})]
+    assert finish(d, run).status == 'failed'
+    assert not d.get_run(run.id).final_answer
+
+
 def test_roles_actual_tools_and_resolvable_numeric_audit(tmp_path):
     d, run, sessions, driver, ps, _ = assemble(tmp_path)
     assert finish(d, run).status == 'completed'

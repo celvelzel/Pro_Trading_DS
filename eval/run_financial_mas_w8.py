@@ -285,7 +285,7 @@ def _market_metrics(case, artifact, persisted):
         "timing_violation_count": timing_violations,
         "timing_violation_denominator": len(event_citations),
         "unsupported_causal_claims": {"scorable": False, "count": None, "denominator": 0,
-            "reason": "The persisted final schema contains unverified hypotheses, not a distinct causal-assertion field."},
+            "reason": "Not applicable to MarketInvestigationArtifact v1 structured output: hypotheses are potential contributing factors, not causal assertions; retain historical unscored values."},
         "event_association_supported_disposition_count": event_association_supported,
         "numeric_fact_accuracy": {"numerator": numeric_matches, "denominator": numeric_expected,
                                   "value": numeric_matches / numeric_expected if numeric_expected else None},
@@ -775,7 +775,7 @@ def _aggregate(rows, domain):
             "timing_violations": {"count": sum(metric.get("timing_violation_count", 0) for metric in metric_rows),
                 "denominator": sum(metric.get("timing_violation_denominator", 0) for metric in metric_rows)},
             "unsupported_causal_claims": {"scorable": False, "count": None, "denominator": 0,
-                "reason": "Final structured artifact has no causal-assertion field; do not infer causality from hypothesis disposition."},
+                "reason": "Not applicable to MarketInvestigationArtifact v1 structured output; do not infer causality from hypothesis disposition or report the unscored count as zero."},
             "event_association_supported_disposition_count": sum(metric.get("event_association_supported_disposition_count", 0)
                 for metric in metric_rows),
             "numeric_fact_accuracy": {"numerator": numeric_num, "denominator": numeric_den,
