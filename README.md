@@ -96,9 +96,15 @@
 - **显式记忆**: 用户偏好、研究约束和确认事实可审计管理
 - **文档知识库**: Markdown/PDF 解析、分块、向量检索和可追溯引用
 - **安全边界**: 不包含实盘下单与 OCR；模型和数据源需显式配置
-- **双金融研究 MAS**: Market 与 Portfolio 具备各自的协调器、Agent 团队、运行状态和验证轨迹，支持独立运行与 Combined 双 run
-- **只读组合分析**: 基于显式投资组合快照生成研究和模拟提案，不执行真实下单或修改真实持仓
-- **离线评测**: [金融 MAS 评测说明](docs/architecture/financial-mas-w8-evaluation.md)记录可复现命令、确定性指标及合成数据边界；实验不证明真实模型质量、因果归因或未来收益
+
+### 双金融研究 MAS
+
+- **Market MAS**：Coordinator 组织价格/成交量、宏观/行业、事件与 Critic Agent 调查市场异常，输出数值事实、潜在影响因素、支持证据、反证与不确定性。
+- **Portfolio MAS**：Coordinator 组织机会、风险、约束与 Verifier Agent，基于不可变组合快照生成候选权重，检查硬约束、比较调整前后风险并执行组合模拟。
+- **三种工作流**：支持 Market only、Portfolio only 与 Combined；Combined 保留两个独立 run，通过受限消息与不可变结果引用传递市场证据。
+- **独立运行与验证**：两个系统各自维护 State、预算、Verification、Run 和 Evaluation，复用现有 Plan-and-Execute Runtime；支持审阅批准、暂停、恢复、取消及进度回放。
+- **研究与模拟边界**：当前 Web/API 使用合成数据和确定性模型，不执行真实下单或修改真实持仓；市场解释保留假设性质，不宣称确认因果关系。
+- **可复现评测**：[金融 MAS 评测说明](docs/architecture/financial-mas-w8-evaluation.md)提供自治流程、固定流程、单 Agent 与消融策略的比较方法及运行命令，结果限于合成数据和本地执行环境。
 
 ---
 
