@@ -1,24 +1,10 @@
-# Lobster Quant - 专业量化交易平台
+# Lobster Quant
 
-<div align="center">
-
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Python](https://img.shields.io/badge/python-3.10+-yellow.svg)
-![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)
-
-**一个面向研究与决策支持的量化交易平台，支持多市场分析、策略回测，以及带计划审阅、异步任务和知识库引用的 Agent Copilot 与双金融研究 Multi-Agent System。**
-
-[功能特性](#功能特性) • [快速开始](#快速开始) • [项目架构](#项目架构) • [API文档](#api文档) • [Agent Copilot](#agent-copilot) • [配置说明](#配置说明) • [开发指南](#开发指南)
-
-</div>
-
----
+个人量化研究与 AI Agent 项目，整合行情分析、策略回测、模拟组合、Agent Copilot 和双金融研究 Multi-Agent System，用于研究与决策支持。
 
 ## 项目简介
 
-Lobster Quant 是一个面向股票研究与策略验证的量化分析平台，将行情分析、选股、回测和 AI 研究助手整合到同一个 Web 界面中。
+项目围绕股票研究与策略验证，将行情分析、选股、回测和 AI 研究助手整合到同一个 Web 界面中。
 
 - **行情与选股**：接入美股、港股和 A 股数据，展示 K 线与技术指标，通过多因子评分和批量扫描筛选股票。
 - **策略与回测**：管理自定义策略，执行单股、组合及滚动窗口回测，比较收益、回撤和风险指标。
@@ -31,7 +17,7 @@ Lobster Quant 是一个面向股票研究与策略验证的量化分析平台，
 
 ---
 
-## 📋 目录
+## 目录
 
 - [项目简介](#项目简介)
 - [功能特性](#功能特性)
@@ -47,12 +33,10 @@ Lobster Quant 是一个面向股票研究与策略验证的量化分析平台，
 - [开发指南](#开发指南)
 - [测试](#测试)
 - [部署](#部署)
-- [贡献指南](#贡献指南)
-- [许可证](#许可证)
 
 ---
 
-## 🚀 功能特性
+## 功能特性
 
 ### 多市场支持
 - **美股**: 通过 yfinance 获取实时和历史数据
@@ -118,7 +102,7 @@ Lobster Quant 是一个面向股票研究与策略验证的量化分析平台，
 
 ---
 
-## 🛠️ 技术栈
+## 技术栈
 
 ### 后端 (Python)
 
@@ -146,7 +130,7 @@ Lobster Quant 是一个面向股票研究与策略验证的量化分析平台，
 
 ---
 
-## 🏁 快速开始
+## 快速开始
 
 ### 前置要求
 
@@ -257,7 +241,7 @@ npm run dev
 
 ---
 
-## 🏗️ 项目架构
+## 项目架构
 
 ### 根目录结构
 
@@ -391,7 +375,7 @@ Pro_Trading_DS/
 
 ---
 
-## 📦 核心模块
+## 核心模块
 
 ### 1. 数据引擎 (DataEngine)
 
@@ -579,7 +563,7 @@ result = scheduler.run_strategy(strategy_id="balanced", market="US")
 
 ---
 
-## 📡 API文档
+## API文档
 
 ### 基础端点
 
@@ -763,7 +747,7 @@ python eval/run_financial_mas_w8.py --domain all --output-dir logs/financial-mas
 
 ---
 
-## 🖥️ 前端界面
+## 前端界面
 
 ### Agent Copilot
 - 任务模式切换（审阅后执行 / 自动执行）
@@ -823,7 +807,7 @@ python eval/run_financial_mas_w8.py --domain all --output-dir logs/financial-mas
 
 ---
 
-## ⚙️ 配置说明
+## 配置说明
 
 ### 环境变量
 
@@ -933,7 +917,7 @@ BENCHMARK_SYMBOL=SPY
 
 ---
 
-## 💻 开发指南
+## 开发指南
 
 ### 后端开发
 
@@ -1052,7 +1036,7 @@ npm run build
 
 ---
 
-## 🧪 测试
+## 测试
 
 ### 后端测试
 
@@ -1083,7 +1067,7 @@ npm run test:e2e:ui
 
 ---
 
-## 🚀 部署
+## 部署
 
 ### 开发环境部署
 
@@ -1155,54 +1139,3 @@ docker compose up --build
 ```
 
 Compose 会按数据库健康检查、Alembic 迁移、API/Worker、前端的顺序启动 PostgreSQL/pgvector、Redis、FastAPI、Celery 和 Next.js。先验证配置可用：`docker compose --env-file .env config --quiet`。详细运行边界见 [runtime.md](docs/architecture/runtime.md)。
-
----
-
-## 🤝 贡献指南
-
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
-### 提交规范
-
-使用语义化提交信息:
-
-```
-feat: 添加新功能
-fix: 修复bug
-docs: 更新文档
-style: 代码格式调整
-refactor: 代码重构
-test: 添加测试
-chore: 构建/工具变更
-```
-
----
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
----
-
-## 🙏 致谢
-
-- [TradingView Lightweight Charts](https://github.com/nicholasgasior/lightweight-charts) - 专业金融图表库
-- [shadcn/ui](https://ui.shadcn.com/) - 现代化UI组件库
-- [FastAPI](https://fastapi.tiangolo.com/) - 高性能Python Web框架
-- [Next.js](https://nextjs.org/) - React全栈框架
-- [yfinance](https://github.com/ranaroussi/yfinance) - 美股数据源
-- [akshare](https://github.com/akfamily/akshare) - A股数据源
-
----
-
-<div align="center">
-
-**[⬆ 回到顶部](#lobster-quant---专业量化交易平台)**
-
-Made with ❤️ by Lobster Quant Team
-
-</div>
