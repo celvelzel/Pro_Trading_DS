@@ -8,7 +8,7 @@
 ![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)
 
-**一个面向研究与决策支持的量化交易平台，支持多市场分析、策略回测，以及带计划审阅、异步任务和知识库引用的 Agent Copilot。**
+**一个面向研究与决策支持的量化交易平台，支持多市场分析、策略回测，以及带计划审阅、异步任务和知识库引用的 Agent Copilot 与双金融研究 Multi-Agent System。**
 
 [功能特性](#功能特性) • [快速开始](#快速开始) • [项目架构](#项目架构) • [API文档](#api文档) • [Agent Copilot](#agent-copilot) • [配置说明](#配置说明) • [开发指南](#开发指南)
 
@@ -16,8 +16,24 @@
 
 ---
 
+## 项目简介
+
+Lobster Quant 是一个面向股票研究与策略验证的量化分析平台，将行情分析、选股、回测和 AI 研究助手整合到同一个 Web 界面中。
+
+- **行情与选股**：接入美股、港股和 A 股数据，展示 K 线与技术指标，通过多因子评分和批量扫描筛选股票。
+- **策略与回测**：管理自定义策略，执行单股、组合及滚动窗口回测，比较收益、回撤和风险指标。
+- **模拟与跟踪**：模拟买卖和持仓变化，记录交易与组合快照，并提供自选股管理和价格、评分、信号提醒。
+- **AI 研究助手**：通过自然语言发起研究任务，生成可审阅的执行计划，调用行情、指标、回测及风险分析工具，展示异步任务进度。
+- **双金融研究系统**：Market MAS 调查价格与成交量异常及潜在影响因素；Portfolio MAS 检查组合风险与约束并生成模拟调整提案，两者支持独立运行或协同研究。
+- **研究知识库**：导入 Markdown/PDF 文档，进行检索问答，并提供可追溯的文档引用；支持管理用户偏好和研究约束。
+
+项目采用 Next.js 前端、FastAPI 后端和 Python 量化引擎，服务于研究与模拟，不包含实盘下单。行情、模型及异步任务等能力需配置相应数据源和服务。
+
+---
+
 ## 📋 目录
 
+- [项目简介](#项目简介)
 - [功能特性](#功能特性)
 - [技术栈](#技术栈)
 - [快速开始](#快速开始)
@@ -25,12 +41,12 @@
 - [核心模块](#核心模块)
 - [API文档](#api文档)
 - [Agent Copilot](#agent-copilot)
+- [双金融研究 MAS](#双金融研究-mas)
 - [前端界面](#前端界面)
 - [配置说明](#配置说明)
 - [开发指南](#开发指南)
 - [测试](#测试)
 - [部署](#部署)
-- [更新日志](#更新日志)
 - [贡献指南](#贡献指南)
 - [许可证](#许可证)
 
@@ -174,8 +190,8 @@ taskkill /PID <进程ID> /F
 #### 1. 克隆项目
 
 ```bash
-git clone https://github.com/lobster-quant/lobster-quant.git
-cd lobster-quant
+git clone https://github.com/celvelzel/Pro_Trading_DS.git
+cd Pro_Trading_DS
 ```
 
 #### 2. 启动后端
@@ -220,6 +236,8 @@ npm run dev
 - **Knowledge**: http://localhost:3000/knowledge
 - **Agent API**: `/api/agent`
 - **Documents API**: `/api/documents`
+- **金融工作流**: Copilot 页面内选择 Market only、Portfolio only 或 Combined
+- **Financial API**: `/api/financial`（当前为合成数据演示）
 
 ### 访问应用
 
@@ -590,6 +608,18 @@ result = scheduler.run_strategy(strategy_id="balanced", market="US")
 | GET/POST | `/conversations/{conversation_id}/memory` | 读取或创建显式记忆 |
 | DELETE/POST | `/memory/{memory_id}`、`/memory/{memory_id}/supersede` | 带版本校验的删除或纠正 |
 
+### Financial API `/api/financial`
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| POST | `/market-investigations` | 创建 Market only 工作流 |
+| POST | `/portfolio-reviews` | 创建 Portfolio only 工作流 |
+| POST | `/combined-reviews` | 创建关联的 Market 与 Portfolio run |
+| GET | `/runs/{run_id}` | 获取金融 run、验证记录和类型化结果 |
+| POST | `/runs/{run_id}/approve`、`/pause`、`/resume`、`/cancel` | 带版本校验的研究运行控制 |
+
+事件流通过 `/api/agent/runs/{run_id}/events` 获取；创建请求和结果类型以 Swagger 为准。当前入口只提供合成演示工作流。
+
 ### 股票数据 `/api/stocks`
 
 | 方法 | 路径 | 描述 |
@@ -690,6 +720,46 @@ POST /api/backtest/backtest/strategy?symbol=AAPL&strategy_id=balanced&start_date
 启动后端后访问:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
+
+---
+
+## 双金融研究 MAS
+
+两个系统复用现有 Plan-and-Execute Runtime，不依赖 LangGraph。各自拥有 Coordinator、专业 Agent 团队、State、Verification、Run 和 Evaluation；General Copilot 保持独立工作流。
+
+| 系统 | Agent 团队 | 研究结果 |
+|------|------------|----------|
+| Market MAS | Coordinator、Price/Volume、Macro/Sector、Event、Critic | 价格/成交量异常、确定性数值事实、竞争性解释、支持证据与反证、时点有效性和不确定性 |
+| Portfolio MAS | Coordinator、Opportunity、Risk、Constraint、Verifier | 基于不可变组合快照的候选权重、调整前后风险、硬约束检查与模拟结果；无法满足约束或数据不足时明确报告 |
+
+### 工作流与运行控制
+
+- **Market only**：独立创建市场调查 run，输出带来源引用的调查报告。
+- **Portfolio only**：独立创建组合研究 run，使用显式快照检查风险与约束。
+- **Combined**：创建两个独立 run，通过受限跨 MAS 消息和不可变 artifact 引用传递 Market 证据；Portfolio 审阅和批准遵守证据就绪顺序。
+
+Copilot 展示两个系统各自的状态、预算、验证轨迹与结果，支持审阅批准、暂停、恢复、取消，以及 REST 快照与 SSE 序列回放。批准仅授权当前研究 run，不授权交易。跨系统证据受会话归属、标的范围、截止时点、版本和有效期校验。
+
+Market 报告区分已验证数值事实、假设/潜在影响因素、支持证据、反证及限制。支持某一假设不代表确认因果关系；来源摘录也不等于已验证结论。Portfolio 只输出研究和模拟提案，不下单、不自动调仓、不修改真实持仓。
+
+### 数据与配置边界
+
+当前 Web/API 使用 `synthetic-demo-v1`，提供固定合成行情、证据、组合快照和确定性模型。Portfolio/Combined 仅接受演示快照及对应时点，不能将真实持仓作为该入口的输入。底层装配支持显式注入模型和数据适配器；非演示模式须提供完整依赖及受信任执行配置，不能仅修改环境变量便视为实盘可用。
+
+核心代码位于 `backend/agent/market_mas/`、`backend/agent/portfolio_mas/`、`backend/agent/shared/` 和 `backend/agent/integration/`；金融 REST 路由位于 `backend/api/routes/financial.py`，前端组件位于 `lobster-quant-web/src/components/financial/`。
+
+### 可复现评测
+
+从仓库根目录运行，输出目录须为新的空目录：
+
+```powershell
+$env:PYTHONPATH="backend;.;lobster_quant"
+python eval/run_financial_mas_w8.py --domain all --output-dir logs/financial-mas/my-evaluation
+```
+
+评测使用隔离 SQLite 与不可变合成夹具，比较自治、多种固定流程、单 Agent 及 Portfolio 消融策略，保存逐案例结果、预算、调用记录、引用、数值/时点指标、风险与约束检查。因果声明指标在当前结构化输出中不适用，保留未评分状态；token 用量未持久化，不提供推测值。
+
+见 [金融 MAS 评测说明](docs/architecture/financial-mas-w8-evaluation.md)及 [评测夹具](eval/fixtures/workflow_v1/manifest.json)。离线结果不证明真实模型质量、行情实时性、因果归因、未来收益或 PostgreSQL/Redis/Celery 生产环境可靠性。
 
 ---
 
@@ -1085,83 +1155,6 @@ docker compose up --build
 ```
 
 Compose 会按数据库健康检查、Alembic 迁移、API/Worker、前端的顺序启动 PostgreSQL/pgvector、Redis、FastAPI、Celery 和 Next.js。先验证配置可用：`docker compose --env-file .env config --quiet`。详细运行边界见 [runtime.md](docs/architecture/runtime.md)。
-
----
-
-## 🤖 Agent 升级交付状态（2026-09-19）
-
-| 阶段 | 交付内容 | 状态 |
-|------|----------|------|
-| W0 | 基线、Agent 合约、ADR、状态机边界 | ✅ |
-| W1 | SQLAlchemy/Alembic、Agent/任务持久化、Celery 队列 | ✅ |
-| W2 | 类型化工具注册表、超时/错误封装、异步回测工具 | ✅ |
-| W3 | Planner、状态机、显式记忆、上下文预算、Orchestrator | ✅ |
-| W4 | Agent REST、SSE 回放、Copilot 页面、干预操作 | ✅ |
-| W5 | Markdown/PDF 知识库摄取、分块、Embedding、引用 | ✅ |
-| W6 | Knowledge 页面、文档 API、知识库搜索工具 | ✅ |
-| W7 | Docker Compose、PostgreSQL/pgvector、Redis、双 Worker、健康探针 | ✅（配置验证） |
-| W8 | 确定性评估夹具、恢复契约、运行文档、README 同步 | 🟡（Docker 故障注入和线上指标待环境验证） |
-
-验证结果：量化核心 672 passed，后端 127 passed，前端 122 passed，生产构建通过；Agent 评测夹具完整性 30/30，RAG fixture 完整性 20/20，恢复契约 8/8。实时模型质量、线上检索 Recall@k/引用支持率、Docker 重启与故障注入、投资绩效不在本次离线验证范围内。评估说明见 [docs/evaluation/README.md](docs/evaluation/README.md)。
-
-本次关键提交：`222cce3`（运行时、迁移、健康与指标）、`0d5a47c`（Copilot 证据与显式记忆 UI）。Alembic 当前保持单一 head：`0003_runtime_hardening`。
-
----
-
-## 📝 更新日志
-
-### Phase 2 (2026-05-26)
-
-#### 策略管理系统
-- **策略管理器**: 创建、编辑、删除自定义策略
-- **预设策略**: 内置保守型、平衡型、激进型三种策略
-- **策略比较**: 多策略并行对比，自动识别最佳策略
-- **策略存储**: JSON文件持久化策略配置
-
-#### 回测引擎增强
-- **策略回测**: 基于策略参数运行回测
-- **组合回测**: 多股票组合回测，等权重分配
-- **增强指标**: 胜率、盈亏比、月度/年度收益分解
-- **滚动窗口**: 支持1周/1月/3月/6月/1年窗口分析
-
-#### 每日模拟系统
-- **交易模拟器**: 模拟买入/卖出操作
-- **调度器**: 支持手动/自动运行每日模拟
-- **快照系统**: 每日保存投资组合状态
-- **绩效追踪**: 记录交易历史，计算滚动绩效
-
-#### 前端新页面
-- **策略管理页面**: 策略列表、创建/编辑/删除
-- **增强回测页面**: 策略选择、单/多股票切换
-- **模拟仪表盘**: 每日模拟触发、交易记录、绩效指标
-
-#### API新增
-- **策略管理API**: 6个端点 (CRUD + 比较)
-- **增强回测API**: 3个新端点 (策略/组合回测)
-- **模拟API**: 5个端点 (运行/交易/快照/绩效)
-
----
-
-### Phase 1 (2026-05-09)
-
-#### 核心架构升级
-- **前端重构**: 迁移至 Next.js 16 (App Router)
-- **后端分离**: 引入 FastAPI 中间件
-- **状态管理**: 集成 TanStack Query
-
-#### UI/UX 重定义
-- **Google Finance 设计语言**: 专业金融设计风格
-- **主题支持**: 完整的明暗模式切换
-- **响应式布局**: 优化多端体验
-
-#### 核心功能整合
-- **统一分析工作台**: 合并 Analyzer 和 Quant Tool
-- **专业图表**: 接入 TradingView Lightweight Charts
-
-#### 稳定性修复
-- 解决端口占用和进程冲突
-- 修复类型错误和接口问题
-- 通过生产构建验证
 
 ---
 
