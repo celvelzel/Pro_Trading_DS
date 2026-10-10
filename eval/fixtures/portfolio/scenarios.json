@@ -1,0 +1,723 @@
+{
+  "schema_version": 1,
+  "provenance": "synthetic offline fixtures; not real holdings or market observations",
+  "scenarios": [
+    {
+      "id": "balanced",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": ".5",
+          "CASH": ".5"
+        },
+        "constraints": {}
+      },
+      "gold": {
+        "status": "pass",
+        "weight_sum": "1.0"
+      }
+    },
+    {
+      "id": "missing_cash",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": "1"
+        },
+        "constraints": {}
+      },
+      "gold": {
+        "status": "fail",
+        "weight_sum": "1"
+      }
+    },
+    {
+      "id": "negative",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": "-.1",
+          "CASH": "1.1"
+        },
+        "constraints": {}
+      },
+      "gold": {
+        "status": "fail",
+        "weight_sum": "1.0"
+      }
+    },
+    {
+      "id": "underweight",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": ".4",
+          "CASH": ".4"
+        },
+        "constraints": {}
+      },
+      "gold": {
+        "status": "fail",
+        "weight_sum": "0.8"
+      }
+    },
+    {
+      "id": "overweight",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": ".8",
+          "CASH": ".4"
+        },
+        "constraints": {}
+      },
+      "gold": {
+        "status": "fail",
+        "weight_sum": "1.2"
+      }
+    },
+    {
+      "id": "symbol_cap",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": ".8",
+          "CASH": ".2"
+        },
+        "constraints": {
+          "max_weight_by_symbol": {
+            "A": ".5"
+          }
+        }
+      },
+      "gold": {
+        "status": "fail",
+        "weight_sum": "1.0"
+      }
+    },
+    {
+      "id": "min_cash",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": ".9",
+          "CASH": ".1"
+        },
+        "constraints": {
+          "min_cash_weight": ".2"
+        }
+      },
+      "gold": {
+        "status": "fail",
+        "weight_sum": "1.0"
+      }
+    },
+    {
+      "id": "equity_unknown",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": ".8",
+          "CASH": ".2"
+        },
+        "constraints": {
+          "max_equity_weight": ".9"
+        }
+      },
+      "gold": {
+        "status": "unknown",
+        "weight_sum": "1.0"
+      }
+    },
+    {
+      "id": "sector_unknown",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": ".8",
+          "CASH": ".2"
+        },
+        "constraints": {
+          "max_sector_weight": {
+            "tech": ".9"
+          }
+        }
+      },
+      "gold": {
+        "status": "unknown",
+        "weight_sum": "1.0"
+      }
+    },
+    {
+      "id": "zero_equity",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": "0",
+          "CASH": "1"
+        },
+        "constraints": {
+          "max_equity_weight": "0",
+          "max_sector_weight": {
+            "tech": "0"
+          }
+        }
+      },
+      "gold": {
+        "status": "pass",
+        "weight_sum": "1"
+      }
+    },
+    {
+      "id": "tolerance",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": ".5",
+          "CASH": ".500000001"
+        },
+        "constraints": {}
+      },
+      "gold": {
+        "status": "pass",
+        "weight_sum": "1.000000001"
+      }
+    },
+    {
+      "id": "cash_cap",
+      "kind": "constraint",
+      "input": {
+        "weights": {
+          "A": "0",
+          "CASH": "1"
+        },
+        "constraints": {
+          "max_weight_by_symbol": {
+            "CASH": ".8"
+          }
+        }
+      },
+      "gold": {
+        "status": "fail",
+        "weight_sum": "1"
+      }
+    },
+    {
+      "id": "candidate_cash",
+      "kind": "candidate",
+      "input": {
+        "symbols": [
+          "A"
+        ],
+        "constraints": {}
+      },
+      "gold": {
+        "status": "feasible"
+      }
+    },
+    {
+      "id": "contradiction",
+      "kind": "candidate",
+      "input": {
+        "symbols": [
+          "A"
+        ],
+        "constraints": {
+          "min_cash_weight": ".5",
+          "max_weight_by_symbol": {
+            "CASH": ".4"
+          }
+        }
+      },
+      "gold": {
+        "status": "infeasible"
+      }
+    },
+    {
+      "id": "capacity",
+      "kind": "candidate",
+      "input": {
+        "symbols": [
+          "A"
+        ],
+        "constraints": {
+          "max_weight_by_symbol": {
+            "A": ".2",
+            "CASH": ".2"
+          }
+        }
+      },
+      "gold": {
+        "status": "infeasible"
+      }
+    },
+    {
+      "id": "candidate_unknown",
+      "kind": "candidate",
+      "input": {
+        "symbols": [
+          "A"
+        ],
+        "constraints": {
+          "max_weight_by_symbol": {
+            "CASH": ".2"
+          },
+          "max_equity_weight": ".5"
+        }
+      },
+      "gold": {
+        "status": "insufficient_data"
+      }
+    },
+    {
+      "id": "snapshot_ok",
+      "kind": "snapshot",
+      "input": {
+        "snapshot": {
+          "snapshot_id": "demo-1",
+          "source": "fixture:portfolio/v1",
+          "snapshot_kind": "demo",
+          "effective_at": "2026-10-08T20:00:00Z",
+          "currency": "USD",
+          "cash": "50",
+          "holdings": [
+            {
+              "symbol": "A",
+              "quantity": "1",
+              "currency": "USD"
+            }
+          ],
+          "quotes": [
+            {
+              "symbol": "A",
+              "price": "100",
+              "currency": "USD",
+              "effective_at": "2026-10-08T20:00:00Z",
+              "available_at": "2026-10-08T20:00:00Z",
+              "source": "fixture:quote/v1"
+            }
+          ]
+        },
+        "as_of": "2026-10-08T20:00:00Z"
+      },
+      "gold": {
+        "status": "ok",
+        "total_value": "150",
+        "market_values": {
+          "A": "100"
+        }
+      }
+    },
+    {
+      "id": "missing_price",
+      "kind": "snapshot",
+      "input": {
+        "snapshot": {
+          "snapshot_id": "demo-1",
+          "source": "fixture:portfolio/v1",
+          "snapshot_kind": "demo",
+          "effective_at": "2026-10-08T20:00:00Z",
+          "currency": "USD",
+          "cash": "50",
+          "holdings": [
+            {
+              "symbol": "A",
+              "quantity": "1",
+              "currency": "USD"
+            }
+          ],
+          "quotes": []
+        },
+        "as_of": "2026-10-08T20:00:00Z"
+      },
+      "gold": {
+        "status": "insufficient_data"
+      }
+    },
+    {
+      "id": "snapshot_missing_cash",
+      "kind": "snapshot",
+      "input": {
+        "snapshot": {
+          "snapshot_id": "demo-1",
+          "source": "fixture:portfolio/v1",
+          "snapshot_kind": "demo",
+          "effective_at": "2026-10-08T20:00:00Z",
+          "currency": "USD",
+          "cash": null,
+          "holdings": [
+            {
+              "symbol": "A",
+              "quantity": "1",
+              "currency": "USD"
+            }
+          ],
+          "quotes": [
+            {
+              "symbol": "A",
+              "price": "100",
+              "currency": "USD",
+              "effective_at": "2026-10-08T20:00:00Z",
+              "available_at": "2026-10-08T20:00:00Z",
+              "source": "fixture:quote/v1"
+            }
+          ]
+        },
+        "as_of": "2026-10-08T20:00:00Z"
+      },
+      "gold": {
+        "status": "insufficient_data"
+      }
+    },
+    {
+      "id": "cost_fallback",
+      "kind": "snapshot",
+      "input": {
+        "snapshot": {
+          "snapshot_id": "demo-1",
+          "source": "fixture:portfolio/v1",
+          "snapshot_kind": "demo",
+          "effective_at": "2026-10-08T20:00:00Z",
+          "currency": "USD",
+          "cash": "50",
+          "holdings": [
+            {
+              "symbol": "A",
+              "quantity": "1",
+              "currency": "USD"
+            }
+          ],
+          "quotes": [
+            {
+              "symbol": "A",
+              "price": "100",
+              "currency": "USD",
+              "effective_at": "2026-10-08T20:00:00Z",
+              "available_at": "2026-10-08T20:00:00Z",
+              "source": "fixture:quote/v1",
+              "price_kind": "cost_basis"
+            }
+          ]
+        },
+        "as_of": "2026-10-08T20:00:00Z"
+      },
+      "gold": {
+        "status": "insufficient_data"
+      }
+    },
+    {
+      "id": "mixed_currency",
+      "kind": "snapshot",
+      "input": {
+        "snapshot": {
+          "snapshot_id": "demo-1",
+          "source": "fixture:portfolio/v1",
+          "snapshot_kind": "demo",
+          "effective_at": "2026-10-08T20:00:00Z",
+          "currency": "USD",
+          "cash": "50",
+          "holdings": [
+            {
+              "symbol": "A",
+              "quantity": "1",
+              "currency": "EUR"
+            }
+          ],
+          "quotes": [
+            {
+              "symbol": "A",
+              "price": "100",
+              "currency": "USD",
+              "effective_at": "2026-10-08T20:00:00Z",
+              "available_at": "2026-10-08T20:00:00Z",
+              "source": "fixture:quote/v1"
+            }
+          ]
+        },
+        "as_of": "2026-10-08T20:00:00Z"
+      },
+      "gold": {
+        "status": "insufficient_data"
+      }
+    },
+    {
+      "id": "stale_price",
+      "kind": "snapshot",
+      "input": {
+        "snapshot": {
+          "snapshot_id": "demo-1",
+          "source": "fixture:portfolio/v1",
+          "snapshot_kind": "demo",
+          "effective_at": "2026-10-08T20:00:00Z",
+          "currency": "USD",
+          "cash": "50",
+          "holdings": [
+            {
+              "symbol": "A",
+              "quantity": "1",
+              "currency": "USD"
+            }
+          ],
+          "quotes": [
+            {
+              "symbol": "A",
+              "price": "100",
+              "currency": "USD",
+              "effective_at": "2026-10-01T20:00:00Z",
+              "available_at": "2026-10-01T20:00:00Z",
+              "source": "fixture:quote/v1"
+            }
+          ]
+        },
+        "as_of": "2026-10-08T20:00:00Z"
+      },
+      "gold": {
+        "status": "insufficient_data"
+      }
+    },
+    {
+      "id": "simulation_half",
+      "kind": "simulation",
+      "input": {
+        "histories": [
+          {
+            "symbol": "A",
+            "currency": "USD",
+            "source": "fixture:adjusted/v1",
+            "adjustment": "total_return",
+            "exchange_timezone": "UTC",
+            "bars": [
+              {
+                "date": "2026-10-06",
+                "price": "100",
+                "close_at": "2026-10-06T20:00:00Z",
+                "available_at": "2026-10-06T20:00:00Z"
+              },
+              {
+                "date": "2026-10-07",
+                "price": "110",
+                "close_at": "2026-10-07T20:00:00Z",
+                "available_at": "2026-10-07T20:00:00Z"
+              },
+              {
+                "date": "2026-10-08",
+                "price": "99",
+                "close_at": "2026-10-08T20:00:00Z",
+                "available_at": "2026-10-08T20:00:00Z"
+              }
+            ]
+          }
+        ],
+        "as_of": "2026-10-08T20:00:00Z",
+        "currency": "USD",
+        "target_weights": {
+          "A": "0.5",
+          "CASH": "0.5"
+        },
+        "initial_value": "100",
+        "rebalance_every": 1
+      },
+      "gold": {
+        "status": "ok",
+        "final_value": "99.75"
+      }
+    },
+    {
+      "id": "simulation_full",
+      "kind": "simulation",
+      "input": {
+        "histories": [
+          {
+            "symbol": "A",
+            "currency": "USD",
+            "source": "fixture:adjusted/v1",
+            "adjustment": "total_return",
+            "exchange_timezone": "UTC",
+            "bars": [
+              {
+                "date": "2026-10-06",
+                "price": "100",
+                "close_at": "2026-10-06T20:00:00Z",
+                "available_at": "2026-10-06T20:00:00Z"
+              },
+              {
+                "date": "2026-10-07",
+                "price": "110",
+                "close_at": "2026-10-07T20:00:00Z",
+                "available_at": "2026-10-07T20:00:00Z"
+              },
+              {
+                "date": "2026-10-08",
+                "price": "99",
+                "close_at": "2026-10-08T20:00:00Z",
+                "available_at": "2026-10-08T20:00:00Z"
+              }
+            ]
+          }
+        ],
+        "as_of": "2026-10-08T20:00:00Z",
+        "currency": "USD",
+        "target_weights": {
+          "A": "1",
+          "CASH": "0"
+        },
+        "initial_value": "100",
+        "rebalance_every": 1
+      },
+      "gold": {
+        "status": "ok",
+        "final_value": "99"
+      }
+    },
+    {
+      "id": "simulation_cash",
+      "kind": "simulation",
+      "input": {
+        "histories": [
+          {
+            "symbol": "A",
+            "currency": "USD",
+            "source": "fixture:adjusted/v1",
+            "adjustment": "total_return",
+            "exchange_timezone": "UTC",
+            "bars": [
+              {
+                "date": "2026-10-06",
+                "price": "100",
+                "close_at": "2026-10-06T20:00:00Z",
+                "available_at": "2026-10-06T20:00:00Z"
+              },
+              {
+                "date": "2026-10-07",
+                "price": "110",
+                "close_at": "2026-10-07T20:00:00Z",
+                "available_at": "2026-10-07T20:00:00Z"
+              },
+              {
+                "date": "2026-10-08",
+                "price": "99",
+                "close_at": "2026-10-08T20:00:00Z",
+                "available_at": "2026-10-08T20:00:00Z"
+              }
+            ]
+          }
+        ],
+        "as_of": "2026-10-08T20:00:00Z",
+        "currency": "USD",
+        "target_weights": {
+          "A": "0",
+          "CASH": "1"
+        },
+        "initial_value": "100",
+        "rebalance_every": 1
+      },
+      "gold": {
+        "status": "ok",
+        "final_value": "100"
+      }
+    },
+    {
+      "id": "risk_concentration",
+      "kind": "risk",
+      "input": {
+        "snapshot": {
+          "snapshot_id": "demo-1",
+          "source": "fixture:portfolio/v1",
+          "snapshot_kind": "demo",
+          "effective_at": "2026-10-08T20:00:00Z",
+          "currency": "USD",
+          "cash": "50",
+          "holdings": [
+            {
+              "symbol": "A",
+              "quantity": "1",
+              "currency": "USD"
+            }
+          ],
+          "quotes": [
+            {
+              "symbol": "A",
+              "price": "100",
+              "currency": "USD",
+              "effective_at": "2026-10-08T20:00:00Z",
+              "available_at": "2026-10-08T20:00:00Z",
+              "source": "fixture:quote/v1"
+            }
+          ]
+        },
+        "as_of": "2026-10-08T20:00:00Z",
+        "histories": [
+          {
+            "symbol": "A",
+            "currency": "USD",
+            "source": "fixture:adjusted/v1",
+            "adjustment": "total_return",
+            "exchange_timezone": "UTC",
+            "bars": [
+              {
+                "date": "2026-10-06",
+                "price": "100",
+                "close_at": "2026-10-06T20:00:00Z",
+                "available_at": "2026-10-06T20:00:00Z"
+              },
+              {
+                "date": "2026-10-07",
+                "price": "110",
+                "close_at": "2026-10-07T20:00:00Z",
+                "available_at": "2026-10-07T20:00:00Z"
+              },
+              {
+                "date": "2026-10-08",
+                "price": "99",
+                "close_at": "2026-10-08T20:00:00Z",
+                "available_at": "2026-10-08T20:00:00Z"
+              }
+            ]
+          }
+        ]
+      },
+      "gold": {
+        "status": "ok",
+        "cash_weight": "0.3333333333333333333333333333",
+        "concentration": "0.6666666666666666666666666667",
+        "max_drawdown": 0.06666666666666665
+      }
+    },
+    {
+      "id": "risk_missing_history",
+      "kind": "risk",
+      "input": {
+        "snapshot": {
+          "snapshot_id": "demo-1",
+          "source": "fixture:portfolio/v1",
+          "snapshot_kind": "demo",
+          "effective_at": "2026-10-08T20:00:00Z",
+          "currency": "USD",
+          "cash": "50",
+          "holdings": [
+            {
+              "symbol": "A",
+              "quantity": "1",
+              "currency": "USD"
+            }
+          ],
+          "quotes": [
+            {
+              "symbol": "A",
+              "price": "100",
+              "currency": "USD",
+              "effective_at": "2026-10-08T20:00:00Z",
+              "available_at": "2026-10-08T20:00:00Z",
+              "source": "fixture:quote/v1"
+            }
+          ]
+        },
+        "as_of": "2026-10-08T20:00:00Z",
+        "histories": []
+      },
+      "gold": {
+        "status": "insufficient_data"
+      }
+    }
+  ]
+}

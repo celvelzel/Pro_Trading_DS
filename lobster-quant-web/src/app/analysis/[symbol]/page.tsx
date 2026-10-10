@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import {
@@ -100,7 +101,7 @@ export default function AnalysisDetailPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold text-text-primary">
+            <Link className="text-sm underline" href={{ pathname: "/copilot", query: { workflow: "market", symbol } }}>此标的 Market 合成只读演示</Link><h1 className="text-3xl font-bold text-text-primary">
               {symbol}
             </h1>
             <HelpTooltip helpKey="analysis.title" />

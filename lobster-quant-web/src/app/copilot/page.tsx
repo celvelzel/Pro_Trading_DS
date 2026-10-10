@@ -1,6 +1,9 @@
 'use client'
 
-import { FormEvent, useCallback, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { FinancialWorkflow } from '@/components/financial/FinancialWorkflow'
+import type { WorkflowType } from '@/types/financial-api'
+import { FormEvent, Suspense, useCallback, useState } from 'react'
 import { Ban, Bot, Pause, Play, RefreshCw, RotateCcw, Send, Square, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,7 +17,7 @@ import { agentApi, AgentRequestError } from '@/lib/agent-api'
 import { useAgentEvents } from '@/hooks/useAgentEvents'
 import { useAgentRun } from '@/hooks/useAgentRun'
 
-export default function CopilotPage() {
+function GeneralCopilot() {
   const [goal, setGoal] = useState('分析 AAPL 的近期趋势、指标和风险，并给出有来源的研究摘要')
   const [runId, setRunId] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
@@ -115,3 +118,17 @@ export default function CopilotPage() {
     </div>
   )
 }
+
+function WorkflowCopilot() {
+  const params = useSearchParams()
+  const requested = params.get('workflow')
+  const [workflowType, setWorkflowType] = useState<WorkflowType>(['market', 'portfolio', 'combined'].includes(requested ?? '') ? requested as WorkflowType : 'general')
+  const [mode, setMode] = useState<'review' | 'auto'>('review')
+  return <><nav className="flex flex-wrap items-center gap-3 border-b p-4" aria-label="研究工作流">
+    <label>Workflow <select aria-label="Workflow" value={workflowType} onChange={e => setWorkflowType(e.target.value as WorkflowType)} className="ml-2 rounded border bg-background p-2">
+      <option value="general">General</option><option value="market">Market</option><option value="portfolio">Portfolio</option><option value="combined">Combined</option>
+    </select></label>
+    {workflowType !== 'general' && <label>执行模式 <select aria-label="金融执行模式" value={mode} onChange={e => setMode(e.target.value as 'review' | 'auto')} className="ml-2 rounded border bg-background p-2"><option value="review">Review</option><option value="auto">Auto</option></select></label>}
+  </nav>{workflowType === 'general' ? <GeneralCopilot /> : <main className="mx-auto max-w-6xl space-y-4 p-6"><h1 className="text-2xl font-semibold">Financial Research Copilot</h1><FinancialWorkflow key={workflowType} workflow={workflowType} mode={mode} symbol={params.get('symbol') ?? 'MU'} /></main>}</>
+}
+export default function CopilotPage() { return <Suspense fallback={<p role="status">正在加载工作流…</p>}><WorkflowCopilot /></Suspense> }

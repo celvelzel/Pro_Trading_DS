@@ -1,0 +1,10 @@
+/** Mirrors backend/agent/shared/contracts.py, schema_version 1. */
+export interface EvidenceRef { id: string; source_type: 'market_tool' | 'filing' | 'news' | 'macro' | 'document'; source_locator: string; published_at: string | null; available_at: string | null; observed_at: string; content_hash: string; excerpt: string | null }
+export interface NumericFact { name: string; value: number; unit: string; evidence_id: string; tool_result_id: string }
+export interface Hypothesis { explanation: string; support_ids: string[]; against_ids: string[]; disposition: 'supported' | 'contradicted' | 'unverified' }
+export interface MarketArtifact { schema_version: 1; producing_run_id: string; symbol: string; as_of: string; numeric_facts: NumericFact[]; hypotheses: Hypothesis[]; evidence: EvidenceRef[]; limitations: string[]; status: 'verified' | 'partial' | 'insufficient_evidence' }
+export interface RiskMetrics { volatility: number | null; maximum_drawdown: number | null; concentration: number | null; cash_weight: number | null; tool_result_id: string }
+export interface PortfolioArtifact { schema_version: 1; producing_run_id: string; snapshot_id: string; as_of: string; current_weights: Record<string, number>; proposed_weights: Record<string, number>; constraint_check: { status: 'pass' | 'fail' | 'unknown'; violations: { constraint: string; symbol: string | null; actual: number | null; limit: number | null; reason: string }[]; unknowns: string[] }; risk_comparison: { before: RiskMetrics; after: RiskMetrics } | null; simulation: { tool_result_id: string; adjustment: string; rebalance_cadence: string; fees_bps: number; slippage_bps: number; net_return: number | null; assumptions: string[] } | null; evidence_ids: string[]; limitations: string[]; status: 'feasible' | 'infeasible' | 'insufficient_data' }
+/** Supplied by a trusted caller; never inferred from symbols or snapshot names. */
+export type SourceProfile = 'demo' | 'user' | 'unknown'
+export interface ResultProps<T> { artifact?: T | null; sourceProfile?: SourceProfile; loading?: boolean; error?: string | null }

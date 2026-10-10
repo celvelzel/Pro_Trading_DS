@@ -244,7 +244,7 @@ async def websocket_alerts(ws: WebSocket):
 
 
 # Import and include routers
-from api.routes import stocks, scanner, backtest, settings, strategy, strategy_history, simulation, health, help, watchlist, alerts, cache, portfolio, signals_stats, agent, documents
+from api.routes import stocks, scanner, backtest, settings, strategy, strategy_history, simulation, health, help, watchlist, alerts, cache, portfolio, signals_stats, agent, documents, financial
 
 app.include_router(stocks.router, prefix="/api/stocks", tags=["stocks"])
 app.include_router(scanner.router, prefix="/api/scanner", tags=["scanner"])
@@ -262,6 +262,7 @@ app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"]
 app.include_router(signals_stats.router, prefix="/api/signals", tags=["signals-stats"])
 app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
+app.include_router(financial.router, prefix="/api/financial", tags=["financial"])
 
 
 if __name__ == "__main__":

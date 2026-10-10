@@ -8,7 +8,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from backend.db.base import Base
-from backend.db.models import agent, jobs  # noqa: F401 - register model metadata
+from backend.db.models import agent, jobs, financial_mas  # noqa: F401 - register model metadata
 from backend.db.session import get_database_url
 
 config = context.config
