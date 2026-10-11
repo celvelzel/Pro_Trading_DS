@@ -24,7 +24,7 @@ class ModelResponse(BaseModel):
     kind: str
     payload: dict[str, Any] = Field(default_factory=dict)
     latency_ms: int = 0
-    token_usage: dict[str, int] = Field(default_factory=dict)
+    token_usage: dict[str, Any] = Field(default_factory=dict)
     provider_request_id: str | None = None
 
 
