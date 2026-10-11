@@ -8,3 +8,5 @@ logs
 coverage
 *.pyc
 .env
+financial-mas.json
+financial-classifications.json
