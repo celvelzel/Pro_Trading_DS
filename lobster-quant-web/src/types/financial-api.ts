@@ -6,6 +6,32 @@ export interface FinancialRunBase {
   status: FinancialStatus; mode: 'review' | 'auto'; version: number; error_code: string | null
   artifact_ref: { artifact_id: string; schema_version: 1 } | null
   limitations: string[]
+  data_source?: 'demo' | 'user'
+}
+
+export interface AllocationConstraints {
+  max_weight_by_symbol: Record<string, number>
+  min_cash_weight: number
+  max_equity_weight: number
+  max_sector_weight: Record<string, number>
+}
+export interface ConstraintDraft {
+  constraints: AllocationConstraints
+  recognized: string[]
+  unresolved: string[]
+  parser: string
+  requires_confirmation: boolean
+}
+export interface LivePrepared {
+  dataset_id: string; conversation_id: string; as_of: string; snapshot_id: string | null
+  symbols: string[]; sectors: string[]; cash: string | null; currency: string
+  holdings: { symbol: string; quantity: string; price: string; price_at: string; source: string }[]
+  limitations: string[]
+}
+export interface FinancialRequest {
+  conversation_id: string; idempotency_key: string; mode: 'review' | 'auto'; dataset_id?: string
+  market?: { symbol: string; as_of: string; sector_benchmark?: string }
+  portfolio?: { portfolio_snapshot_id: string; as_of: string; user_constraints: AllocationConstraints }
 }
 export type FinancialRun = FinancialRunBase & (
   { mas_kind: 'market_investigation'; artifact: MarketArtifact | null; validation_outcome: 'verified' | 'partial' | 'insufficient_evidence' | 'pending' }

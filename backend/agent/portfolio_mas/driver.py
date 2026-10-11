@@ -32,6 +32,7 @@ class PortfolioDependencies:
     snapshot_loader: s.SnapshotLoader
     history_loader: Callable[[s.SnapshotRecord, datetime], tuple[r.AssetHistory, ...] | Awaitable[tuple[r.AssetHistory, ...]]]
     classifications: Mapping[str, a.AssetClassification]
+    snapshot_max_age_seconds: int = 86400
 
 
 class PortfolioTask(FinancialModel):
@@ -186,7 +187,8 @@ class PortfolioDriver:
             return result
 
         snap = await tool('coordinator', 'snapshot:v1', 'get_portfolio_snapshot',
-                          s.SnapshotInput(snapshot_id=req.portfolio_snapshot_id, as_of=req.as_of), s.SnapshotOutput)
+            s.SnapshotInput(snapshot_id=req.portfolio_snapshot_id, as_of=req.as_of,
+                max_age_seconds=self.dependencies.snapshot_max_age_seconds), s.SnapshotOutput)
         constraints = a.AllocationConstraints.model_validate(req.user_constraints.model_dump())
         histories = ()
         missing = []
@@ -217,7 +219,8 @@ class PortfolioDriver:
         candidates = None
         if not missing:
             before = await tool('risk', 'risk:current:v1', 'calculate_portfolio_risk',
-                r.RiskInput(snapshot=snap, as_of=req.as_of, histories=histories), r.RiskOutput)
+                r.RiskInput(snapshot=snap, as_of=req.as_of, histories=histories,
+                    max_quote_age_seconds=self.dependencies.snapshot_max_age_seconds if self.dependencies.snapshot_max_age_seconds != 86400 else None), r.RiskOutput)
             candidates = await tool('coordinator', 'candidates:v1', 'generate_feasible_candidates',
                 a.CandidateInput(symbols=tuple(h.symbol for h in snap.snapshot.holdings), constraints=constraints,
                                  classifications=self.classifications), a.CandidateOutput)
@@ -271,7 +274,8 @@ class PortfolioDriver:
                         round_missing.append('proposal_requires_unavailable_quote')
                     else:
                         after = await tool('risk', f'risk:proposed:{round_no}', 'calculate_portfolio_risk',
-                            r.RiskInput(snapshot=virtual, as_of=req.as_of, histories=histories), r.RiskOutput)
+                            r.RiskInput(snapshot=virtual, as_of=req.as_of, histories=histories,
+                                max_quote_age_seconds=self.dependencies.snapshot_max_age_seconds if self.dependencies.snapshot_max_age_seconds != 86400 else None), r.RiskOutput)
                         sim = await tool('coordinator', f'simulation:{round_no}', 'simulate_allocation',
                             a.SimulationInput(histories=histories, as_of=req.as_of, currency=snap.snapshot.currency,
                                 target_weights=proposed, initial_value=snap.total_value), a.SimulationOutput)

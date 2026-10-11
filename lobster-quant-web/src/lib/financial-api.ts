@@ -1,6 +1,6 @@
 import { object, text, strings, statuses, validArtifact } from '@/types/financial-validation'
 import { API_BASE_URL } from './constants'
-import type { FinancialCreation, FinancialRun, WorkflowType } from '@/types/financial-api'
+import type { FinancialCreation, FinancialRun, WorkflowType, AllocationConstraints, FinancialRequest, ConstraintDraft, LivePrepared } from '@/types/financial-api'
 
 export class FinancialRequestError extends Error {
   constructor(public status: number, message: string) { super(message) }
@@ -13,6 +13,7 @@ export function parseFinancialRun(value: unknown, expectedId?: string, expectedC
     || !statuses.includes(v.status as string) || !outcomes.includes(v.validation_outcome as string)
     || !text(v.run_id) || !text(v.conversation_id) || !text(v.correlation_id) || !['auto', 'review'].includes(v.mode as string) || !Number.isInteger(v.version) || Number(v.version) < 1
     || !(v.error_code === null || typeof v.error_code === 'string') || !strings(v.limitations)
+    || (v.data_source !== undefined && !['demo', 'user'].includes(v.data_source as string))
     || (expectedId !== undefined && v.run_id !== expectedId) || (expectedConversation !== undefined && v.conversation_id !== expectedConversation) || (expectedCorrelation !== undefined && v.correlation_id !== expectedCorrelation)
     || (v.artifact === null ? v.artifact_ref !== null || v.validation_outcome !== 'pending' : !object(v.artifact_ref) || v.artifact_ref.schema_version !== 1 || !text(v.artifact_ref.artifact_id) || !validArtifact(v.artifact, v.mas_kind as string, v.run_id as string, v.validation_outcome as string))) throw new Error('金融结果契约不匹配，请刷新或检查服务版本')
   return v as unknown as FinancialRun
@@ -35,16 +36,21 @@ async function request(path: string, body?: unknown): Promise<unknown> {
   if (!response.ok) throw new FinancialRequestError(response.status, typeof value.detail === 'string' ? value.detail : value.error?.message ?? `请求失败 (${response.status})`)
   return value
 }
-export function demoRequest(workflow: Exclude<WorkflowType, 'general'>, conversationId: string, mode: 'review' | 'auto', symbol = 'MU', key = crypto.randomUUID()) {
+export const defaultConstraints = (): AllocationConstraints => ({ max_weight_by_symbol: { MU: .25 }, min_cash_weight: .2, max_equity_weight: 1, max_sector_weight: {} })
+export function demoRequest(workflow: Exclude<WorkflowType, 'general'>, conversationId: string, mode: 'review' | 'auto', symbol = 'MU', key = crypto.randomUUID(), constraints = defaultConstraints()): FinancialRequest {
   const as_of = '2026-09-29T20:05:00Z'
   return { conversation_id: conversationId, idempotency_key: key, mode,
     ...(workflow !== 'portfolio' ? { market: { symbol: symbol.trim().toUpperCase(), as_of, sector_benchmark: 'SOXX' } } : {}),
-    ...(workflow !== 'market' ? { portfolio: { portfolio_snapshot_id: 'synthetic-mu-soxx-v1', as_of, user_constraints: { max_weight_by_symbol: { MU: .25 }, min_cash_weight: .2 } } } : {}) }
+    ...(workflow !== 'market' ? { portfolio: { portfolio_snapshot_id: 'synthetic-mu-soxx-v1', as_of, user_constraints: constraints } } : {}) }
 }
 export const financialApi = {
-  create: async (workflow: Exclude<WorkflowType, 'general'>, body: ReturnType<typeof demoRequest>) => {
+  create: async (workflow: Exclude<WorkflowType, 'general'>, body: FinancialRequest) => {
     return parseFinancialCreation(await request(`/${{ market: 'market-investigations', portfolio: 'portfolio-reviews', combined: 'combined-reviews' }[workflow]}`, body), workflow, body.conversation_id)
   },
   getRun: async (id: string) => parseFinancialRun(await request(`/runs/${encodeURIComponent(id)}`), id),
   action: async (id: string, name: 'approve' | 'pause' | 'resume' | 'cancel', version: number) => parseFinancialRun(await request(`/runs/${encodeURIComponent(id)}/${name}`, { expected_version: version }), id),
+  connection: async () => await request('/connection') as { configured: boolean; model: string; message: string },
+  checkConnection: async () => await request('/connection/check', { check_model: true }) as { configured: boolean; model: string; message: string },
+  prepare: async (body: { conversation_id: string; workflow: string; symbol: string; sector_benchmark?: string }) => await request('/live/prepare', body) as LivePrepared,
+  parseConstraints: async (body: { text: string; symbols: string[]; sectors: string[]; use_llm: boolean }) => await request('/constraints/parse', body) as ConstraintDraft,
 }

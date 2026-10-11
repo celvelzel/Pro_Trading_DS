@@ -2,7 +2,7 @@
 from __future__ import annotations
 from datetime import date
 from typing import Literal
-from pydantic import Field, model_validator
+from pydantic import Field, model_validator, model_serializer
 from lobster_quant.src.core.portfolio_risk import PortfolioRiskAnalyzer
 from .portfolio_snapshot import (StrictModel, UTCDateTime, Symbol, Currency, PositiveAmount,
                                  Amount, SnapshotOutput, NonBlank, SymbolMap)
@@ -43,6 +43,14 @@ class RiskInput(StrictModel):
     histories: tuple[AssetHistory, ...] = Field(default=(), max_length=32)
     max_history_age_seconds: int = Field(default=604800, ge=0, le=31536000)
     periods_per_year: int = Field(default=252, ge=1, le=366)
+    max_quote_age_seconds: int | None = Field(default=None, ge=0, le=604800)
+
+    @model_serializer(mode='wrap')
+    def preserve_legacy_input(self, handler):
+        data = handler(self)
+        if self.max_quote_age_seconds is None:
+            data.pop('max_quote_age_seconds', None)
+        return data
 
 
 class RiskOutput(StrictModel):
@@ -91,7 +99,8 @@ def calculate_portfolio_risk(payload: RiskInput) -> RiskOutput:
     record = snapshot.snapshot
     # Revalue the record, so callers cannot forge market_values or use an old-valued wrapper.
     from .portfolio_snapshot import get_portfolio_snapshot, SnapshotInput
-    checked = get_portfolio_snapshot(SnapshotInput(snapshot_id=record.snapshot_id, as_of=payload.as_of), lambda _:record)
+    checked = get_portfolio_snapshot(SnapshotInput(snapshot_id=record.snapshot_id, as_of=payload.as_of,
+        max_age_seconds=payload.max_quote_age_seconds if payload.max_quote_age_seconds is not None else 86400), lambda _:record)
     if checked.status != "ok":
         return RiskOutput(status="insufficient_data", reasons=checked.reasons)
     try:

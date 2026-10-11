@@ -9,6 +9,7 @@ for (const workflow of ['market', 'portfolio', 'combined']) {
     await page.goto(`/copilot?workflow=${workflow}&symbol=MU`)
     await page.getByRole('combobox', { name: '金融执行模式' }).selectOption('auto')
     const createdResponse = page.waitForResponse(response => response.url().includes('/api/financial/') && response.request().method() === 'POST')
+    if (workflow !== 'market') await page.getByRole('checkbox', { name: '确认组合约束' }).check()
     await page.getByRole('button', { name: `开始 ${workflow} 合成演示` }).click()
     const response = await createdResponse
     expect(response.status()).toBe(202)
@@ -51,6 +52,7 @@ test(`Portfolio ${workflow} entry uses synthetic request and preserves holdings/
   await page.getByRole('link', { name: workflow === 'portfolio' ? 'Portfolio 合成只读演示' : 'Combined 合成只读演示' }).click()
   await page.getByRole('combobox', { name: '金融执行模式' }).selectOption('auto')
   const requestPromise = page.waitForRequest(request => request.url().includes(`/api/financial/${workflow === 'portfolio' ? 'portfolio-reviews' : 'combined-reviews'}`) && request.method() === 'POST')
+  await page.getByRole('checkbox', { name: '确认组合约束' }).check()
   await page.getByRole('button', { name: `开始 ${workflow} 合成演示` }).click()
   const body = (await requestPromise).postDataJSON()
   expect(body.portfolio.portfolio_snapshot_id).toBe('synthetic-mu-soxx-v1')

@@ -69,3 +69,12 @@ class FinancialRelation(Base):
     relation_type: Mapped[str] = mapped_column(String(32))
     idempotency_key: Mapped[str] = mapped_column(String(128))
     envelope: Mapped[dict] = mapped_column(JsonType)
+
+
+class FinancialDataset(Base):
+    """Captured read-only inputs, shared by a persisted pair and its recovery."""
+    __tablename__ = 'financial_datasets'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey('conversations.id'), index=True)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[dict] = mapped_column(JsonType)

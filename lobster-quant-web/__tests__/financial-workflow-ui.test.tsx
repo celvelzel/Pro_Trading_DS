@@ -15,6 +15,7 @@ describe('accessible financial workflow', () => {
     vi.mocked(financialApi.getRun).mockImplementation(async id => snapshot(id, id === 'm' ? 'market_investigation' : 'portfolio_rebalance') as Awaited<ReturnType<typeof financialApi.getRun>>)
     render(<FinancialWorkflow workflow="combined" mode="review" />)
     expect(screen.getByRole('status')).toHaveTextContent('尚未启动')
+    fireEvent.click(screen.getByRole('checkbox', { name: '确认组合约束' }))
     fireEvent.click(screen.getByRole('button', { name: '开始 combined 合成演示' }))
     await waitFor(() => expect(screen.getByRole('button', { name: '批准此 Market 分析' })).toBeEnabled())
     expect(screen.getByRole('button', { name: '批准此 Portfolio 分析' })).toBeDisabled()
@@ -26,6 +27,7 @@ describe('accessible financial workflow', () => {
   it('shows creation error as accessible alert and keeps idempotency for retry', async () => {
     vi.mocked(financialApi.create).mockRejectedValue(new Error('server unavailable'))
     render(<FinancialWorkflow workflow="portfolio" mode="auto" />)
+    fireEvent.click(screen.getByRole('checkbox', { name: '确认组合约束' }))
     fireEvent.click(screen.getByRole('button', { name: '开始 portfolio 合成演示' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('server unavailable')
     fireEvent.click(screen.getByRole('button', { name: '重试同一任务' }))
@@ -50,6 +52,7 @@ it.each([['SYSTEM_UNAVAILABLE', true], ['market_evidence_unavailable', false]])(
   vi.mocked(financialApi.create).mockResolvedValue({ schema_version: 1, conversation_id: 'c', correlation_id: 'pair', portfolio_run_id: 'p', runs: [{ run_id: 'p', mas_kind: 'portfolio_rebalance', status: 'waiting_user', version: 1 }] })
   vi.mocked(financialApi.getRun).mockResolvedValue({ ...snapshot('p', 'portfolio_rebalance'), mas_kind: 'portfolio_rebalance', status: 'waiting_user', mode: 'review', limitations: [marker] })
   render(<FinancialWorkflow workflow="portfolio" mode="review" />)
+  fireEvent.click(screen.getByRole('checkbox', { name: '确认组合约束' }))
   fireEvent.click(screen.getByRole('button', { name: '开始 portfolio 合成演示' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '批准此 Portfolio 分析' })).toBeEnabled())
   if (explicit) expect(screen.getByText(/SYSTEM_UNAVAILABLE：API 已确认持久化/)).toBeInTheDocument()

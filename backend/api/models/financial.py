@@ -1,6 +1,7 @@
 """Additive financial API DTOs; domain contracts remain the authority."""
 from typing import Annotated, Literal
 from pydantic import Field, model_validator
+from agent.integration import CrossMASRequest
 from agent.shared import (FinancialModel, ArtifactRef, MarketInvestigationArtifact,
     PortfolioProposalArtifact)
 
@@ -31,6 +32,7 @@ class FinancialRunResult(FinancialRunSummary):
     artifact: MarketInvestigationArtifact | PortfolioProposalArtifact | None = None
     validation_outcome: Literal['verified', 'partial', 'insufficient_evidence', 'feasible', 'infeasible', 'insufficient_data', 'pending'] = 'pending'
     limitations: list[str] = Field(default_factory=list)
+    data_source: Literal['demo', 'user'] = 'demo'
 
     @model_validator(mode='after')
     def artifact_matches_kind(self):
@@ -63,3 +65,25 @@ class PortfolioRunResult(FinancialRunResult):
 # The public result schema uses mas_kind to select its exact artifact shape.
 FinancialRunResponse = Annotated[MarketRunResult | PortfolioRunResult,
     Field(discriminator='mas_kind')]
+
+
+class FinancialWorkflowRequest(CrossMASRequest):
+    dataset_id: str | None = Field(default=None, max_length=36)
+
+
+class FinancialLivePrepare(FinancialModel):
+    conversation_id: str = Field(min_length=1)
+    workflow: Literal['market','portfolio','combined']
+    symbol: str = Field(default='MU', min_length=1, max_length=32)
+    sector_benchmark: str | None = Field(default=None, max_length=32)
+
+
+class FinancialConstraintInput(FinancialModel):
+    text: str = Field(min_length=1,max_length=4000)
+    symbols: list[str] = Field(default_factory=list,max_length=32)
+    sectors: list[str] = Field(default_factory=list,max_length=32)
+    use_llm: bool = False
+
+
+class FinancialConnectionCheck(FinancialModel):
+    check_model: bool = True

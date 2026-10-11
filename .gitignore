@@ -38,6 +38,9 @@ lobster_quant/data/cache/
 # Logs
 logs/
 
+# Test artifacts
+test-results/
+
 # Sisyphus working files
 .sisyphus/
 
@@ -64,6 +67,8 @@ out/
 .env
 .env.local
 .env.*.local
+financial-mas.json
+financial-classifications.json
 
 # Jupyter Notebook
 .ipynb_checkpoints/

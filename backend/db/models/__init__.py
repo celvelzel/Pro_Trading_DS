@@ -14,10 +14,10 @@ from .agent import (
     ToolResult,
 )
 from .jobs import BacktestRun, Job
-from .financial_mas import FinancialRun, FinancialInvocation, FinancialArtifact, FinancialRelation
+from .financial_mas import FinancialRun, FinancialInvocation, FinancialArtifact, FinancialRelation, FinancialDataset
 
 __all__ = [
-    "FinancialRun", "FinancialInvocation", "FinancialArtifact", "FinancialRelation",
+    "FinancialRun", "FinancialInvocation", "FinancialArtifact", "FinancialRelation", "FinancialDataset",
     "AgentEvent",
     "AgentRun",
     "BacktestRun",

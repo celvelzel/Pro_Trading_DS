@@ -15,7 +15,7 @@ describe('financial contracts', () => {
   it('creates only synthetic snapshot input and independent workflow scopes', () => {
     const p = demoRequest('portfolio', 'c', 'review', 'MU', 'k')
     expect(p).not.toHaveProperty('market')
-    expect(p.portfolio).toEqual({ portfolio_snapshot_id: 'synthetic-mu-soxx-v1', as_of: '2026-09-29T20:05:00Z', user_constraints: { max_weight_by_symbol: { MU: .25 }, min_cash_weight: .2 } })
+    expect(p.portfolio).toEqual({ portfolio_snapshot_id: 'synthetic-mu-soxx-v1', as_of: '2026-09-29T20:05:00Z', user_constraints: { max_weight_by_symbol: { MU: .25 }, min_cash_weight: .2, max_equity_weight: 1, max_sector_weight: {} } })
     expect(JSON.stringify(p)).not.toMatch(/cash_balance|positions|holdings/)
     expect(demoRequest('market', 'c', 'auto', 'AAPL', 'k')).not.toHaveProperty('portfolio')
   })

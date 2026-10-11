@@ -12,6 +12,9 @@ from workers.celery_app import celery_app
 
 def _financial_dispatcher(snapshot):
     # Reconstruction is a trusted deployment mapping, never inferred from symbols.
+    if (snapshot.get('execution_profile') or '').startswith('live-financial-v1:'):
+        from agent.financial_live import live_assembly
+        return live_assembly(sync_session_factory, snapshot['execution_profile'], (snapshot['mas_kind'],), require_model=False)[0]
     if snapshot.get("execution_profile") != "synthetic-demo-v1":
         raise ValueError("unsupported_execution_profile: financial worker configuration is unavailable")
     from agent.financial import build_financial_dispatcher
@@ -19,6 +22,9 @@ def _financial_dispatcher(snapshot):
 
 
 def _financial_pair_router(snapshot):
+    if (snapshot.get('execution_profile') or '').startswith('live-financial-v1:'):
+        from agent.financial_live import live_assembly
+        return live_assembly(sync_session_factory, snapshot['execution_profile'], require_model=False)[1]
     if snapshot.get("execution_profile") != "synthetic-demo-v1":
         raise ValueError("unsupported_execution_profile: financial worker configuration is unavailable")
     from agent.financial import build_financial_dispatcher

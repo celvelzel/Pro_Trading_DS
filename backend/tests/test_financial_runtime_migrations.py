@@ -10,7 +10,7 @@ from db.base import Base
 from db.models import FinancialRun  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[2]
-FINANCIAL = {'financial_runs', 'financial_invocations', 'financial_artifacts', 'financial_relations'}
+FINANCIAL = {'financial_runs', 'financial_invocations', 'financial_artifacts', 'financial_relations', 'financial_datasets'}
 
 
 def migrate(path, direction, revision):

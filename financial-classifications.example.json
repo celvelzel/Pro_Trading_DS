@@ -1,0 +1,6 @@
+{
+  "MU": {"asset_class": "equity", "sector": "TECH", "source": "user-confirmed-classification"},
+  "SOXX": {"asset_class": "equity", "sector": "TECH", "source": "user-confirmed-classification"},
+  "SPY": {"asset_class": "equity", "sector": "BROAD", "source": "user-confirmed-classification"},
+  "TLT": {"asset_class": "other", "sector": "BOND", "source": "user-confirmed-classification"}
+}
