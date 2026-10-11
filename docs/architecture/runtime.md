@@ -28,7 +28,7 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
-Startup order is database health check -> Alembic migration -> API/worker -> frontend. The API container does not create tables implicitly; migrations are the only schema source of truth. The current migration head is `0003_runtime_hardening`.
+Startup order is database health check -> Alembic migration -> API/worker -> frontend. The API container does not create tables implicitly; migrations are the only schema source of truth. The current migration head is `0005_financial_datasets`. Financial live model configuration, data capture and local startup are described in [financial-mas-live-usage.md](financial-mas-live-usage.md).
 
 The API exposes `/api/health/live` for process liveness, `/api/health/ready`
 for database readiness, and `/metrics` for low-cardinality Prometheus text

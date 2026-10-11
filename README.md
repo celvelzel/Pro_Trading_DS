@@ -103,7 +103,8 @@
 - **Portfolio MAS**：Coordinator 组织机会、风险、约束与 Verifier Agent，基于不可变组合快照生成候选权重，检查硬约束、比较调整前后风险并执行组合模拟。
 - **三种工作流**：支持 Market only、Portfolio only 与 Combined；Combined 保留两个独立 run，通过受限消息与不可变结果引用传递市场证据。
 - **独立运行与验证**：两个系统各自维护 State、预算、Verification、Run 和 Evaluation，复用现有 Plan-and-Execute Runtime；支持审阅批准、暂停、恢复、取消及进度回放。
-- **研究与模拟边界**：当前 Web/API 使用合成数据和确定性模型，不执行真实下单或修改真实持仓；市场解释保留假设性质，不宣称确认因果关系。
+- **数据与约束入口**：Web/API 可选择合成演示，或通过独立金融 LLM 配置、Yahoo 最新可用行情和已保存的美股 USD 持仓创建只读快照；支持约束表单与自然语言草稿，核对确认后运行。
+- **研究与模拟边界**：不执行真实下单或修改真实持仓；行情可能延迟，市场解释保留假设性质，不宣称确认因果关系。
 - **可复现评测**：[金融 MAS 评测说明](docs/architecture/financial-mas-w8-evaluation.md)提供自治流程、固定流程、单 Agent 与消融策略的比较方法及运行命令，结果限于合成数据和本地执行环境。
 
 ---
@@ -227,7 +228,7 @@ npm run dev
 - **Agent API**: `/api/agent`
 - **Documents API**: `/api/documents`
 - **金融工作流**: Copilot 页面内选择 Market only、Portfolio only 或 Combined
-- **Financial API**: `/api/financial`（当前为合成数据演示）
+- **Financial API**: `/api/financial`（合成演示、真实数据快照与约束解析）
 
 ### 访问应用
 
@@ -608,7 +609,7 @@ result = scheduler.run_strategy(strategy_id="balanced", market="US")
 | GET | `/runs/{run_id}` | 获取金融 run、验证记录和类型化结果 |
 | POST | `/runs/{run_id}/approve`、`/pause`、`/resume`、`/cancel` | 带版本校验的研究运行控制 |
 
-事件流通过 `/api/agent/runs/{run_id}/events` 获取；创建请求和结果类型以 Swagger 为准。当前入口只提供合成演示工作流。
+事件流通过 `/api/agent/runs/{run_id}/events` 获取；创建请求和结果类型以 Swagger 为准。真实数据先调用 `/api/financial/live/prepare`，再将返回的 `dataset_id` 与同一会话、时点用于创建请求。自然语言约束通过 `/api/financial/constraints/parse` 返回待确认草稿。
 
 ### 股票数据 `/api/stocks`
 
@@ -734,7 +735,9 @@ Market 报告区分已验证数值事实、假设/潜在影响因素、支持证
 
 ### 数据与配置边界
 
-当前 Web/API 使用 `synthetic-demo-v1`，提供固定合成行情、证据、组合快照和确定性模型。Portfolio/Combined 仅接受演示快照及对应时点，不能将真实持仓作为该入口的输入。底层装配支持显式注入模型和数据适配器；非演示模式须提供完整依赖及受信任执行配置，不能仅修改环境变量便视为实盘可用。
+Web/API 默认使用 `synthetic-demo-v1` 合成演示，也可选择“我的美股持仓 / 最新行情”。真实入口读取明确保存的 USD 持仓与现金，捕获 Yahoo 原始/复权历史、最新估值与可用新闻，保存为不可变数据集；worker 按受信任的 `live-financial-v1:<dataset_id>` 配置重建，审批与恢复不会重新抓取或切换到演示数据。Yahoo 可能延迟，不代表交易所实时流；缺现金、价格、币种、分类或新闻时拒绝替代或保留明确限制。
+
+金融 LLM 使用独立的 `financial-mas.json`（由 `financial-mas.example.json` 复制），不沿用 General 的 AI 配置；本地密钥文件已忽略。Copilot 提供现金上下限、股票总仓位、单资产和行业上限表单，以及“自然语言 → 草稿 → 填入表单 → 核对确认”的流程。可选 `financial-classifications.json` 提供用户确认的 ETF/行业分类。配置、迁移与操作步骤见[真实接入与约束使用指南](docs/architecture/financial-mas-live-usage.md)。
 
 核心代码位于 `backend/agent/market_mas/`、`backend/agent/portfolio_mas/`、`backend/agent/shared/` 和 `backend/agent/integration/`；金融 REST 路由位于 `backend/api/routes/financial.py`，前端组件位于 `lobster-quant-web/src/components/financial/`。
 
