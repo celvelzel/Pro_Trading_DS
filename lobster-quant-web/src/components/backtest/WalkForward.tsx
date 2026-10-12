@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Play, TrendingUp, TrendingDown, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Loader2, Play, TrendingUp, ShieldCheck, ShieldAlert } from 'lucide-react';
 
 // ============================================================================
 // Helpers
@@ -34,7 +34,7 @@ function MetricRow({ label, isValue, oosValue, format }: {
       <td className="py-2 font-medium">{label}</td>
       <td className="py-2 text-right">{format(isValue)}</td>
       <td className="py-2 text-right">{format(oosValue)}</td>
-      <td className={`py-2 text-right font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+      <td className={`py-2 text-right font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>
         {isPositive ? '+' : ''}{format(delta)}
       </td>
     </tr>
@@ -214,13 +214,13 @@ export function WalkForward() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Avg OOS Sharpe</p>
-                  <p className={`text-2xl font-bold ${result.avgOosSharpe > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className={`text-2xl font-bold ${result.avgOosSharpe > 0 ? 'text-success' : 'text-destructive'}`}>
                     {num(result.avgOosSharpe)}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Consistency</p>
-                  <p className={`text-2xl font-bold ${result.consistencyRatio >= 0.6 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className={`text-2xl font-bold ${result.consistencyRatio >= 0.6 ? 'text-success' : 'text-destructive'}`}>
                     {pct(result.consistencyRatio, 0)}
                   </p>
                 </div>
@@ -229,7 +229,7 @@ export function WalkForward() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Avg Degradation</p>
-                  <p className={`text-lg font-semibold ${result.avgDegradation < 0.3 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className={`text-lg font-semibold ${result.avgDegradation < 0.3 ? 'text-success' : 'text-destructive'}`}>
                     {pct(result.avgDegradation)}
                   </p>
                 </div>
@@ -239,7 +239,7 @@ export function WalkForward() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Avg OOS Return</p>
-                  <p className={`text-lg font-semibold ${result.avgOosReturn > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className={`text-lg font-semibold ${result.avgOosReturn > 0 ? 'text-success' : 'text-destructive'}`}>
                     {pct(result.avgOosReturn)}
                   </p>
                 </div>
@@ -281,16 +281,16 @@ export function WalkForward() {
                           <td className="py-2 text-xs">{w.trainStart} → {w.trainEnd}</td>
                           <td className="py-2 text-xs">{w.testStart} → {w.testEnd}</td>
                           <td className="py-2 text-right">{num(w.isMetrics.sharpeRatio)}</td>
-                          <td className={`py-2 text-right ${w.oosMetrics.sharpeRatio > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <td className={`py-2 text-right ${w.oosMetrics.sharpeRatio > 0 ? 'text-success' : 'text-destructive'}`}>
                             {num(w.oosMetrics.sharpeRatio)}
                           </td>
                           <td className="py-2 text-right">{pct(w.isMetrics.cumulativeReturn)}</td>
-                          <td className={`py-2 text-right ${w.oosMetrics.cumulativeReturn > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <td className={`py-2 text-right ${w.oosMetrics.cumulativeReturn > 0 ? 'text-success' : 'text-destructive'}`}>
                             {pct(w.oosMetrics.cumulativeReturn)}
                           </td>
                           <td className="py-2 text-right">{pct(w.isMetrics.winRate, 0)}</td>
                           <td className="py-2 text-right">{pct(w.oosMetrics.winRate, 0)}</td>
-                          <td className={`py-2 text-right ${w.degradation < 0.3 ? 'text-green-600' : 'text-red-600'}`}>
+                          <td className={`py-2 text-right ${w.degradation < 0.3 ? 'text-success' : 'text-destructive'}`}>
                             {pct(w.degradation)}
                           </td>
                         </tr>

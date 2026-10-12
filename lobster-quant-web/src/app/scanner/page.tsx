@@ -19,7 +19,9 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
 import { Search, Loader2 } from 'lucide-react'
 import { ExportButton } from '@/components/ui/export-button'
+import { PageHeader } from '@/components/layout/PageHeader'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 import type { Market, StockResult } from '@/lib/types'
 
 /** Threshold above which virtualization kicks in */
@@ -38,31 +40,27 @@ export default function ScannerPage() {
   const shouldVirtualize = results.length > VIRTUALIZE_THRESHOLD
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
       {/* Page Header */}
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-3xl font-bold text-text-primary">Stock Scanner</h1>
-          <HelpTooltip helpKey="scanner.title" />
-        </div>
-        <p className="text-text-secondary mt-1">
-          Scan stocks across multiple markets based on technical criteria
-        </p>
-      </div>
+      <PageHeader
+        title="Stock Scanner"
+        description="Scan stocks across multiple markets based on technical criteria"
+        actions={<HelpTooltip helpKey="scanner.title" />}
+      />
 
       {/* Scan Controls */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <CardTitle>Scan Parameters</CardTitle>
             <HelpTooltip helpKey="scanner.scan_parameters" />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
             {/* Market Selection */}
-            <div className="flex-1">
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <div className="w-full space-y-1.5 sm:w-48">
+              <label className="block text-xs font-medium text-muted-foreground">
                 Market
               </label>
               <Select value={market} onValueChange={(value) => setMarket(value as Market)}>
@@ -78,60 +76,69 @@ export default function ScannerPage() {
             </div>
 
             {/* Min Score Slider */}
-            <div className="flex-1">
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
-                Minimum Score: {minScore}
+            <div className="min-w-56 flex-1 space-y-1.5">
+              <label className="block text-xs font-medium text-muted-foreground">
+                Minimum Score:{' '}
+                <span className="font-mono font-semibold tabular-nums text-foreground">
+                  {minScore}
+                </span>
               </label>
-              <Slider
-                value={[minScore]}
-                onValueChange={(value) => {
-                  const val = Array.isArray(value) ? value[0] : value
-                  setMinScore(val)
-                }}
-                max={100}
-                min={0}
-                step={5}
-              />
+              <div className="flex h-8 items-center">
+                <Slider
+                  value={[minScore]}
+                  onValueChange={(value) => {
+                    const val = Array.isArray(value) ? value[0] : value
+                    setMinScore(val)
+                  }}
+                  max={100}
+                  min={0}
+                  step={5}
+                />
+              </div>
             </div>
 
             {/* Scan Button */}
-            <div className="flex items-end">
-              <Button onClick={handleScan} disabled={isScanning}>
-                {isScanning ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Scanning...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4 mr-2" />
-                    Scan Stocks
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button onClick={handleScan} disabled={isScanning}>
+              {isScanning ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Scanning...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 size-4" />
+                  Scan Stocks
+                </>
+              )}
+            </Button>
           </div>
 
           {/* Progress Indicator */}
           {isScanning && progress && (
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-sm text-text-secondary">
+            <div className="mt-4 space-y-2 border-t border-border pt-4">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>
-                  Scanning <span className="font-medium text-text-primary">{progress.symbol}</span>
+                  Scanning{' '}
+                  <span className="font-mono font-medium text-foreground">
+                    {progress.symbol}
+                  </span>
                   {progress.status === 'skipped' && ' (skipped)'}
                   {progress.status === 'error' && ' (error)'}
                 </span>
-                <span>{progress.processed} / {progress.total}</span>
+                <span className="font-mono tabular-nums">
+                  {progress.processed} / {progress.total}
+                </span>
               </div>
-              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div
-                  className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
+                  className="h-full rounded-full bg-primary transition-all duration-300 ease-out"
                   style={{ width: `${(progress.processed / progress.total) * 100}%` }}
                 />
               </div>
               {results.length > 0 && (
-                <p className="text-xs text-text-tertiary">
-                  {results.length} matching stock{results.length !== 1 ? 's' : ''} found so far
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-mono tabular-nums">{results.length}</span>{' '}
+                  matching stock{results.length !== 1 ? 's' : ''} found so far
                 </p>
               )}
             </div>
@@ -141,8 +148,8 @@ export default function ScannerPage() {
 
       {/* Error State */}
       {error && (
-        <ErrorState 
-          message={error || 'Failed to scan stocks'} 
+        <ErrorState
+          message={error || 'Failed to scan stocks'}
           onRetry={handleScan}
         />
       )}
@@ -150,9 +157,9 @@ export default function ScannerPage() {
       {/* Results */}
       {results.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-text-primary">
+              <h2 className="text-base font-semibold tracking-tight text-foreground">
                 Results ({results.length} stocks)
               </h2>
               <HelpTooltip helpKey="scanner.results" />
@@ -174,7 +181,7 @@ export default function ScannerPage() {
                 filename={`scanner-${market}`}
               />
               {shouldVirtualize && (
-                <p className="text-sm text-text-tertiary">
+                <p className="text-xs text-muted-foreground">
                   Virtualized for performance
                 </p>
               )}
@@ -213,7 +220,7 @@ function ResultsGrid({
   prefetchStock: (symbol: string) => void
 }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {results.map((stock) => (
         <StockResultCard
           key={stock.symbol}
@@ -248,7 +255,7 @@ function VirtualizedResultsGrid({
   return (
     <div
       ref={parentRef}
-      className="overflow-auto"
+      className="overflow-auto rounded-lg"
       style={{ height: '70vh' }}
     >
       <div
@@ -302,21 +309,22 @@ function StockResultCard({
       onFocus={onHover}
       className="block"
     >
-      <Card className="hover:shadow-md transition-shadow cursor-pointer">
+      <Card className="h-full cursor-pointer transition-colors hover:border-primary/40">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <p className="font-semibold text-text-primary">{stock.symbol}</p>
-              <p className="text-sm text-text-secondary">{stock.name}</p>
+          <div className="mb-3 flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-mono font-semibold text-foreground">{stock.symbol}</p>
+              <p className="truncate text-sm text-muted-foreground">{stock.name}</p>
             </div>
             <div className="text-right">
-              <p className="font-semibold text-text-primary">
+              <p className="font-mono font-semibold tabular-nums text-foreground">
                 ${stock.price.toFixed(2)}
               </p>
               <p
-                className={`text-sm ${
+                className={cn(
+                  'font-mono text-sm tabular-nums',
                   (stock.change ?? 0) >= 0 ? 'text-success' : 'text-error'
-                }`}
+                )}
               >
                 {(stock.change ?? 0) >= 0 ? '+' : ''}
                 {(stock.change ?? 0).toFixed(2)} ({(stock.changePercent ?? 0).toFixed(2)}%)

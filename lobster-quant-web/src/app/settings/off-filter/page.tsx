@@ -20,12 +20,12 @@ export default function OffFilterPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>OFF (Risk-Off) Filter Settings</CardTitle>
+        <CardTitle className="text-sm font-semibold">OFF (Risk-Off) Filter Settings</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               VIX Threshold: {vixThreshold.toFixed(1)}
             </label>
             <Slider
@@ -36,13 +36,13 @@ export default function OffFilterPage() {
               step={0.5}
               className="mt-2"
             />
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               VIX level triggering risk-off signal (10–100)
             </p>
             <FieldError message={errors.vixThreshold} />
           </div>
           <div>
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               ATR % Threshold: {(atrPctThreshold * 100).toFixed(1)}%
             </label>
             <Slider
@@ -53,13 +53,13 @@ export default function OffFilterPage() {
               step={0.005}
               className="mt-2"
             />
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               ATR percentage threshold (1–20%)
             </p>
             <FieldError message={errors.atrPctThreshold} />
           </div>
           <div>
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               Gap Threshold: {(gapThreshold * 100).toFixed(1)}%
             </label>
             <Slider
@@ -70,13 +70,13 @@ export default function OffFilterPage() {
               step={0.005}
               className="mt-2"
             />
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Gap percentage threshold (1–30%)
             </p>
             <FieldError message={errors.gapThreshold} />
           </div>
           <div>
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               Min Volume Ratio: {minVolumeRatio.toFixed(2)}
             </label>
             <Slider
@@ -87,13 +87,13 @@ export default function OffFilterPage() {
               step={0.05}
               className="mt-2"
             />
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Minimum volume ratio (0–1)
             </p>
             <FieldError message={errors.minVolumeRatio} />
           </div>
           <div>
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               MA200 Recovery Days: {ma200RecoveryDays}
             </label>
             <Slider
@@ -104,7 +104,7 @@ export default function OffFilterPage() {
               step={5}
               className="mt-2"
             />
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Days to recover above MA200 (10–200)
             </p>
             <FieldError message={errors.ma200RecoveryDays} />

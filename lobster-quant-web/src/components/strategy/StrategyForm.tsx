@@ -18,7 +18,7 @@ export function StrategyForm({ strategy, onSubmit, onCancel }: StrategyFormProps
   const [name, setName] = useState(strategy?.name || '');
   const [description, setDescription] = useState(strategy?.description || '');
   const [loading, setLoading] = useState(false);
-  
+
   const [params, setParams] = useState<StrategyParams>(
     strategy?.params || {
       holdingDays: 20,
@@ -48,95 +48,106 @@ export function StrategyForm({ strategy, onSubmit, onCancel }: StrategyFormProps
         <CardTitle>{strategy ? 'Edit Strategy' : 'Create Strategy'}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic info */}
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="holdingDays">Holding Days</Label>
+              <Label htmlFor="name">Name</Label>
               <Input
-                id="holdingDays"
-                type="number"
-                min={5}
-                max={100}
-                value={params.holdingDays}
-                onChange={(e) => setParams({ ...params, holdingDays: parseInt(e.target.value) })}
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="minScore">Min Score</Label>
+              <Label htmlFor="description">Description</Label>
               <Input
-                id="minScore"
-                type="number"
-                min={0}
-                max={100}
-                value={params.minScore}
-                onChange={(e) => setParams({ ...params, minScore: parseInt(e.target.value) })}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="positionSize">Position Size (%)</Label>
-              <Input
-                id="positionSize"
-                type="number"
-                min={1}
-                max={100}
-                value={params.positionSize * 100}
-                onChange={(e) => setParams({ ...params, positionSize: parseInt(e.target.value) / 100 })}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="maxPositions">Max Positions</Label>
-              <Input
-                id="maxPositions"
-                type="number"
-                min={1}
-                max={20}
-                value={params.maxPositions}
-                onChange={(e) => setParams({ ...params, maxPositions: parseInt(e.target.value) })}
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
           </div>
-          
-          <div className="space-y-2">
-            <Label>Position Sizing</Label>
-            <Select
-              value={params.positionSizing}
-              onValueChange={(value) => 
-                setParams({ ...params, positionSizing: value || 'fixed' })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fixed">Fixed</SelectItem>
-                <SelectItem value="dynamic">Dynamic</SelectItem>
-              </SelectContent>
-            </Select>
+
+          {/* Trading parameters */}
+          <div className="space-y-4 border-t border-border pt-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="holdingDays">Holding Days</Label>
+                <Input
+                  id="holdingDays"
+                  type="number"
+                  min={5}
+                  max={100}
+                  className="font-mono"
+                  value={params.holdingDays}
+                  onChange={(e) => setParams({ ...params, holdingDays: parseInt(e.target.value) })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="minScore">Min Score</Label>
+                <Input
+                  id="minScore"
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="font-mono"
+                  value={params.minScore}
+                  onChange={(e) => setParams({ ...params, minScore: parseInt(e.target.value) })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="positionSize">Position Size (%)</Label>
+                <Input
+                  id="positionSize"
+                  type="number"
+                  min={1}
+                  max={100}
+                  className="font-mono"
+                  value={params.positionSize * 100}
+                  onChange={(e) => setParams({ ...params, positionSize: parseInt(e.target.value) / 100 })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="maxPositions">Max Positions</Label>
+                <Input
+                  id="maxPositions"
+                  type="number"
+                  min={1}
+                  max={20}
+                  className="font-mono"
+                  value={params.maxPositions}
+                  onChange={(e) => setParams({ ...params, maxPositions: parseInt(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Position Sizing</Label>
+              <Select
+                value={params.positionSizing}
+                onValueChange={(value) =>
+                  setParams({ ...params, positionSizing: value || 'fixed' })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">Fixed</SelectItem>
+                  <SelectItem value="dynamic">Dynamic</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          
-          <div className="flex gap-2 justify-end">
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 border-t border-border pt-6">
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>

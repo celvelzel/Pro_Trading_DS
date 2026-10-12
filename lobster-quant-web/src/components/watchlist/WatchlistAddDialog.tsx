@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -65,7 +66,7 @@ export function WatchlistAddDialog({
 
     addRecentSearch(upperSymbol)
     addSymbol(upperSymbol)
-    
+
     // If a group is selected, we need to add it to the group too
     // Note: addSymbol only adds to the master list in the current implementation
     // We might want to update the store to handle this, or call addToGroup
@@ -108,21 +109,21 @@ export function WatchlistAddDialog({
         </DialogHeader>
 
         <Tabs defaultValue="single" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsList className="mb-1 grid w-full grid-cols-2">
             <TabsTrigger value="single">Single Stock</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Add</TabsTrigger>
           </TabsList>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Target Group (Optional)
               </label>
               <Select
                 value={selectedGroup}
                 onValueChange={(value) => setSelectedGroup(value ?? 'none')}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a group" />
                 </SelectTrigger>
                 <SelectContent>
@@ -136,7 +137,7 @@ export function WatchlistAddDialog({
               </Select>
             </div>
 
-            <TabsContent value="single" className="space-y-4 mt-0">
+            <TabsContent value="single" className="mt-0 space-y-4">
               <div className="flex gap-2">
                 <Input
                   placeholder="Enter stock symbol (e.g., AAPL)"
@@ -145,23 +146,24 @@ export function WatchlistAddDialog({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleAddSingle()
                   }}
+                  className="flex-1 font-mono uppercase"
                   autoFocus
                 />
                 <Button onClick={handleAddSingle} disabled={!symbol.trim()}>
-                  <Plus className="w-4 h-4 mr-1" />
+                  <Plus />
                   Add
                 </Button>
               </div>
 
               {recentSearches.length > 0 && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">Recent Searches</p>
+                  <p className="mb-2 text-xs text-muted-foreground">Recent Searches</p>
                   <div className="flex flex-wrap gap-2">
                     {recentSearches.map((s) => (
                       <button
                         key={s}
                         onClick={() => handleAddRecent(s)}
-                        className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
+                        className="rounded-md border border-border bg-muted px-2 py-1 font-mono text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                       >
                         {s}
                       </button>
@@ -171,20 +173,20 @@ export function WatchlistAddDialog({
               )}
             </TabsContent>
 
-            <TabsContent value="bulk" className="space-y-4 mt-0">
+            <TabsContent value="bulk" className="mt-0 space-y-4">
               <div className="space-y-2">
-                <textarea
+                <Textarea
                   placeholder="Paste symbols separated by commas or new lines (e.g., AAPL, MSFT, TSLA)"
                   value={bulkSymbols}
                   onChange={(e) => setBulkSymbols(e.target.value.toUpperCase())}
-                  className="w-full min-h-[120px] rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-[120px] w-full font-mono uppercase"
                 />
-                <Button 
-                  onClick={handleAddBulk} 
+                <Button
+                  onClick={handleAddBulk}
                   disabled={!bulkSymbols.trim()}
                   className="w-full"
                 >
-                  <ListPlus className="w-4 h-4 mr-2" />
+                  <ListPlus />
                   Add {bulkSymbols.split(/[\n,]+/).filter(s => s.trim()).length} Symbols
                 </Button>
               </div>

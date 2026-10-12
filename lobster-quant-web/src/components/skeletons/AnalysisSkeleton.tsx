@@ -1,39 +1,43 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 /**
  * Skeleton loader for the Analysis detail page.
- * Matches the layout: breadcrumb, header, tabs with chart and indicators.
+ * Matches the layout: breadcrumb, price header, metrics, tabs with chart,
+ * signal summary and radar.
  */
 export function AnalysisSkeleton() {
   return (
-    <div className="p-6 space-y-6">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2">
-        <div className="h-4 bg-muted-foreground/20 rounded w-16 animate-pulse" />
-        <div className="h-4 bg-muted-foreground/20 rounded w-4 animate-pulse" />
-        <div className="h-4 bg-muted-foreground/20 rounded w-20 animate-pulse" />
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-4 w-14" />
       </div>
 
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="h-8 bg-muted-foreground/20 rounded w-32 animate-pulse" />
-          <div className="h-4 bg-muted-foreground/20 rounded w-48 mt-2 animate-pulse" />
+      {/* Price Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="space-y-1.5">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-4 w-48" />
         </div>
-        <div className="flex gap-2">
-          <div className="h-6 bg-muted-foreground/20 rounded w-20 animate-pulse" />
-          <div className="h-6 bg-muted-foreground/20 rounded w-24 animate-pulse" />
+        <div className="space-y-1.5 md:text-right">
+          <Skeleton className="h-8 w-36" />
+          <Skeleton className="h-4 w-28 md:ml-auto" />
         </div>
       </div>
 
-      {/* Price Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
             <CardContent className="p-4">
-              <div className="animate-pulse space-y-2">
-                <div className="h-4 bg-muted-foreground/20 rounded w-16" />
-                <div className="h-6 bg-muted-foreground/20 rounded w-24" />
+              <div className="space-y-2">
+                <Skeleton className="h-3.5 w-20" />
+                <Skeleton className="h-8 w-24" />
               </div>
             </CardContent>
           </Card>
@@ -42,42 +46,54 @@ export function AnalysisSkeleton() {
 
       {/* Tabs */}
       <div className="space-y-4">
-        <div className="flex gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-10 bg-muted-foreground/20 rounded w-24 animate-pulse" />
-          ))}
-        </div>
+        <Skeleton className="h-8 w-full max-w-2xl rounded-lg" />
 
         {/* Chart */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="h-5 bg-muted-foreground/20 rounded w-36 animate-pulse" />
+          <CardHeader className="pb-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Skeleton className="h-5 w-32" />
               <div className="flex gap-2">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-8 bg-muted-foreground/20 rounded w-12 animate-pulse" />
+                  <Skeleton key={i} className="h-7 w-12" />
                 ))}
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px] bg-muted-foreground/10 rounded animate-pulse" />
+            <Skeleton className="h-[400px] w-full" />
           </CardContent>
         </Card>
 
-        {/* Indicators Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-4">
-                <div className="animate-pulse space-y-2">
-                  <div className="h-4 bg-muted-foreground/20 rounded w-20" />
-                  <div className="h-6 bg-muted-foreground/20 rounded w-16" />
-                  <div className="h-3 bg-muted-foreground/20 rounded w-32" />
+        {/* Signal summary + radar */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="size-7 rounded-full" />
+                    <Skeleton className="h-5 w-28" />
+                  </div>
+                  <Skeleton className="h-5 w-14 rounded-md" />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <div className="grid grid-cols-2 gap-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-5 w-40" />
+            </CardHeader>
+            <CardContent className="flex h-[300px] items-center justify-center">
+              <Skeleton className="size-56 rounded-full" />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

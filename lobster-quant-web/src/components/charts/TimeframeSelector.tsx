@@ -28,20 +28,25 @@ export const TimeframeSelector = memo(function TimeframeSelector({
   className,
 }: TimeframeSelectorProps) {
   return (
-    <div className={cn('flex items-center gap-1', className)}>
+    <div
+      className={cn(
+        'inline-flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5',
+        className
+      )}
+    >
       {timeframes.map((tf) => {
         const isActive = activeTimeframe === tf.value
         return (
           <Button
             key={tf.value}
-            variant={isActive ? 'default' : 'ghost'}
+            variant="ghost"
             size="sm"
             onClick={() => onSelect(tf.value)}
             className={cn(
-              'h-7 px-2 text-xs font-medium transition-colors',
+              'h-6 rounded-md px-2 text-xs font-medium transition-colors',
               isActive
-                ? 'bg-primary text-primary-foreground'
-                : 'text-text-secondary hover:text-text-primary'
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             {tf.label}

@@ -9,25 +9,25 @@ import { DataSourceStatus } from '@/components/ui/data-source-status'
 import { MobileMenuDrawer } from '@/components/layout/MobileMenuDrawer'
 
 export function Header() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center px-4 md:px-6">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="flex h-14 items-center gap-3 px-4 md:px-6">
         {/* Mobile menu button */}
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden mr-2"
+          className="md:hidden"
           onClick={() => setMobileMenuOpen(true)}
         >
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle menu</span>
+          <Menu className="size-5" />
+          <span className="sr-only">Open navigation menu</span>
         </Button>
 
         <MobileMenuDrawer
@@ -35,22 +35,21 @@ export function Header() {
           onOpenChange={setMobileMenuOpen}
         />
 
-        {/* Search bar with autocomplete */}
+        {/* Global symbol search */}
         <SearchAutocomplete />
 
         {/* Right side actions */}
-        <div className="flex items-center gap-2 ml-auto">
-          {/* Data source status indicator */}
+        <div className="ml-auto flex items-center gap-1.5">
           <DataSourceStatus />
 
-          {/* Theme toggle */}
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
+            aria-label="Toggle color theme"
           >
-            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            <span className="sr-only">Toggle theme</span>
+            <Sun className="hidden size-4.5 dark:block" />
+            <Moon className="size-4.5 dark:hidden" />
           </Button>
         </div>
       </div>

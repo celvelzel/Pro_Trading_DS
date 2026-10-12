@@ -1,6 +1,5 @@
 'use client'
 
-import { useRef } from 'react'
 import { useSettingsContext } from '../settings-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,7 +25,7 @@ export default function ImportExportPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-text-secondary">
+          <p className="text-sm text-muted-foreground">
             Download your current settings as a JSON file. This is useful for backing up your
             configuration or sharing it across devices.
           </p>
@@ -46,7 +45,7 @@ export default function ImportExportPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-text-secondary">
+          <p className="text-sm text-muted-foreground">
             Import settings from a previously exported JSON file. This will overwrite your current
             settings. You will be asked to confirm before the import is applied.
           </p>
@@ -73,7 +72,7 @@ export default function ImportExportPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-text-secondary">
+          <p className="text-sm text-muted-foreground">
             Reset all settings to their default values. This action will fetch fresh defaults from
             the server if available, otherwise local defaults will be used.
           </p>
@@ -93,7 +92,7 @@ export default function ImportExportPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-text-secondary mb-3">
+          <p className="text-sm text-muted-foreground mb-3">
             Settings files use JSON format with the following structure:
           </p>
           <pre className="p-4 bg-muted rounded-md text-xs overflow-x-auto">

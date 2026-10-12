@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react'
+import { memo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
@@ -22,11 +22,11 @@ export const MetricCard = memo(function MetricCard({
 }: MetricCardProps) {
   if (loading) {
     return (
-      <Card className={cn('animate-pulse', className)}>
-        <CardContent className="p-4">
-          <div className="h-4 bg-gray-200 rounded w-20 mb-2" />
-          <div className="h-8 bg-gray-200 rounded w-24 mb-2" />
-          <div className="h-3 bg-gray-200 rounded w-16" />
+      <Card className={className}>
+        <CardContent className="animate-pulse p-4">
+          <div className="mb-2 h-3.5 w-20 rounded bg-muted" />
+          <div className="mb-2 h-8 w-28 rounded bg-muted" />
+          <div className="h-3.5 w-16 rounded bg-muted" />
         </CardContent>
       </Card>
     )
@@ -35,7 +35,7 @@ export const MetricCard = memo(function MetricCard({
   const deltaColors = {
     up: 'text-success',
     down: 'text-error',
-    neutral: 'text-text-tertiary',
+    neutral: 'text-muted-foreground',
   }
 
   const DeltaIcon = {
@@ -45,14 +45,23 @@ export const MetricCard = memo(function MetricCard({
   }[deltaType]
 
   return (
-    <Card className={cn('', className)}>
+    <Card className={cn('transition-colors hover:border-primary/30', className)}>
       <CardContent className="p-4">
-        <div className="text-sm text-text-secondary mb-1">{label}</div>
-        <div className="text-2xl font-semibold text-text-primary">{value}</div>
+        <div className="mb-1.5 text-[13px] font-medium text-muted-foreground">
+          {label}
+        </div>
+        <div className="font-mono text-2xl font-semibold tracking-tight text-foreground">
+          {value}
+        </div>
         {delta && (
-          <div className={cn('flex items-center gap-1 mt-1', deltaColors[deltaType])}>
-            <DeltaIcon className="w-3 h-3" />
-            <span className="text-sm font-medium">{delta}</span>
+          <div
+            className={cn(
+              'mt-1.5 flex items-center gap-1 text-[13px] font-medium',
+              deltaColors[deltaType]
+            )}
+          >
+            <DeltaIcon className="size-3.5" />
+            <span>{delta}</span>
           </div>
         )}
       </CardContent>

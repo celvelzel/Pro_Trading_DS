@@ -1,8 +1,11 @@
 'use client'
 
-import { memo, useEffect, useRef } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { createChart, ColorType, LineSeries, type IChartApi, type UTCTimestamp } from 'lightweight-charts'
+import { useTheme } from 'next-themes'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { X } from 'lucide-react'
 
 interface CompareData {
@@ -17,7 +20,28 @@ interface StockCompareViewProps {
   className?: string
 }
 
-const COLORS = ['#4285F4', '#34A853', '#EA4335', '#FBBC04', '#8AB4F8']
+// Series palette sourced from theme tokens (fallbacks mirror globals.css)
+const COLOR_VARS = [
+  '--color-primary',
+  '--color-success',
+  '--color-error',
+  '--color-warning',
+  '--chart-4',
+]
+const FALLBACK_COLORS = ['#3E7BFA', '#22C55E', '#EF4444', '#D97706', '#A855F7']
+
+function themeColors(): string[] {
+  if (typeof window === 'undefined') return FALLBACK_COLORS
+  const styles = getComputedStyle(document.documentElement)
+  return COLOR_VARS.map(
+    (name, i) => styles.getPropertyValue(name).trim() || FALLBACK_COLORS[i]
+  )
+}
+
+function themeVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
 
 export const StockCompareView = memo(function StockCompareView({
   symbols,
@@ -25,8 +49,15 @@ export const StockCompareView = memo(function StockCompareView({
   onClose,
   className,
 }: StockCompareViewProps) {
+  const { resolvedTheme } = useTheme()
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
+  const [colors, setColors] = useState<string[]>(FALLBACK_COLORS)
+
+  // Resolve palette from the active theme once mounted
+  useEffect(() => {
+    setColors(themeColors())
+  }, [resolvedTheme])
 
   useEffect(() => {
     if (!chartContainerRef.current) return
@@ -34,11 +65,11 @@ export const StockCompareView = memo(function StockCompareView({
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#9aa0a6',
+        textColor: themeVar('--muted-foreground', '#8B95A5'),
       },
       grid: {
-        vertLines: { color: '#3c4043' },
-        horzLines: { color: '#3c4043' },
+        vertLines: { color: themeVar('--border', 'rgba(139, 149, 165, 0.15)') },
+        horzLines: { color: themeVar('--border', 'rgba(139, 149, 165, 0.15)') },
       },
       width: chartContainerRef.current.clientWidth,
       height: 400,
@@ -53,7 +84,7 @@ export const StockCompareView = memo(function StockCompareView({
     // Add a line series for each stock
     data.forEach((stock, index) => {
       const series = chart.addSeries(LineSeries, {
-        color: COLORS[index % COLORS.length],
+        color: colors[index % colors.length],
         lineWidth: 2,
         title: stock.symbol,
       })
@@ -84,34 +115,58 @@ export const StockCompareView = memo(function StockCompareView({
       window.removeEventListener('resize', handleResize)
       chart.remove()
     }
-  }, [data])
+  }, [data, colors])
 
   return (
-    <div className={className}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <h3 className="text-lg font-semibold text-text-primary">
-            Stock Comparison
-          </h3>
-          <div className="flex items-center gap-3">
-            {symbols.map((symbol, index) => (
-              <div key={symbol} className="flex items-center gap-1">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                />
-                <span className="text-sm font-medium text-text-primary">
-                  {symbol}
-                </span>
-              </div>
-            ))}
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span>Stock Comparison</span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {symbols.map((symbol, index) => {
+              const series = data.find((d) => d.symbol === symbol)
+              const first = series?.data[0]?.value
+              const last =
+                series && series.data.length > 0
+                  ? series.data[series.data.length - 1].value
+                  : undefined
+              const pct =
+                first !== undefined && first !== 0 && last !== undefined
+                  ? ((last - first) / first) * 100
+                  : undefined
+              return (
+                <div key={symbol} className="flex items-center gap-1.5">
+                  <span
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: colors[index % colors.length] }}
+                  />
+                  <span className="font-mono text-sm font-medium text-foreground">
+                    {symbol}
+                  </span>
+                  {pct !== undefined && (
+                    <span
+                      className={cn(
+                        'font-mono text-xs font-medium tabular-nums',
+                        pct >= 0 ? 'text-success' : 'text-error'
+                      )}
+                    >
+                      {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
+                    </span>
+                  )}
+                </div>
+              )
+            })}
           </div>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      <div ref={chartContainerRef} className="w-full" />
-    </div>
+        </CardTitle>
+        <CardAction>
+          <Button variant="ghost" size="icon-sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <div ref={chartContainerRef} className="w-full" />
+      </CardContent>
+    </Card>
   )
 })

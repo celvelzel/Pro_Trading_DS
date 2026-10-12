@@ -14,6 +14,7 @@ import {
 } from '@/hooks/useStock'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { MetricCard } from '@/components/cards/MetricCard'
 import { SignalCard } from '@/components/cards/SignalCard'
 import { StatusCard } from '@/components/cards/StatusCard'
@@ -25,6 +26,7 @@ import { MultiTimeframeChart } from '@/components/charts/MultiTimeframeChart'
 import { ScoreRadarChart } from '@/components/charts/ScoreRadarChart'
 import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
+import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, BarChart3, Activity, Shield, Layers } from 'lucide-react'
 
 export default function AnalysisDetailPage() {
@@ -63,10 +65,11 @@ export default function AnalysisDetailPage() {
   // Loading state
   if (stockLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-48" />
-          <div className="h-4 bg-gray-200 rounded w-32" />
+      <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-32" />
         </div>
         <ChartSkeleton height={400} />
       </div>
@@ -76,10 +79,10 @@ export default function AnalysisDetailPage() {
   // Error state
   if (!stock) {
     return (
-      <div className="p-6">
-        <Card className="border-error">
+      <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
+        <Card className="border-error/50">
           <CardContent className="p-6 text-center">
-            <p className="text-error text-lg">Failed to load data for {symbol}</p>
+            <p className="text-lg text-error">Failed to load data for {symbol}</p>
           </CardContent>
         </Card>
       </div>
@@ -87,7 +90,7 @@ export default function AnalysisDetailPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
       {/* Breadcrumb */}
       <Breadcrumb
         items={[
@@ -98,42 +101,47 @@ export default function AnalysisDetailPage() {
       />
 
       {/* Price Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Link className="text-sm underline" href={{ pathname: "/copilot", query: { workflow: "market", symbol } }}>此标的 Market 合成只读演示</Link><h1 className="text-3xl font-bold text-text-primary">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Link
+              className="text-sm text-primary underline underline-offset-4"
+              href={{ pathname: "/copilot", query: { workflow: "market", symbol } }}
+            >
+              此标的 Market 合成只读演示
+            </Link>
+            <h1 className="font-mono text-2xl font-bold tracking-tight text-foreground">
               {symbol}
             </h1>
             <HelpTooltip helpKey="analysis.title" />
           </div>
-          <p className="text-text-secondary">{stock.name}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{stock.name}</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-3xl font-bold text-text-primary">
-              ${stock.price.toFixed(2)}
-            </p>
-            <div
-              className={`flex items-center gap-1 ${
-                (stock.change ?? 0) >= 0 ? 'text-success' : 'text-error'
-              }`}
-            >
-              {(stock.change ?? 0) >= 0 ? (
-                <TrendingUp className="w-4 h-4" />
-              ) : (
-                <TrendingDown className="w-4 h-4" />
-              )}
-              <span className="font-medium">
-                {(stock.change ?? 0) >= 0 ? '+' : ''}
-                {(stock.change ?? 0).toFixed(2)} ({(stock.changePercent ?? 0).toFixed(2)}%)
-              </span>
-            </div>
+        <div className="shrink-0 md:text-right">
+          <p className="font-mono text-3xl font-bold tabular-nums text-foreground">
+            ${stock.price.toFixed(2)}
+          </p>
+          <div
+            className={cn(
+              'mt-1 flex items-center gap-1 font-mono text-sm font-medium tabular-nums md:justify-end',
+              (stock.change ?? 0) >= 0 ? 'text-success' : 'text-error'
+            )}
+          >
+            {(stock.change ?? 0) >= 0 ? (
+              <TrendingUp className="size-4" />
+            ) : (
+              <TrendingDown className="size-4" />
+            )}
+            <span>
+              {(stock.change ?? 0) >= 0 ? '+' : ''}
+              {(stock.change ?? 0).toFixed(2)} ({(stock.changePercent ?? 0).toFixed(2)}%)
+            </span>
           </div>
         </div>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           label="Volume"
           value={`${(stock.volume / 1000000).toFixed(1)}M`}
@@ -178,27 +186,27 @@ export default function AnalysisDetailPage() {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview" className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
+            <BarChart3 className="size-4" />
             <span className="hidden md:inline">Overview</span>
           </TabsTrigger>
           <TabsTrigger value="technical" className="flex items-center gap-2">
-            <Activity className="w-4 h-4" />
+            <Activity className="size-4" />
             <span className="hidden md:inline">Technical</span>
           </TabsTrigger>
           <TabsTrigger value="options" className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
+            <TrendingUp className="size-4" />
             <span className="hidden md:inline">Options</span>
           </TabsTrigger>
           <TabsTrigger value="signals" className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
+            <TrendingUp className="size-4" />
             <span className="hidden md:inline">Signals</span>
           </TabsTrigger>
           <TabsTrigger value="risk" className="flex items-center gap-2">
-            <Shield className="w-4 h-4" />
+            <Shield className="size-4" />
             <span className="hidden md:inline">Risk</span>
           </TabsTrigger>
           <TabsTrigger value="multi-tf" className="flex items-center gap-2">
-            <Layers className="w-4 h-4" />
+            <Layers className="size-4" />
             <span className="hidden md:inline">Multi-TF</span>
           </TabsTrigger>
         </TabsList>
@@ -206,8 +214,8 @@ export default function AnalysisDetailPage() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <CardHeader className="pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <CardTitle>Price Chart</CardTitle>
                   <HelpTooltip helpKey="analysis.charts" />
@@ -218,7 +226,7 @@ export default function AnalysisDetailPage() {
                 />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 sm:px-4">
               {candles && candles.length > 0 ? (
                 <AnnotatedCandlestickChart
                   data={candles}
@@ -228,7 +236,7 @@ export default function AnalysisDetailPage() {
                   activeIndicators={activeIndicators}
                 />
               ) : (
-                <div className="h-[400px] flex items-center justify-center text-text-secondary">
+                <div className="flex h-[400px] items-center justify-center text-sm text-muted-foreground">
                   No chart data available
                 </div>
               )}
@@ -236,7 +244,7 @@ export default function AnalysisDetailPage() {
           </Card>
 
           {/* Signal Summary & Score Decomposition */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <div className="lg:col-span-2">
               {signals && (
                 <SignalCard
@@ -249,18 +257,16 @@ export default function AnalysisDetailPage() {
                 />
               )}
             </div>
-            <div>
-              <ScoreRadarChart 
-                loading={signalsLoading}
-                className="h-full"
-              />
-            </div>
+            <ScoreRadarChart
+              loading={signalsLoading}
+              className="h-full"
+            />
           </div>
         </TabsContent>
 
         {/* Technical Tab */}
         <TabsContent value="technical" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               label="RSI (14)"
               value={indicators ? indicators.rsi.toFixed(2) : '...'}
@@ -347,11 +353,11 @@ export default function AnalysisDetailPage() {
         {/* Options Tab */}
         <TabsContent value="options" className="space-y-4">
           {options?.estimated && (
-            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-600 dark:text-yellow-400">
+            <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
               ⚠️ 估算值 · 基于价格走势 · 非真实期权链
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <MetricCard
               label="Max Pain"
               value={options ? `$${options.maxPain.toFixed(2)}` : '...'}
@@ -378,9 +384,9 @@ export default function AnalysisDetailPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle className="text-success">Support Levels</CardTitle>
               </CardHeader>
               <CardContent>
@@ -389,23 +395,25 @@ export default function AnalysisDetailPage() {
                     {options.support.map((level, index) => (
                       <div
                         key={index}
-                        className="flex justify-between items-center p-2 bg-success/5 rounded"
+                        className="flex items-center justify-between rounded-md bg-success/5 p-2"
                       >
-                        <span className="text-text-secondary">Level {index + 1}</span>
-                        <span className="font-medium text-success">
+                        <span className="text-sm text-muted-foreground">
+                          Level {index + 1}
+                        </span>
+                        <span className="font-mono font-medium tabular-nums text-success">
                           ${level.toFixed(2)}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-text-secondary">No support levels available</p>
+                  <p className="text-sm text-muted-foreground">No support levels available</p>
                 )}
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle className="text-error">Resistance Levels</CardTitle>
               </CardHeader>
               <CardContent>
@@ -414,17 +422,19 @@ export default function AnalysisDetailPage() {
                     {options.resistance.map((level, index) => (
                       <div
                         key={index}
-                        className="flex justify-between items-center p-2 bg-error/5 rounded"
+                        className="flex items-center justify-between rounded-md bg-error/5 p-2"
                       >
-                        <span className="text-text-secondary">Level {index + 1}</span>
-                        <span className="font-medium text-error">
+                        <span className="text-sm text-muted-foreground">
+                          Level {index + 1}
+                        </span>
+                        <span className="font-mono font-medium tabular-nums text-error">
                           ${level.toFixed(2)}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-text-secondary">No resistance levels available</p>
+                  <p className="text-sm text-muted-foreground">No resistance levels available</p>
                 )}
               </CardContent>
             </Card>
@@ -443,14 +453,14 @@ export default function AnalysisDetailPage() {
             />
           ) : (
             <Card>
-              <CardContent className="p-6 text-center text-text-secondary">
+              <CardContent className="p-6 text-center text-muted-foreground">
                 Loading signals...
               </CardContent>
             </Card>
           )}
 
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <CardTitle>Signal History</CardTitle>
                 <HelpTooltip helpKey="analysis.signalHistory" />
@@ -460,7 +470,7 @@ export default function AnalysisDetailPage() {
               {signalHistory && signalHistory.length > 0 ? (
                 <SignalHistoryChart data={signalHistory} height={350} />
               ) : (
-                <div className="h-[350px] flex items-center justify-center text-text-secondary text-sm">
+                <div className="flex h-[350px] items-center justify-center text-sm text-muted-foreground">
                   No signal history available
                 </div>
               )}
@@ -484,14 +494,14 @@ export default function AnalysisDetailPage() {
             />
           ) : (
             <Card>
-              <CardContent className="p-6 text-center text-text-secondary">
+              <CardContent className="p-6 text-center text-muted-foreground">
                 Loading risk assessment...
               </CardContent>
             </Card>
           )}
 
           {risk && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <MetricCard
                 label="ON Percentage"
                 value={`${risk.onPercent.toFixed(1)}%`}
@@ -509,7 +519,7 @@ export default function AnalysisDetailPage() {
         {/* Multi-Timeframe Tab */}
         <TabsContent value="multi-tf" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <CardTitle>Multi-Timeframe Analysis</CardTitle>
                 <HelpTooltip helpKey="analysis.multiTimeframe" />

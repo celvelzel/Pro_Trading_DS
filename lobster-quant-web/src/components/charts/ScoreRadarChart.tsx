@@ -10,7 +10,6 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts'
-import { useTheme } from 'next-themes'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface ScoreRadarChartProps {
@@ -33,7 +32,7 @@ const DEFAULT_SCORES = {
 
 /**
  * ScoreRadarChart - Renders a radar chart for score decomposition.
- * 
+ *
  * Visualizes Trend, Momentum, Volume, and Pattern scores.
  * Values are on a scale of 0-100.
  */
@@ -42,8 +41,6 @@ export const ScoreRadarChart = memo(function ScoreRadarChart({
   loading = false,
   className,
 }: ScoreRadarChartProps) {
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
 
   const data = useMemo(() => [
     { subject: 'Trend', value: scores.trend },
@@ -54,13 +51,13 @@ export const ScoreRadarChart = memo(function ScoreRadarChart({
 
   // Theme-aware colors
   const colors = useMemo(() => ({
-    stroke: isDark ? '#8ab4f8' : '#1A73E8',
-    fill: isDark ? '#8ab4f8' : '#1A73E8',
-    grid: isDark ? '#333333' : '#E5E7EB',
-    text: isDark ? '#9AA0A6' : '#5F6368',
-    tooltipBg: isDark ? '#2D2E31' : '#FFFFFF',
-    tooltipBorder: isDark ? '#3C4043' : '#E5E7EB',
-  }), [isDark])
+    stroke: 'var(--primary)',
+    fill: 'var(--primary)',
+    grid: 'var(--border)',
+    text: 'var(--muted-foreground)',
+    tooltipBg: 'var(--popover)',
+    tooltipBorder: 'var(--border)',
+  }), [])
 
   if (loading) {
     return (
@@ -99,13 +96,13 @@ export const ScoreRadarChart = memo(function ScoreRadarChart({
               dataKey="value"
               stroke={colors.stroke}
               fill={colors.fill}
-              fillOpacity={0.5}
+              fillOpacity={0.18}
             />
             <Tooltip
               contentStyle={{
                 backgroundColor: colors.tooltipBg,
                 borderColor: colors.tooltipBorder,
-                color: isDark ? '#E8EAED' : '#202124',
+                color: 'var(--popover-foreground)',
                 borderRadius: '8px',
                 fontSize: '12px',
               }}

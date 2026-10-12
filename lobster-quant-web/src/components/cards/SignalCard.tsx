@@ -1,5 +1,7 @@
 import { memo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import type { SignalType } from '@/lib/types'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
@@ -20,7 +22,8 @@ const signalConfig = {
     bgColor: 'bg-success/10',
     borderColor: 'border-l-success',
     textColor: 'text-success',
-    badgeColor: 'bg-success/20 text-success',
+    barColor: 'bg-success',
+    badgeVariant: 'success',
   },
   bearish: {
     icon: TrendingDown,
@@ -28,7 +31,8 @@ const signalConfig = {
     bgColor: 'bg-error/10',
     borderColor: 'border-l-error',
     textColor: 'text-error',
-    badgeColor: 'bg-error/20 text-error',
+    barColor: 'bg-error',
+    badgeVariant: 'destructive',
   },
   neutral: {
     icon: Minus,
@@ -36,9 +40,10 @@ const signalConfig = {
     bgColor: 'bg-warning/10',
     borderColor: 'border-l-warning',
     textColor: 'text-warning',
-    badgeColor: 'bg-warning/20 text-warning',
+    barColor: 'bg-warning',
+    badgeVariant: 'warning',
   },
-}
+} as const
 
 export const SignalCard = memo(function SignalCard({
   signalType,
@@ -50,22 +55,29 @@ export const SignalCard = memo(function SignalCard({
 }: SignalCardProps) {
   if (loading) {
     return (
-      <Card className={cn('animate-pulse', className)}>
+      <Card className={className}>
         <CardContent className="p-4">
-          <div className="h-6 bg-gray-200 rounded w-32 mb-4" />
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-7 rounded-full" />
+              <Skeleton className="h-5 w-28" />
+            </div>
+            <Skeleton className="h-5 w-14 rounded-md" />
+          </div>
+          <div className="mb-4 grid grid-cols-2 gap-4">
             <div>
-              <div className="h-3 bg-gray-200 rounded w-12 mb-1" />
-              <div className="h-8 bg-gray-200 rounded w-16" />
+              <Skeleton className="mb-1 h-3 w-12" />
+              <Skeleton className="mb-2 h-8 w-16" />
+              <Skeleton className="h-1.5 w-full rounded-full" />
             </div>
             <div>
-              <div className="h-3 bg-gray-200 rounded w-16 mb-1" />
-              <div className="h-8 bg-gray-200 rounded w-16" />
+              <Skeleton className="mb-1 h-3 w-16" />
+              <Skeleton className="h-8 w-16" />
             </div>
           </div>
           <div className="space-y-2">
-            <div className="h-3 bg-gray-200 rounded w-full" />
-            <div className="h-3 bg-gray-200 rounded w-3/4" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
           </div>
         </CardContent>
       </Card>
@@ -78,54 +90,59 @@ export const SignalCard = memo(function SignalCard({
   return (
     <Card className={cn('border-l-4', config.borderColor, className)}>
       <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className={cn('p-1.5 rounded-full', config.bgColor)}>
-              <Icon className={cn('w-4 h-4', config.textColor)} />
+            <div className={cn('rounded-full p-1.5', config.bgColor)}>
+              <Icon className={cn('size-4', config.textColor)} />
             </div>
-            <h3 className={cn('font-semibold', config.textColor)}>
+            <h3 className={cn('text-sm font-semibold', config.textColor)}>
               {config.label}
             </h3>
           </div>
-          <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', config.badgeColor)}>
+          <Badge variant={config.badgeVariant} className="font-mono tabular-nums">
             {score}/100
-          </span>
+          </Badge>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="mb-4 grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-text-secondary mb-1">Score</p>
+            <p className="mb-1 text-xs text-muted-foreground">Score</p>
             <div className="flex items-end gap-1">
-              <p className="text-2xl font-bold text-text-primary">{score}</p>
-              <p className="text-sm text-text-tertiary mb-0.5">/100</p>
+              <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
+                {score}
+              </p>
+              <p className="mb-0.5 text-sm text-muted-foreground">/100</p>
             </div>
             {/* Score progress bar */}
-            <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
               <div
                 className={cn(
                   'h-full rounded-full transition-all',
-                  signalType === 'bullish' && 'bg-success',
-                  signalType === 'bearish' && 'bg-error',
-                  signalType === 'neutral' && 'bg-warning'
+                  config.barColor
                 )}
                 style={{ width: `${score}%` }}
               />
             </div>
           </div>
           <div>
-            <p className="text-xs text-text-secondary mb-1">Probability</p>
+            <p className="mb-1 text-xs text-muted-foreground">Probability</p>
             <div className="flex items-end gap-1">
-              <p className="text-2xl font-bold text-text-primary">{probability}</p>
-              <p className="text-sm text-text-tertiary mb-0.5">%</p>
+              <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
+                {probability}
+              </p>
+              <p className="mb-0.5 text-sm text-muted-foreground">%</p>
             </div>
           </div>
         </div>
 
         {reasons.length > 0 && (
-          <div className="space-y-1.5 pt-2 border-t">
+          <div className="space-y-1.5 border-t border-border pt-2">
             {reasons.map((reason, index) => (
-              <p key={index} className="text-sm text-text-secondary flex items-start gap-1.5">
-                <span className="text-text-tertiary mt-0.5">•</span>
+              <p
+                key={index}
+                className="flex items-start gap-1.5 text-sm text-muted-foreground"
+              >
+                <span className="mt-0.5 text-muted-foreground/60">•</span>
                 {reason}
               </p>
             ))}

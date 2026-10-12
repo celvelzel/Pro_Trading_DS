@@ -5,13 +5,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { SettingsProvider, useSettingsContext } from './settings-context'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { HelpTooltip } from '@/components/ui/help-tooltip'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import {
-  Settings,
   Save,
-  RotateCcw,
   Database,
+  RotateCcw,
   BarChart3,
   FlaskConical,
   ShieldAlert,
@@ -57,22 +57,13 @@ function SettingsLayoutInner({ children }: { children: ReactNode }) {
   } = useSettingsContext()
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-text-primary flex items-center gap-2">
-            <Settings className="w-8 h-8" />
-            Settings
-            <HelpTooltip helpKey="settings.title" />
-          </h1>
-          <p className="text-text-secondary mt-1">
-            Configure your trading analysis preferences
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+      <PageHeader title="Settings" description="Configure your trading analysis preferences" actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <HelpTooltip helpKey="settings.title" />
           {isLoadingSettings && (
-            <span className="text-sm text-text-secondary flex items-center gap-1">
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
               <Loader2 className="w-4 h-4 animate-spin" />
               Loading...
             </span>
@@ -122,13 +113,13 @@ function SettingsLayoutInner({ children }: { children: ReactNode }) {
             )}
           </Button>
         </div>
-      </div>
+      } />
 
       {/* Content with sidebar */}
-      <div className="flex gap-6">
+      <div className="flex min-w-0 flex-col gap-6 lg:flex-row">
         {/* Sidebar Navigation */}
-        <nav className="w-56 shrink-0">
-          <ul className="space-y-1">
+        <nav aria-label="Settings sections" className="min-w-0 lg:w-48 lg:shrink-0">
+          <ul className="flex flex-wrap gap-1 lg:flex-col">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               const Icon = item.icon
@@ -136,10 +127,10 @@ function SettingsLayoutInner({ children }: { children: ReactNode }) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex min-h-10 items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive
                         ? 'bg-accent text-accent-foreground'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-accent/50'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                     }`}
                   >
                     <Icon className="w-4 h-4" />

@@ -12,18 +12,18 @@ interface StrategySelectorProps {
 
 export function StrategySelector({ value, onChange, excludePresets = false }: StrategySelectorProps) {
   const { strategies, loading, fetchStrategies } = useStrategyStore();
-  
+
   useEffect(() => {
     fetchStrategies();
   }, [fetchStrategies]);
-  
-  const filteredStrategies = excludePresets 
+
+  const filteredStrategies = excludePresets
     ? strategies.filter(s => !s.isPreset)
     : strategies;
 
   return (
     <Select value={value} onValueChange={(value) => value && onChange(value)} disabled={loading}>
-      <SelectTrigger>
+      <SelectTrigger className="w-full">
         <SelectValue placeholder={loading ? 'Loading...' : 'Select strategy'} />
       </SelectTrigger>
       <SelectContent>

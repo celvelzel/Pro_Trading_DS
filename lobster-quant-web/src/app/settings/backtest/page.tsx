@@ -20,12 +20,12 @@ export default function BacktestPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Backtest Parameters</CardTitle>
+        <CardTitle className="text-sm font-semibold">Backtest Parameters</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               Holding Days: {holdingDays}
             </label>
             <Slider
@@ -36,13 +36,13 @@ export default function BacktestPage() {
               step={1}
               className="mt-2"
             />
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Days to hold a position (5–100)
             </p>
             <FieldError message={errors.holdingDays} />
           </div>
           <div>
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               Min Score: {minScore}
             </label>
             <Slider
@@ -53,13 +53,13 @@ export default function BacktestPage() {
               step={5}
               className="mt-2"
             />
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Minimum score to enter a trade (0–100)
             </p>
             <FieldError message={errors.minScore} />
           </div>
           <div>
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               Lookback Days: {lookbackDays}
             </label>
             <Slider
@@ -70,13 +70,13 @@ export default function BacktestPage() {
               step={50}
               className="mt-2"
             />
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Historical lookback window (100–2000)
             </p>
             <FieldError message={errors.lookbackDays} />
           </div>
           <div>
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               Slippage (%): {(slippagePct * 100).toFixed(2)}%
             </label>
             <Slider
@@ -87,13 +87,13 @@ export default function BacktestPage() {
               step={0.0005}
               className="mt-2"
             />
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Slippage per trade (0–1%)
             </p>
             <FieldError message={errors.slippagePct} />
           </div>
           <div>
-            <label className="text-sm font-medium text-text-secondary mb-2 block">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               Commission (%): {(commissionPct * 100).toFixed(2)}%
             </label>
             <Slider
@@ -104,7 +104,7 @@ export default function BacktestPage() {
               step={0.0005}
               className="mt-2"
             />
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Commission per trade (0–1%)
             </p>
             <FieldError message={errors.commissionPct} />

@@ -41,3 +41,16 @@ export interface FinancialCreation {
   market_run_id?: string | null; portfolio_run_id?: string | null
   runs: { run_id: string; mas_kind: FinancialRun['mas_kind']; status: FinancialStatus; version: number }[]
 }
+export type FinancialValidationOutcome = 'verified' | 'partial' | 'insufficient_evidence' | 'feasible' | 'infeasible' | 'insufficient_data' | 'pending'
+export interface FinancialRunSummaryItem {
+  schema_version: 1; run_id: string; mas_kind: FinancialRun['mas_kind']; status: FinancialStatus; version: number
+  conversation_id: string; correlation_id: string; error_code: string | null
+  validation_outcome: FinancialValidationOutcome
+  as_of: string | null; created_at: string | null; updated_at: string | null
+}
+export interface FinancialRunHistory { schema_version: 1; runs: FinancialRunSummaryItem[] }
+export interface FinancialRunFilters {
+  conversationId?: string
+  masKind?: FinancialRun['mas_kind']
+  status?: FinancialStatus
+}

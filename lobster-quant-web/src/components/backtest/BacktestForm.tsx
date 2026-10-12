@@ -34,7 +34,7 @@ export function BacktestForm({ onRun, loading }: BacktestFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const params: BacktestParams = {
       mode,
       strategyId,
@@ -68,7 +68,7 @@ export function BacktestForm({ onRun, loading }: BacktestFormProps) {
               <TabsTrigger value="single">Single Stock</TabsTrigger>
               <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="single" className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="symbol">Stock Symbol</Label>
@@ -81,7 +81,7 @@ export function BacktestForm({ onRun, loading }: BacktestFormProps) {
                 />
               </div>
             </TabsContent>
-            
+
             <TabsContent value="portfolio" className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="symbols">Stock Symbols (comma-separated)</Label>
@@ -98,7 +98,7 @@ export function BacktestForm({ onRun, loading }: BacktestFormProps) {
 
           <Accordion className="w-full">
             <AccordionItem value="advanced" className="border-none">
-              <AccordionTrigger className="py-2 hover:no-underline text-sm font-medium text-text-secondary">
+              <AccordionTrigger className="py-2 hover:no-underline text-sm font-medium text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Settings2 className="h-4 w-4" />
                   Advanced Parameters

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PrefetchLink } from '@/components/ui/prefetch-link'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Search, BarChart3 } from 'lucide-react'
 
 const QUICK_ACCESS_STOCKS = [
@@ -29,33 +30,31 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-text-primary">Stock Analysis</h1>
-        <p className="text-text-secondary mt-1">
-          Deep analysis with technical indicators, options data, and trading signals
-        </p>
-      </div>
+      <PageHeader
+        title="Stock Analysis"
+        description="Deep analysis with technical indicators, options data, and trading signals"
+      />
 
       {/* Search Form */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-2">
           <CardTitle>Analyze a Stock</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleAnalyze} className="flex gap-4">
+          <form onSubmit={handleAnalyze} className="flex flex-col gap-3 sm:flex-row">
             <div className="flex-1">
               <Input
                 type="text"
                 placeholder="Enter stock symbol (e.g., AAPL, MSFT, TSLA)"
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value)}
-                className="text-lg"
+                className="h-9 font-mono uppercase"
               />
             </div>
-            <Button type="submit" size="lg">
-              <Search className="w-5 h-5 mr-2" />
+            <Button type="submit" className="h-9">
+              <Search className="mr-2 size-4" />
               Analyze
             </Button>
           </form>
@@ -63,7 +62,7 @@ export default function AnalysisPage() {
       </Card>
 
       {/* Quick Access - uses PrefetchLink for instant navigation */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {QUICK_ACCESS_STOCKS.map((stock) => (
           <PrefetchLink
             key={stock.symbol}
@@ -71,15 +70,15 @@ export default function AnalysisPage() {
             href={`/analysis/${stock.symbol}`}
             className="block"
           >
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <Card className="h-full cursor-pointer transition-colors hover:border-primary/40">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="w-5 h-5 text-primary" />
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <BarChart3 className="size-5 text-primary" />
                   </div>
-                  <div>
-                    <p className="font-medium text-text-primary">{stock.symbol}</p>
-                    <p className="text-sm text-text-secondary">{stock.name}</p>
+                  <div className="min-w-0">
+                    <p className="font-mono font-medium text-foreground">{stock.symbol}</p>
+                    <p className="truncate text-sm text-muted-foreground">{stock.name}</p>
                   </div>
                 </div>
               </CardContent>

@@ -4,6 +4,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/constants'
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface DataSourceInfo {
   status: 'healthy' | 'degraded' | 'error' | 'unknown'
@@ -23,13 +29,26 @@ interface HealthResponse {
 function getStatusColor(status: string): string {
   switch (status) {
     case 'healthy':
-      return 'bg-green-500'
+      return 'bg-success'
     case 'degraded':
-      return 'bg-yellow-500'
+      return 'bg-warning'
     case 'error':
-      return 'bg-red-500'
+      return 'bg-error'
     default:
-      return 'bg-gray-400'
+      return 'bg-neutral'
+  }
+}
+
+function getStatusLabel(status: string): string {
+  switch (status) {
+    case 'healthy':
+      return 'Live'
+    case 'degraded':
+      return 'Degraded'
+    case 'error':
+      return 'Error'
+    default:
+      return 'Unknown'
   }
 }
 
@@ -64,9 +83,12 @@ export function DataSourceStatus() {
 
   if (isLoading || !data) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-tertiary">
-        <span className="w-2 h-2 rounded-full bg-gray-300 animate-pulse" />
-        <span>Loading status...</span>
+      <div
+        className="flex h-7 items-center gap-1.5 rounded-full border border-border px-2.5 text-xs text-muted-foreground"
+        role="status"
+      >
+        <span className="size-1.5 animate-pulse rounded-full bg-neutral" />
+        <span className="hidden sm:inline">Connecting…</span>
       </div>
     )
   }
@@ -75,34 +97,53 @@ export function DataSourceStatus() {
   // Use the most recently successful source's timestamp
   const latestSuccess = [sources.yfinance, sources.akshare]
     .filter((s) => s.last_success_ago_seconds !== null)
-    .sort((a, b) => (a.last_success_ago_seconds ?? Infinity) - (b.last_success_ago_seconds ?? Infinity))[0]
+    .sort(
+      (a, b) =>
+        (a.last_success_ago_seconds ?? Infinity) -
+        (b.last_success_ago_seconds ?? Infinity)
+    )[0]
 
   return (
-    <div className="px-3 py-2 space-y-2">
-      {/* Status indicator row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${getStatusColor(overall)}`} />
-          <span className="text-xs text-text-secondary">
-            Data: {overall === 'healthy' ? 'OK' : overall === 'degraded' ? 'Degraded' : overall === 'error' ? 'Error' : 'Unknown'}
-          </span>
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="p-1 rounded hover:bg-bg-hover transition-colors disabled:opacity-50"
-          title="Refresh all data"
-        >
-          <RefreshCw
-            className={`w-3.5 h-3.5 text-text-tertiary ${isRefreshing ? 'animate-spin' : ''}`}
-          />
-        </button>
-      </div>
+    <div className="flex items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <div
+              className="flex h-7 cursor-default items-center gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs text-muted-foreground"
+              role="status"
+              aria-label={`Data source status: ${getStatusLabel(overall)}`}
+            >
+              <span
+                className={cn('size-1.5 rounded-full', getStatusColor(overall))}
+              />
+              <span className="hidden sm:inline">{getStatusLabel(overall)}</span>
+            </div>
+          }
+        />
+        <TooltipContent side="bottom" className="space-y-1 text-xs">
+          <p>
+            Last update: {formatTimeAgo(latestSuccess?.last_success_ago_seconds ?? null)}
+          </p>
+          <p>
+            yfinance: {sources.yfinance.status} · updated{' '}
+            {formatTimeAgo(sources.yfinance.last_success_ago_seconds)}
+          </p>
+          <p>
+            akshare: {sources.akshare.status} · updated{' '}
+            {formatTimeAgo(sources.akshare.last_success_ago_seconds)}
+          </p>
+        </TooltipContent>
+      </Tooltip>
 
-      {/* Last updated text */}
-      <div className="text-[11px] text-text-tertiary">
-        Updated: {formatTimeAgo(latestSuccess?.last_success_ago_seconds ?? null)}
-      </div>
+      <button
+        onClick={handleRefresh}
+        disabled={isRefreshing}
+        className="flex size-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+        title="Refresh all data"
+        aria-label="Refresh all data"
+      >
+        <RefreshCw className={cn('size-3.5', isRefreshing && 'animate-spin')} />
+      </button>
     </div>
   )
 }

@@ -23,57 +23,60 @@ interface TradeListProps {
   trades: Trade[];
 }
 
+const headerCellClass = 'py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground';
+const numCellClass = 'py-2.5 text-right font-mono tabular-nums';
+
 export function TradeList({ trades }: TradeListProps) {
   const openTrades = trades.filter(t => t.status === 'open');
   const closedTrades = trades.filter(t => t.status === 'closed');
 
   const renderTradeCard = (trade: Trade) => (
-    <Card key={trade.id} className="md:hidden mb-4">
-      <CardContent className="p-4 space-y-3">
+    <Card key={trade.id} className="mb-4 md:hidden">
+      <CardContent className="space-y-3 p-4">
         <div className="flex justify-between items-center">
-          <span className="font-bold text-lg text-text-primary">{trade.symbol}</span>
+          <span className="font-mono text-lg font-semibold text-foreground">{trade.symbol}</span>
           <Badge variant={trade.status === 'open' ? 'default' : 'secondary'}>
             {trade.status.toUpperCase()}
           </Badge>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
-            <p className="text-text-tertiary">Entry Date</p>
-            <p className="font-medium">{trade.entryDate}</p>
+            <p className="text-xs text-muted-foreground">Entry Date</p>
+            <p className="font-mono font-medium tabular-nums">{trade.entryDate}</p>
           </div>
           <div className="text-right">
-            <p className="text-text-tertiary">Entry Price</p>
-            <p className="font-medium">${trade.entryPrice.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Entry Price</p>
+            <p className="font-mono font-medium tabular-nums">${trade.entryPrice.toFixed(2)}</p>
           </div>
           <div>
-            <p className="text-text-tertiary">Shares</p>
-            <p className="font-medium">{trade.shares}</p>
+            <p className="text-xs text-muted-foreground">Shares</p>
+            <p className="font-mono font-medium tabular-nums">{trade.shares}</p>
           </div>
           {trade.status === 'closed' && (
             <div className="text-right">
-              <p className="text-text-tertiary">Exit Price</p>
-              <p className="font-medium">${trade.exitPrice?.toFixed(2) || '-'}</p>
+              <p className="text-xs text-muted-foreground">Exit Price</p>
+              <p className="font-mono font-medium tabular-nums">${trade.exitPrice?.toFixed(2) || '-'}</p>
             </div>
           )}
         </div>
 
         {trade.status === 'closed' && (
-          <div className="pt-2 border-t flex justify-between items-center">
+          <div className="flex justify-between items-center border-t border-border pt-2">
             <div className="flex gap-4">
               <div>
-                <p className="text-xs text-text-tertiary">P&L</p>
+                <p className="text-xs text-muted-foreground">P&L</p>
                 <p className={cn(
-                  "font-bold",
+                  "font-mono font-bold tabular-nums",
                   (trade.pnl || 0) >= 0 ? "text-success" : "text-error"
                 )}>
                   ${trade.pnl?.toFixed(2) || '-'}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-text-tertiary">Return</p>
+                <p className="text-xs text-muted-foreground">Return</p>
                 <p className={cn(
-                  "font-bold",
+                  "font-mono font-bold tabular-nums",
                   (trade.pnlPercent || 0) >= 0 ? "text-success" : "text-error"
                 )}>
                   {trade.pnlPercent?.toFixed(2) || '-'}%
@@ -81,8 +84,8 @@ export function TradeList({ trades }: TradeListProps) {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs text-text-tertiary">Exit Date</p>
-              <p className="text-sm font-medium">{trade.exitDate || '-'}</p>
+              <p className="text-xs text-muted-foreground">Exit Date</p>
+              <p className="font-mono text-sm font-medium tabular-nums">{trade.exitDate || '-'}</p>
             </div>
           </div>
         )}
@@ -91,23 +94,23 @@ export function TradeList({ trades }: TradeListProps) {
   );
 
   const renderTradeRow = (trade: Trade) => (
-    <tr key={trade.id} className="border-b">
-      <td className="py-2 font-medium">{trade.symbol}</td>
-      <td className="py-2">{trade.entryDate}</td>
-      <td className="text-right py-2">${trade.entryPrice.toFixed(2)}</td>
-      <td className="text-right py-2">{trade.shares}</td>
+    <tr key={trade.id} className="border-b border-border transition-colors hover:bg-muted/50">
+      <td className="py-2.5 font-mono font-medium">{trade.symbol}</td>
+      <td className="py-2.5 font-mono text-muted-foreground tabular-nums">{trade.entryDate}</td>
+      <td className={numCellClass}>${trade.entryPrice.toFixed(2)}</td>
+      <td className={numCellClass}>{trade.shares}</td>
       {trade.status === 'closed' && (
         <>
-          <td className="py-2">{trade.exitDate || '-'}</td>
-          <td className="text-right py-2">${trade.exitPrice?.toFixed(2) || '-'}</td>
-          <td className={`text-right py-2 font-medium ${
-            (trade.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-          }`}>
+          <td className="py-2.5 font-mono text-muted-foreground tabular-nums">{trade.exitDate || '-'}</td>
+          <td className={numCellClass}>${trade.exitPrice?.toFixed(2) || '-'}</td>
+          <td className={cn(numCellClass, 'font-medium',
+            (trade.pnl || 0) >= 0 ? 'text-success' : 'text-error'
+          )}>
             ${trade.pnl?.toFixed(2) || '-'}
           </td>
-          <td className={`text-right py-2 font-medium ${
-            (trade.pnlPercent || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-          }`}>
+          <td className={cn(numCellClass, 'font-medium',
+            (trade.pnlPercent || 0) >= 0 ? 'text-success' : 'text-error'
+          )}>
             {trade.pnlPercent?.toFixed(2) || '-'}%
           </td>
         </>
@@ -133,7 +136,7 @@ export function TradeList({ trades }: TradeListProps) {
               Closed ({closedTrades.length})
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="open">
             {openTrades.length === 0 ? (
               <p className="text-muted-foreground py-4">No open trades</p>
@@ -145,11 +148,11 @@ export function TradeList({ trades }: TradeListProps) {
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2">Symbol</th>
-                        <th className="text-left py-2">Entry Date</th>
-                        <th className="text-right py-2">Entry Price</th>
-                        <th className="text-right py-2">Shares</th>
+                      <tr className="border-b border-border">
+                        <th className={`text-left ${headerCellClass}`}>Symbol</th>
+                        <th className={`text-left ${headerCellClass}`}>Entry Date</th>
+                        <th className={`text-right ${headerCellClass}`}>Entry Price</th>
+                        <th className={`text-right ${headerCellClass}`}>Shares</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -160,7 +163,7 @@ export function TradeList({ trades }: TradeListProps) {
               </>
             )}
           </TabsContent>
-          
+
           <TabsContent value="closed">
             {closedTrades.length === 0 ? (
               <p className="text-muted-foreground py-4">No closed trades</p>
@@ -172,15 +175,15 @@ export function TradeList({ trades }: TradeListProps) {
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2">Symbol</th>
-                        <th className="text-left py-2">Entry Date</th>
-                        <th className="text-right py-2">Entry Price</th>
-                        <th className="text-right py-2">Shares</th>
-                        <th className="text-left py-2">Exit Date</th>
-                        <th className="text-right py-2">Exit Price</th>
-                        <th className="text-right py-2">P&L</th>
-                        <th className="text-right py-2">P&L %</th>
+                      <tr className="border-b border-border">
+                        <th className={`text-left ${headerCellClass}`}>Symbol</th>
+                        <th className={`text-left ${headerCellClass}`}>Entry Date</th>
+                        <th className={`text-right ${headerCellClass}`}>Entry Price</th>
+                        <th className={`text-right ${headerCellClass}`}>Shares</th>
+                        <th className={`text-left ${headerCellClass}`}>Exit Date</th>
+                        <th className={`text-right ${headerCellClass}`}>Exit Price</th>
+                        <th className={`text-right ${headerCellClass}`}>P&L</th>
+                        <th className={`text-right ${headerCellClass}`}>P&L %</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -189,33 +192,6 @@ export function TradeList({ trades }: TradeListProps) {
                   </table>
                 </div>
               </>
-            )}
-          </TabsContent>
-
-          
-          <TabsContent value="closed">
-            {closedTrades.length === 0 ? (
-              <p className="text-muted-foreground py-4">No closed trades</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2">Symbol</th>
-                      <th className="text-left py-2">Entry Date</th>
-                      <th className="text-right py-2">Entry Price</th>
-                      <th className="text-right py-2">Shares</th>
-                      <th className="text-left py-2">Exit Date</th>
-                      <th className="text-right py-2">Exit Price</th>
-                      <th className="text-right py-2">P&L</th>
-                      <th className="text-right py-2">Return</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {closedTrades.map(renderTradeRow)}
-                  </tbody>
-                </table>
-              </div>
             )}
           </TabsContent>
         </Tabs>

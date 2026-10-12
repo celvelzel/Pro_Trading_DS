@@ -8,14 +8,18 @@ import { ParameterSweep } from '@/components/backtest/ParameterSweep';
 import { WalkForward } from '@/components/backtest/WalkForward';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { HelpTooltip } from '@/components/ui/help-tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/error-state';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useRunBacktest, type BacktestHistoryEntry, type BacktestPageResult } from '@/hooks/useBacktest';
 import { showToastError } from '@/hooks/useApiQuery';
 import { History, GitCompare, SlidersHorizontal, Play, TrendingUp } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // localStorage Helpers for Backtest History
@@ -133,7 +137,7 @@ export default function BacktestPage() {
   const runBacktest = useRunBacktest();
   const [activeTab, setActiveTab] = useState('new');
   const [compareEntries, setCompareEntries] = useState<BacktestHistoryEntry[]>([]);
-  const [localHistory, setLocalHistory] = useState<BacktestHistoryEntry[]>(() => loadLocalHistory());
+  const [, setLocalHistory] = useState<BacktestHistoryEntry[]>(() => loadLocalHistory());
 
   const handleRunBacktest = async (params: BacktestParams) => {
     try {
@@ -165,19 +169,15 @@ export default function BacktestPage() {
   const error = runBacktest.error?.message ?? null;
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-8">
-        <div className="flex items-center gap-2">
-          <h1 className="text-3xl font-bold">Strategy Backtest</h1>
-          <HelpTooltip helpKey="backtest.title" />
-        </div>
-        <p className="text-muted-foreground mt-2">
-          Test your strategies against historical data
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
+      <PageHeader
+        title="Strategy Backtest"
+        description="Test your strategies against historical data"
+        actions={<HelpTooltip helpKey="backtest.title" />}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList variant="line" className="mb-6">
+        <TabsList variant="line" className="mb-4">
           <TabsTrigger value="new">
             <Play className="h-4 w-4 mr-1.5" />
             New Backtest
@@ -204,7 +204,7 @@ export default function BacktestPage() {
         {/* New Backtest Tab */}
         {/* ================================================================ */}
         <TabsContent value="new">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Left: Backtest Form */}
             <div className="lg:col-span-1">
               <BacktestForm onRun={handleRunBacktest} loading={loading} />
@@ -257,34 +257,35 @@ export default function BacktestPage() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="border-b">
-                                <th className="text-left py-2">Entry Date</th>
-                                <th className="text-left py-2">Exit Date</th>
-                                <th className="text-right py-2">Entry Price</th>
-                                <th className="text-right py-2">Exit Price</th>
-                                <th className="text-right py-2">Return</th>
-                                <th className="text-right py-2">Days</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {result.trades.map((trade, i) => (
-                                <tr key={i} className="border-b">
-                                  <td className="py-2">{trade.entryDate}</td>
-                                  <td className="py-2">{trade.exitDate || '-'}</td>
-                                  <td className="text-right py-2">${trade.entryPrice?.toFixed(2)}</td>
-                                  <td className="text-right py-2">${trade.exitPrice?.toFixed(2) || '-'}</td>
-                                  <td className={`text-right py-2 ${trade.returnPercent > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    {trade.returnPercent?.toFixed(2)}%
-                                  </td>
-                                  <td className="text-right py-2">{trade.holdingDays}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                              <TableHead className="text-xs font-medium text-muted-foreground">Entry Date</TableHead>
+                              <TableHead className="text-xs font-medium text-muted-foreground">Exit Date</TableHead>
+                              <TableHead className="text-right text-xs font-medium text-muted-foreground">Entry Price</TableHead>
+                              <TableHead className="text-right text-xs font-medium text-muted-foreground">Exit Price</TableHead>
+                              <TableHead className="text-right text-xs font-medium text-muted-foreground">Return</TableHead>
+                              <TableHead className="text-right text-xs font-medium text-muted-foreground">Days</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {result.trades.map((trade, i) => (
+                              <TableRow key={i}>
+                                <TableCell className="font-mono text-sm">{trade.entryDate}</TableCell>
+                                <TableCell className="font-mono text-sm">{trade.exitDate || '-'}</TableCell>
+                                <TableCell className="text-right font-mono text-sm">${trade.entryPrice?.toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-mono text-sm">${trade.exitPrice?.toFixed(2) || '-'}</TableCell>
+                                <TableCell className={cn(
+                                  'text-right font-mono text-sm font-medium',
+                                  trade.returnPercent > 0 ? 'text-success' : 'text-error'
+                                )}>
+                                  {trade.returnPercent?.toFixed(2)}%
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-sm">{trade.holdingDays}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </CardContent>
                     </Card>
                   )}
@@ -295,7 +296,7 @@ export default function BacktestPage() {
                         <CardTitle>Equity Curve</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                        <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
                           Chart placeholder - integrate with your charting library
                         </div>
                       </CardContent>
@@ -305,14 +306,11 @@ export default function BacktestPage() {
               )}
 
               {!loading && !result && !error && (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                      <p className="text-lg mb-2">No backtest results yet</p>
-                      <p className="text-sm">Select a strategy and run a backtest to see results</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <EmptyState
+                  icon="chart"
+                  title="No backtest results yet"
+                  message="Select a strategy and run a backtest to see results"
+                />
               )}
             </div>
           </div>
@@ -333,7 +331,7 @@ export default function BacktestPage() {
             <BacktestComparison entries={compareEntries} onBack={handleBackFromComparison} />
           ) : (
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="pt-4">
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <GitCompare className="h-12 w-12 mb-4 opacity-50" />
                   <p className="text-lg mb-2">No comparison selected</p>

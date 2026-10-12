@@ -68,14 +68,16 @@ export function ManageTagsDialog({
               disabled={!newTag.trim()}
               size="sm"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              <Plus />
               Add
             </Button>
           </div>
 
           {/* Current tags */}
           <div>
-            <h4 className="text-sm font-medium mb-2">Current Tags</h4>
+            <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Current Tags
+            </h4>
             {symbolTags.length === 0 ? (
               <p className="text-xs text-muted-foreground">
                 No tags yet. Add one above.
@@ -91,10 +93,10 @@ export function ManageTagsDialog({
                     {tag}
                     <button
                       onClick={() => handleRemoveTag(tag)}
-                      className="ml-0.5 rounded-full hover:bg-muted p-0.5"
+                      className="ml-0.5 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-error"
                       aria-label={`Remove tag ${tag}`}
                     >
-                      <X className="w-2.5 h-2.5" />
+                      <X className="size-2.5" />
                     </button>
                   </Badge>
                 ))}

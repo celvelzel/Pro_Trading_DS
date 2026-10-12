@@ -4,178 +4,162 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================================
+   Lobster Quant — "Quant Terminal" Design System
+   ----------------------------------------------------------------------------
+   Dark-first professional financial terminal aesthetic, fully themable.
+   Surface scale (dark):  bg #0A0D12 → surface #0F141B → raised #151B24
+   Surface scale (light): bg #F6F7F9 → surface #FFFFFF → raised #FFFFFF
+   Accent blue:           #3E7BFA (light) / #5B8DEF (dark)
+   Up/Gain:               #22C55E   Down/Loss: #EF4444  (consistent semantics)
+   Cards: 1px border, 10px radius, no heavy shadows. Numbers: tabular-nums.
+   ============================================================================ */
+
 :root {
-  /* Primary Colors */
-  --color-primary: #1A73E8;
-  --color-primary-dark: #174EA6;
-  --color-primary-light: #4285F4;
-  --color-primary-lighter: #669DF6;
+  /* Brand / accent */
+  --color-primary: #3E7BFA;
+  --color-primary-dark: #2F5FD4;
+  --color-primary-light: #6B96FB;
+  --color-primary-lighter: #A8C0FD;
 
-  /* Semantic Colors - Trading */
-  --color-success: #34A853;
-  --color-error: #EA4335;
-  --color-warning: #FBBC04;
-  --color-info: #4285F4;
-  --color-neutral: #9AA0A6;
+  /* Semantic — trading (light theme uses slightly deeper tones for contrast) */
+  --color-success: #16A34A;
+  --color-error: #DC2626;
+  --color-warning: #D97706;
+  --color-info: #3E7BFA;
+  --color-neutral: #64748B;
 
-  /* Background Colors */
-  --color-bg-surface: #FFFFFF;
-  --color-bg-card: #F8F9FA;
-  --color-bg-hover: #F1F3F4;
-  --color-bg-dark: #202124;
+  /* Surfaces */
+  --color-bg-surface: #F6F7F9;
+  --color-bg-card: #FFFFFF;
+  --color-bg-raised: #FFFFFF;
+  --color-bg-hover: #EEF1F4;
+  --color-bg-dark: #0A0D12;
 
-  /* Text Colors */
-  --color-text-primary: #202124;
-  --color-text-secondary: #5F6368;
-  --color-text-tertiary: #9AA0A6;
+  /* Text */
+  --color-text-primary: #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-tertiary: #8A94A6;
 
-  /* Default background and foreground */
-
-  --background: oklch(1 0 0);
-
-  --foreground: oklch(0.145 0 0);
-
-  --card: oklch(1 0 0);
-
-  --card-foreground: oklch(0.145 0 0);
-
-  --popover: oklch(1 0 0);
-
-  --popover-foreground: oklch(0.145 0 0);
-
-  --primary: oklch(0.205 0 0);
-
-  --primary-foreground: oklch(0.985 0 0);
-
-  --secondary: oklch(0.97 0 0);
-
-  --secondary-foreground: oklch(0.205 0 0);
-
-  --muted: oklch(0.97 0 0);
-
-  --muted-foreground: oklch(0.556 0 0);
-
-  --accent: oklch(0.97 0 0);
-
-  --accent-foreground: oklch(0.205 0 0);
-
-  --destructive: oklch(0.577 0.245 27.325);
-
-  --border: oklch(0.922 0 0);
-
-  --input: oklch(0.922 0 0);
-
-  --ring: oklch(0.708 0 0);
-
-  --chart-1: oklch(0.87 0 0);
-
-  --chart-2: oklch(0.556 0 0);
-
-  --chart-3: oklch(0.439 0 0);
-
-  --chart-4: oklch(0.371 0 0);
-
-  --chart-5: oklch(0.269 0 0);
-
+  /* shadcn tokens */
+  --background: #F6F7F9;
+  --foreground: #111827;
+  --card: #FFFFFF;
+  --card-foreground: #111827;
+  --popover: #FFFFFF;
+  --popover-foreground: #111827;
+  --primary: #3E7BFA;
+  --primary-foreground: #FFFFFF;
+  --secondary: #EEF1F4;
+  --secondary-foreground: #111827;
+  --muted: #EEF1F4;
+  --muted-foreground: #5F6B7E;
+  --accent: #EAF1FE;
+  --accent-foreground: #1D4ED8;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #E4E7EC;
+  --input: #E4E7EC;
+  --ring: #3E7BFA;
+  --chart-1: #3E7BFA;
+  --chart-2: #22C55E;
+  --chart-3: #F59E0B;
+  --chart-4: #A855F7;
+  --chart-5: #EF4444;
   --radius: 0.625rem;
-
-  --sidebar: oklch(0.985 0 0);
-
-  --sidebar-foreground: oklch(0.145 0 0);
-
-  --sidebar-primary: oklch(0.205 0 0);
-
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-
-  --sidebar-accent: oklch(0.97 0 0);
-
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-
-  --sidebar-border: oklch(0.922 0 0);
-
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #FBFCFD;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #3E7BFA;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #EAF1FE;
+  --sidebar-accent-foreground: #1D4ED8;
+  --sidebar-border: #E4E7EC;
+  --sidebar-ring: #3E7BFA;
 }
 
 .dark {
-  /* Custom Color Variables - Dark Mode */
-  --color-primary: #8ab4f8;
-  --color-primary-dark: #669df6;
-  --color-primary-light: #aecbfa;
-  --color-primary-lighter: #c5d9f9;
+  /* Brand / accent */
+  --color-primary: #5B8DEF;
+  --color-primary-dark: #3E7BFA;
+  --color-primary-light: #82A7F4;
+  --color-primary-lighter: #B3C8F9;
 
-  /* Semantic Colors - Trading (Dark Mode) */
-  --color-success: #81c995;
-  --color-error: #f28b82;
-  --color-warning: #fdd663;
-  --color-info: #8ab4f8;
-  --color-neutral: #9aa0a6;
+  /* Semantic — trading */
+  --color-success: #22C55E;
+  --color-error: #EF4444;
+  --color-warning: #F59E0B;
+  --color-info: #5B8DEF;
+  --color-neutral: #8B95A5;
 
-  /* Background Colors (Dark Mode) */
-  --color-bg-surface: #202124;
-  --color-bg-card: #292a2d;
-  --color-bg-hover: #3c4043;
-  --color-bg-dark: #121212;
+  /* Surfaces */
+  --color-bg-surface: #0A0D12;
+  --color-bg-card: #0F141B;
+  --color-bg-raised: #151B24;
+  --color-bg-hover: #151B24;
+  --color-bg-dark: #06080C;
 
-  /* Text Colors (Dark Mode) */
-  --color-text-primary: #e8eaed;
-  --color-text-secondary: #9aa0a6;
-  --color-text-tertiary: #80868b;
+  /* Text */
+  --color-text-primary: #E6EAF0;
+  --color-text-secondary: #98A2B3;
+  --color-text-tertiary: #667085;
 
-  /* Shadcn/UI Variables - Dark Mode */
-  --background: #121212;
-  --foreground: #e8eaed;
-  --card: #202124;
-  --card-foreground: #e8eaed;
-  --popover: #202124;
-  --popover-foreground: #e8eaed;
-  --primary: #8ab4f8;
-  --primary-foreground: #202124;
-  --secondary: #3c4043;
-  --secondary-foreground: #e8eaed;
-  --muted: #3c4043;
-  --muted-foreground: #9aa0a6;
-  --accent: #3c4043;
-  --accent-foreground: #e8eaed;
-  --destructive: #f28b82;
-  --destructive-foreground: #202124;
-  --border: #3c4043;
-  --input: #3c4043;
-  --ring: #8ab4f8;
-  --chart-1: #8ab4f8;
-  --chart-2: #81c995;
-  --chart-3: #fdd663;
-  --chart-4: #fcad70;
-  --chart-5: #f28b82;
-  --sidebar: #202124;
-  --sidebar-foreground: #e8eaed;
-  --sidebar-primary: #8ab4f8;
-  --sidebar-primary-foreground: #202124;
-  --sidebar-accent: #3c4043;
-  --sidebar-accent-foreground: #e8eaed;
-  --sidebar-border: #3c4043;
-  --sidebar-ring: #8ab4f8;
+  /* shadcn tokens */
+  --background: #0A0D12;
+  --foreground: #E6EAF0;
+  --card: #0F141B;
+  --card-foreground: #E6EAF0;
+  --popover: #151B24;
+  --popover-foreground: #E6EAF0;
+  --primary: #5B8DEF;
+  --primary-foreground: #FFFFFF;
+  --secondary: #151B24;
+  --secondary-foreground: #E6EAF0;
+  --muted: #151B24;
+  --muted-foreground: #8B95A5;
+  --accent: #1A2332;
+  --accent-foreground: #E6EAF0;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #5B8DEF;
+  --chart-1: #5B8DEF;
+  --chart-2: #22C55E;
+  --chart-3: #F59E0B;
+  --chart-4: #A855F7;
+  --chart-5: #EF4444;
+  --sidebar: #0C1017;
+  --sidebar-foreground: #E6EAF0;
+  --sidebar-primary: #5B8DEF;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #1A2332;
+  --sidebar-accent-foreground: #E6EAF0;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #5B8DEF;
 }
 
 @theme inline {
-  /* Primary Colors */
+  /* Primary colors */
   --color-primary: var(--color-primary);
   --color-primary-dark: var(--color-primary-dark);
   --color-primary-light: var(--color-primary-light);
   --color-primary-lighter: var(--color-primary-lighter);
 
-  /* Semantic Colors */
+  /* Semantic colors */
   --color-success: var(--color-success);
   --color-error: var(--color-error);
   --color-warning: var(--color-warning);
+  --color-info: var(--color-info);
   --color-neutral: var(--color-neutral);
 
-  /* Background Colors */
+  /* Surface colors */
   --color-bg-surface: var(--color-bg-surface);
   --color-bg-card: var(--color-bg-card);
+  --color-bg-raised: var(--color-bg-raised);
   --color-bg-hover: var(--color-bg-hover);
   --color-bg-dark: var(--color-bg-dark);
 
-  /* Text Colors */
+  /* Text colors */
   --color-text-primary: var(--color-text-primary);
   --color-text-secondary: var(--color-text-secondary);
   --color-text-tertiary: var(--color-text-tertiary);
@@ -184,10 +168,11 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* Font families */
-  --font-sans: var(--font-sans);
-  --font-mono: 'Google Sans Mono', 'JetBrains Mono', ui-monospace, monospace;
-  --font-heading: var(--font-sans);
+  /* Font families (Geist via next/font) */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+  --font-heading: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -225,110 +210,72 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Dark mode primary colors */
-    --color-primary: #4285F4;
-    --color-primary-dark: #1A73E8;
-    --color-primary-light: #669DF6;
-    --color-primary-lighter: #8AB4F8;
-
-    /* Dark mode semantic colors */
-    --color-success: #81C995;
-    --color-error: #F28B82;
-    --color-warning: #FDD663;
-    --color-neutral: #9AA0A6;
-
-    /* Dark mode background colors */
-    --color-bg-surface: #202124;
-    --color-bg-card: #292A2D;
-    --color-bg-hover: #3C4043;
-    --color-bg-dark: #171717;
-
-    /* Dark mode text colors */
-    --color-text-primary: #E8EAED;
-    --color-text-secondary: #9AA0A6;
-    --color-text-tertiary: #80868B;
-
-    /* Dark mode background and foreground */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    /* Financial data: keep digits aligned everywhere */
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }
 
-body {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Custom scrollbar for Google Finance style */
+/* ---------------------------------------------------------------------------
+   Scrollbars — thin, quiet, terminal-like
+   --------------------------------------------------------------------------- */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-card);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-neutral);
-  border-radius: 4px;
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+  border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--foreground) 32%, transparent);
 }
 
-/* Selection color */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Selection */
 ::selection {
-  background: var(--color-primary-lighter);
-  color: white;
+  background: color-mix(in srgb, var(--color-primary) 30%, transparent);
+  color: var(--foreground);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* Focus visibility (accessibility) */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
+/* ---------------------------------------------------------------------------
+   Utilities
+   --------------------------------------------------------------------------- */
+
+/* Numeric alignment for financial figures */
+.num {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
 }
 
 /* Mobile safe area for bottom nav */
@@ -338,21 +285,21 @@ body {
   }
 }
 
-/* Responsive improvements */
+/* Space for mobile bottom nav */
 @media (max-width: 768px) {
   main {
-    padding-bottom: 5rem; /* Space for mobile nav */
+    padding-bottom: 5rem;
   }
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Better focus styles */
-:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* Reduced motion (accessibility) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

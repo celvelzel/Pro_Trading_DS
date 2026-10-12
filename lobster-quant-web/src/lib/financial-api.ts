@@ -1,6 +1,7 @@
 import { object, text, strings, statuses, validArtifact } from '@/types/financial-validation'
 import { API_BASE_URL } from './constants'
-import type { FinancialCreation, FinancialRun, WorkflowType, AllocationConstraints, FinancialRequest, ConstraintDraft, LivePrepared } from '@/types/financial-api'
+import type { FinancialCreation, FinancialRun, FinancialRunFilters, FinancialRunHistory, WorkflowType, AllocationConstraints, FinancialRequest, ConstraintDraft, LivePrepared } from '@/types/financial-api'
+import { parseRelations } from './financial-observatory'
 
 export class FinancialRequestError extends Error {
   constructor(public status: number, message: string) { super(message) }
@@ -30,6 +31,18 @@ export function parseFinancialCreation(value: unknown, workflow: Exclude<Workflo
     || (workflow === 'market' && value.portfolio_run_id != null) || (workflow === 'portfolio' && value.market_run_id != null)) throw new Error('金融工作流返回了无效运行 ID')
   return value as unknown as FinancialCreation
 }
+const outcomes = ['verified', 'partial', 'insufficient_evidence', 'feasible', 'infeasible', 'insufficient_data', 'pending']
+const nullableDate = (v: unknown) => v === null || (typeof v === 'string' && Number.isFinite(Date.parse(v)))
+export function parseFinancialRunHistory(value: unknown): FinancialRunHistory {
+  if (!object(value) || value.schema_version !== 1 || !Array.isArray(value.runs)
+    || !value.runs.every(run => object(run) && run.schema_version === 1 && text(run.run_id)
+      && ['market_investigation', 'portfolio_rebalance'].includes(run.mas_kind as string)
+      && statuses.includes(run.status as string) && Number.isInteger(run.version) && Number(run.version) >= 1
+      && text(run.conversation_id) && text(run.correlation_id) && (run.error_code === null || typeof run.error_code === 'string')
+      && outcomes.includes(run.validation_outcome as string)
+      && nullableDate(run.as_of) && nullableDate(run.created_at) && nullableDate(run.updated_at))) throw new Error('金融运行历史契约不匹配，请刷新或检查服务版本')
+  return value as unknown as FinancialRunHistory
+}
 async function request(path: string, body?: unknown): Promise<unknown> {
   const response = await fetch(`${API_BASE_URL}/api/financial${path}`, { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) })
   const value = await response.json().catch(() => ({}))
@@ -48,6 +61,15 @@ export const financialApi = {
     return parseFinancialCreation(await request(`/${{ market: 'market-investigations', portfolio: 'portfolio-reviews', combined: 'combined-reviews' }[workflow]}`, body), workflow, body.conversation_id)
   },
   getRun: async (id: string) => parseFinancialRun(await request(`/runs/${encodeURIComponent(id)}`), id),
+  listRuns: async (filters: FinancialRunFilters = {}) => {
+    const params = new URLSearchParams()
+    if (filters.conversationId) params.set('conversation_id', filters.conversationId)
+    if (filters.masKind) params.set('mas_kind', filters.masKind)
+    if (filters.status) params.set('status', filters.status)
+    const query = params.toString()
+    return parseFinancialRunHistory(await request(`/runs${query ? `?${query}` : ''}`))
+  },
+  relations: async (id: string) => parseRelations(await request(`/runs/${encodeURIComponent(id)}/relations`), id),
   action: async (id: string, name: 'approve' | 'pause' | 'resume' | 'cancel', version: number) => parseFinancialRun(await request(`/runs/${encodeURIComponent(id)}/${name}`, { expected_version: version }), id),
   connection: async () => await request('/connection') as { configured: boolean; model: string; message: string },
   checkConnection: async () => await request('/connection/check', { check_model: true }) as { configured: boolean; model: string; message: string },

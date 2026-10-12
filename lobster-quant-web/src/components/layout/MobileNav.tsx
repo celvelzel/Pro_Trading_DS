@@ -5,78 +5,45 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
-  Search,
   BarChart3,
-  FlaskConical,
-  Target,
-  Play,
   List,
   Bell,
+  Briefcase,
 } from 'lucide-react'
 
+/** Primary destinations for the bottom tab bar; the full menu lives in the drawer. */
 const navItems = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Watchlist',
-    href: '/watchlist',
-    icon: List,
-  },
-  {
-    title: 'Scanner',
-    href: '/scanner',
-    icon: Search,
-  },
-  {
-    title: 'Analysis',
-    href: '/analysis',
-    icon: BarChart3,
-  },
-  {
-    title: 'Strategy',
-    href: '/strategy',
-    icon: Target,
-  },
-  {
-    title: 'Backtest',
-    href: '/backtest',
-    icon: FlaskConical,
-  },
-  {
-    title: 'Simulation',
-    href: '/simulation',
-    icon: Play,
-  },
-  {
-    title: 'Alerts',
-    href: '/alerts',
-    icon: Bell,
-  },
+  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { title: 'Watchlist', href: '/watchlist', icon: List },
+  { title: 'Analysis', href: '/analysis', icon: BarChart3 },
+  { title: 'Portfolio', href: '/portfolio', icon: Briefcase },
+  { title: 'Alerts', href: '/alerts', icon: Bell },
 ]
 
 export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg-surface border-t border-gray-200 safe-bottom">
-      <div className="flex justify-around items-center h-16 px-1">
+    <nav
+      aria-label="Primary"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden safe-bottom"
+    >
+      <div className="flex h-14 items-stretch justify-around px-1">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex flex-col items-center gap-1 px-2 py-2 text-xs font-medium transition-colors min-w-0',
+                'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md text-[10px] font-medium transition-colors',
                 isActive
                   ? 'text-primary'
-                  : 'text-text-tertiary hover:text-text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
+              <item.icon className="size-5 shrink-0" strokeWidth={isActive ? 2.4 : 2} />
               <span className="truncate">{item.title}</span>
             </Link>
           )

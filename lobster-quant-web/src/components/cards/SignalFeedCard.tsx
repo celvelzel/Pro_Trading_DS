@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { ArrowRight, TrendingUp, TrendingDown, Minus, Clock } from 'lucide-react'
+import { ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 interface SignalChange {
@@ -28,16 +28,16 @@ const MOCK_SIGNAL_CHANGES: SignalChange[] = [
 
 function SignalBadge({ signal }: { signal: 'BUY' | 'SELL' | 'NEUTRAL' }) {
   const config = {
-    BUY: { label: 'BUY', color: 'text-success bg-success/10', icon: TrendingUp },
-    SELL: { label: 'SELL', color: 'text-error bg-error/10', icon: TrendingDown },
-    NEUTRAL: { label: 'NEUTRAL', color: 'text-text-secondary bg-text-secondary/10', icon: Minus },
+    BUY: { label: 'BUY', color: 'bg-success/10 text-success', icon: TrendingUp },
+    SELL: { label: 'SELL', color: 'bg-error/10 text-error', icon: TrendingDown },
+    NEUTRAL: { label: 'NEUTRAL', color: 'bg-muted text-muted-foreground', icon: Minus },
   }
 
   const { label, color, icon: Icon } = config[signal]
 
   return (
-    <span className={cn('flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider', color)}>
-      <Icon className="w-3 h-3" />
+    <span className={cn('flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider', color)}>
+      <Icon className="size-3" />
       {label}
     </span>
   )
@@ -45,38 +45,36 @@ function SignalBadge({ signal }: { signal: 'BUY' | 'SELL' | 'NEUTRAL' }) {
 
 export const SignalFeedCard = memo(function SignalFeedCard() {
   return (
-    <Card className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <CardHeader className="pb-3 border-b border-border/50">
+    <Card className="flex h-full flex-col transition-colors hover:border-primary/30 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <CardHeader className="border-b border-border/50 pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Clock className="w-4 h-4 text-primary" />
-            Signal Change Feed
-          </CardTitle>
-          <span className="text-[10px] font-medium text-text-secondary uppercase tracking-tighter bg-muted px-1.5 py-0.5 rounded">
+          <CardTitle>Signal Change Feed</CardTitle>
+          <span className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-success" />
             Live Updates
           </span>
         </div>
       </CardHeader>
-      <CardContent className="p-0 flex-1 overflow-auto max-h-[400px]">
+      <CardContent className="max-h-[400px] flex-1 overflow-auto p-0">
         {MOCK_SIGNAL_CHANGES.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 text-text-secondary">
+          <div className="flex h-40 flex-col items-center justify-center text-muted-foreground">
             <p className="text-sm">No recent signal changes</p>
           </div>
         ) : (
-          <div className="divide-y divide-border/30">
+          <div className="divide-y divide-border/50">
             {MOCK_SIGNAL_CHANGES.map((change) => (
-              <div key={change.id} className="p-3 hover:bg-muted/30 transition-colors group">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-bold text-sm text-text-primary tracking-tight group-hover:text-primary transition-colors">
+              <div key={change.id} className="group p-3 transition-colors hover:bg-bg-hover">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span className="font-mono text-sm font-bold tracking-tight text-foreground">
                     {change.symbol}
                   </span>
-                  <span className="text-[10px] text-text-secondary font-medium">
+                  <span className="text-[10px] font-medium text-muted-foreground">
                     {formatDistanceToNow(new Date(change.timestamp), { addSuffix: true })}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <SignalBadge signal={change.oldSignal} />
-                  <ArrowRight className="w-3 h-3 text-text-secondary/50" />
+                  <ArrowRight className="size-3 text-muted-foreground/60" />
                   <SignalBadge signal={change.newSignal} />
                 </div>
               </div>

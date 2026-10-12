@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, Clock, Eye } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface StrategyCardProps {
   strategy: Strategy;
@@ -18,12 +19,15 @@ interface StrategyCardProps {
 
 export function StrategyCard({ strategy, onEdit, onDelete, onViewHistory, onViewDetails, onSelect, isSelected }: StrategyCardProps) {
   return (
-    <Card 
-      className={`cursor-pointer transition-all hover:shadow-md ${isSelected ? 'ring-2 ring-primary' : ''}`}
+    <Card
+      className={cn(
+        'cursor-pointer transition-colors hover:border-primary/40',
+        isSelected && 'border-primary ring-1 ring-primary'
+      )}
       onClick={() => onSelect?.(strategy)}
     >
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-lg">{strategy.name}</CardTitle>
           <div className="flex gap-1">
             {strategy.isPreset && (
@@ -37,27 +41,27 @@ export function StrategyCard({ strategy, onEdit, onDelete, onViewHistory, onView
         <p className="text-sm text-muted-foreground mb-4">
           {strategy.description || 'No description'}
         </p>
-        
-        <div className="grid grid-cols-2 gap-2 text-sm">
+
+        <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-background p-3 text-sm">
           <div>
             <span className="text-muted-foreground">Holding:</span>{' '}
-            <span className="font-medium">{strategy.params.holdingDays} days</span>
+            <span className="font-mono font-medium">{strategy.params.holdingDays} days</span>
           </div>
           <div>
             <span className="text-muted-foreground">Min Score:</span>{' '}
-            <span className="font-medium">{strategy.params.minScore}</span>
+            <span className="font-mono font-medium">{strategy.params.minScore}</span>
           </div>
           <div>
             <span className="text-muted-foreground">Position:</span>{' '}
-            <span className="font-medium">{(strategy.params.positionSize * 100).toFixed(0)}%</span>
+            <span className="font-mono font-medium">{(strategy.params.positionSize * 100).toFixed(0)}%</span>
           </div>
           <div>
             <span className="text-muted-foreground">Max Positions:</span>{' '}
-            <span className="font-medium">{strategy.params.maxPositions}</span>
+            <span className="font-mono font-medium">{strategy.params.maxPositions}</span>
           </div>
         </div>
-        
-        <div className="flex gap-2 mt-4">
+
+        <div className="flex flex-wrap gap-2 mt-4">
           <Button
             variant="outline"
             size="sm"

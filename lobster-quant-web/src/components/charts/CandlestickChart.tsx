@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, memo, useMemo } from 'react'
+import { useEffect, useRef, memo } from 'react'
 import { useTheme } from 'next-themes'
 import { createChart, IChartApi, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, type UTCTimestamp, type MouseEventParams } from 'lightweight-charts'
 import type { Candle } from '@/lib/types'
@@ -8,6 +8,17 @@ import type { IndicatorType } from './IndicatorToggle'
 import { calculateSMA, calculateEMA, calculateBollingerBands, getClosePrices, formatIndicatorData } from '@/lib/indicators'
 import type { Annotation, AnnotationToolType, HorizontalLineAnnotation, TrendLineAnnotation, PriceMarkerAnnotation } from './annotations'
 import { ANNOTATION_COLORS } from './annotations'
+
+/** Read a design-system CSS custom property from the document root. */
+function cssVar(name: string): string {
+  if (typeof window === 'undefined') return ''
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
+/** Append an alpha channel to a #rrggbb color; other formats pass through. */
+function withAlpha(color: string, alpha: string): string {
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? `${color}${alpha}` : color
+}
 
 interface CandlestickChartProps {
   data: Candle[]
@@ -41,20 +52,8 @@ export const CandlestickChart = memo(function CandlestickChart({
   const chartRef = useRef<IChartApi | null>(null)
   const candlestickSeriesRef = useRef<ReturnType<IChartApi['addSeries']> | null>(null)
   const pendingTrendStartRef = useRef<{ time: UTCTimestamp; price: number } | null>(null)
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
-
-  // Theme-aware colors
-  const chartColors = useMemo(() => ({
-    background: isDark ? '#0a0a0a' : '#FFFFFF',
-    text: isDark ? '#e0e0e0' : '#202124',
-    grid: isDark ? '#1a1a1a' : '#F0F0F0',
-    border: isDark ? '#333333' : '#F0F0F0',
-    upColor: '#34A853',
-    downColor: '#EA4335',
-    volumeUp: isDark ? 'rgba(52, 168, 83, 0.3)' : 'rgba(52, 168, 83, 0.5)',
-    volumeDown: isDark ? 'rgba(234, 67, 53, 0.3)' : 'rgba(234, 67, 53, 0.5)',
-  }), [isDark])
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
 
   // Reset pending trend start when tool changes
   useEffect(() => {
@@ -65,6 +64,27 @@ export const CandlestickChart = memo(function CandlestickChart({
 
   useEffect(() => {
     if (!chartContainerRef.current || data.length === 0) return
+
+    // Theme-aware colors resolved from design-system CSS variables so the
+    // chart always matches the active light/dark theme. The effect re-runs
+    // when the resolved theme changes, re-applying these options.
+    const chartColors = {
+      background: cssVar('--card'),
+      text: cssVar('--muted-foreground'),
+      grid: cssVar('--border'),
+      border: cssVar('--border'),
+      crosshair: cssVar('--color-text-tertiary'),
+      upColor: cssVar('--color-success'),
+      downColor: cssVar('--color-error'),
+      volumeUp: withAlpha(cssVar('--color-success'), isDark ? '4D' : '80'),
+      volumeDown: withAlpha(cssVar('--color-error'), isDark ? '4D' : '80'),
+      sma20: cssVar('--chart-1'),
+      sma50: cssVar('--chart-3'),
+      sma200: cssVar('--chart-4'),
+      ema12: cssVar('--chart-2'),
+      ema26: cssVar('--chart-5'),
+      bands: cssVar('--muted-foreground'),
+    }
 
     // Create chart
     const chart = createChart(chartContainerRef.current, {
@@ -80,6 +100,8 @@ export const CandlestickChart = memo(function CandlestickChart({
       },
       crosshair: {
         mode: 0,
+        vertLine: { color: chartColors.crosshair },
+        horzLine: { color: chartColors.crosshair },
       },
       rightPriceScale: {
         borderColor: chartColors.border,
@@ -151,11 +173,11 @@ export const CandlestickChart = memo(function CandlestickChart({
         const sma50 = calculateSMA(closePrices, 50)
         const sma200 = calculateSMA(closePrices, 200)
 
-        chart.addSeries(LineSeries, { color: '#2196F3', lineWidth: 1 })
+        chart.addSeries(LineSeries, { color: chartColors.sma20, lineWidth: 1 })
           .setData(formatIndicatorData(data, sma20))
-        chart.addSeries(LineSeries, { color: '#4CAF50', lineWidth: 1 })
+        chart.addSeries(LineSeries, { color: chartColors.sma50, lineWidth: 1 })
           .setData(formatIndicatorData(data, sma50))
-        chart.addSeries(LineSeries, { color: '#F44336', lineWidth: 1 })
+        chart.addSeries(LineSeries, { color: chartColors.sma200, lineWidth: 1 })
           .setData(formatIndicatorData(data, sma200))
       }
 
@@ -164,9 +186,9 @@ export const CandlestickChart = memo(function CandlestickChart({
         const ema12 = calculateEMA(closePrices, 12)
         const ema26 = calculateEMA(closePrices, 26)
 
-        chart.addSeries(LineSeries, { color: '#FF9800', lineWidth: 1 })
+        chart.addSeries(LineSeries, { color: chartColors.ema12, lineWidth: 1 })
           .setData(formatIndicatorData(data, ema12))
-        chart.addSeries(LineSeries, { color: '#9C27B0', lineWidth: 1 })
+        chart.addSeries(LineSeries, { color: chartColors.ema26, lineWidth: 1 })
           .setData(formatIndicatorData(data, ema26))
       }
 
@@ -176,12 +198,12 @@ export const CandlestickChart = memo(function CandlestickChart({
         const upper = bbData.map(d => d.upper)
         const middle = bbData.map(d => d.middle)
         const lower = bbData.map(d => d.lower)
-        
-        chart.addSeries(LineSeries, { color: '#607D8B', lineWidth: 1 })
+
+        chart.addSeries(LineSeries, { color: chartColors.bands, lineWidth: 1 })
           .setData(formatIndicatorData(data, upper))
-        chart.addSeries(LineSeries, { color: '#607D8B80', lineWidth: 1 })
+        chart.addSeries(LineSeries, { color: withAlpha(chartColors.bands, '80'), lineWidth: 1 })
           .setData(formatIndicatorData(data, lower))
-        chart.addSeries(LineSeries, { color: '#607D8B40', lineWidth: 1 })
+        chart.addSeries(LineSeries, { color: withAlpha(chartColors.bands, '40'), lineWidth: 1 })
           .setData(formatIndicatorData(data, middle))
       }
     }
@@ -302,7 +324,7 @@ export const CandlestickChart = memo(function CandlestickChart({
       chartRef.current = null
       candlestickSeriesRef.current = null
     }
-  }, [data, height, showVolume, activeIndicators, isDark, chartColors, annotations, activeAnnotationTool, onAnnotationAdd])
+  }, [data, height, showVolume, activeIndicators, isDark, annotations, activeAnnotationTool, onAnnotationAdd])
 
   const showRSI = activeIndicators.includes('rsi')
   const showMACD = activeIndicators.includes('macd')

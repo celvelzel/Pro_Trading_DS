@@ -77,7 +77,7 @@ export function VersionHistoryModal({ strategy, open, onOpenChange }: VersionHis
 
             {/* Version list */}
             {versionsLoading ? (
-              <div className="text-center py-4 text-muted-foreground">Loading versions...</div>
+              <div className="text-center py-4 text-sm text-muted-foreground">Loading versions...</div>
             ) : versions.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -85,7 +85,7 @@ export function VersionHistoryModal({ strategy, open, onOpenChange }: VersionHis
                 <p className="text-sm">Save the current parameters as a version above</p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                 {versions.map((version) => (
                   <VersionItem
                     key={version.id}
@@ -115,11 +115,11 @@ function VersionItem({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="border rounded-lg p-3">
+    <div className="rounded-lg border border-border bg-background p-3 transition-colors hover:border-primary/40 hover:bg-muted/50">
       <div className="flex items-center justify-between">
         <div>
           <p className="font-medium">{version.name}</p>
-          <p className="text-xs text-muted-foreground">{formatDate(version.date)}</p>
+          <p className="font-mono text-xs text-muted-foreground">{formatDate(version.date)}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -140,7 +140,7 @@ function VersionItem({
         </div>
       </div>
       {expanded && (
-        <div className="mt-2 pt-2 border-t grid grid-cols-2 gap-1 text-xs">
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 border-t border-border pt-3 font-mono text-xs">
           <div><span className="text-muted-foreground">Holding:</span> {version.params.holdingDays}d</div>
           <div><span className="text-muted-foreground">Min Score:</span> {version.params.minScore}</div>
           <div><span className="text-muted-foreground">Position:</span> {(version.params.positionSize * 100).toFixed(0)}%</div>

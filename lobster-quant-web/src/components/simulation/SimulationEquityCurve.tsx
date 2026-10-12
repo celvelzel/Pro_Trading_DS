@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, memo } from 'react'
-import { createChart, IChartApi, LineSeries } from 'lightweight-charts'
+import { useTheme } from 'next-themes'
+import { createChart, ColorType, IChartApi, LineSeries } from 'lightweight-charts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { PerformanceChartData } from '@/hooks/useSimulation'
@@ -23,6 +24,7 @@ export const SimulationEquityCurve = memo(function SimulationEquityCurve({
 }: SimulationEquityCurveProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
+  const { resolvedTheme } = useTheme()
 
   const strategyReturn = data.initialValue > 0
     ? ((data.finalValue - data.initialValue) / data.initialValue * 100)
@@ -33,50 +35,60 @@ export const SimulationEquityCurve = memo(function SimulationEquityCurve({
   const alpha = strategyReturn - benchmarkReturn
 
   useEffect(() => {
-    if (!chartContainerRef.current || data.strategyCurve.length === 0) return
+    const container = chartContainerRef.current
+    if (!container || data.strategyCurve.length === 0) return
 
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
+    // Resolve Quant Terminal tokens from CSS variables so the chart
+    // adapts to both light and dark themes without hardcoded colors.
+    const css = getComputedStyle(container)
+    const token = (name: string) => css.getPropertyValue(name).trim()
+    const strategyColor = token('--chart-1')
+    const benchmarkColor = token('--chart-3')
+    const textColor = token('--muted-foreground')
+    const gridColor = token('--border')
+
+    const chart = createChart(container, {
+      width: container.clientWidth,
       height,
       layout: {
-        background: { color: '#FFFFFF' },
-        textColor: '#5F6368',
+        background: { type: ColorType.Solid, color: 'transparent' },
+        textColor,
         fontSize: 12,
       },
       grid: {
-        vertLines: { color: '#F0F0F0' },
-        horzLines: { color: '#F0F0F0' },
+        vertLines: { color: gridColor },
+        horzLines: { color: gridColor },
       },
       crosshair: {
         mode: 0,
         vertLine: {
-          labelBackgroundColor: '#1A73E8',
+          labelBackgroundColor: strategyColor,
         },
         horzLine: {
-          labelBackgroundColor: '#1A73E8',
+          labelBackgroundColor: strategyColor,
         },
       },
       rightPriceScale: {
-        borderColor: '#E8EAED',
+        borderColor: gridColor,
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
       timeScale: {
-        borderColor: '#E8EAED',
+        borderColor: gridColor,
         timeVisible: false,
         secondsVisible: false,
       },
     })
 
-    // Strategy line (primary - blue)
+    // Strategy line (primary accent)
     const strategySeries = chart.addSeries(LineSeries, {
-      color: '#1A73E8',
+      color: strategyColor,
       lineWidth: 2,
       crosshairMarkerVisible: true,
       crosshairMarkerRadius: 4,
-      crosshairMarkerBackgroundColor: '#1A73E8',
+      crosshairMarkerBackgroundColor: strategyColor,
       lastValueVisible: true,
       priceLineVisible: true,
-      priceLineColor: '#1A73E8',
+      priceLineColor: strategyColor,
       priceLineWidth: 1,
       priceLineStyle: 2,
     })
@@ -88,14 +100,14 @@ export const SimulationEquityCurve = memo(function SimulationEquityCurve({
       }))
     )
 
-    // Benchmark line (secondary - grey/orange dashed feel via color)
+    // Benchmark line (secondary)
     const benchmarkSeries = chart.addSeries(LineSeries, {
-      color: '#F9AB00',
+      color: benchmarkColor,
       lineWidth: 1,
       lineStyle: 0,
       crosshairMarkerVisible: true,
       crosshairMarkerRadius: 3,
-      crosshairMarkerBackgroundColor: '#F9AB00',
+      crosshairMarkerBackgroundColor: benchmarkColor,
       lastValueVisible: true,
       priceLineVisible: false,
     })
@@ -117,14 +129,14 @@ export const SimulationEquityCurve = memo(function SimulationEquityCurve({
         chart.applyOptions({ width })
       }
     })
-    resizeObserver.observe(chartContainerRef.current)
+    resizeObserver.observe(container)
 
     return () => {
       resizeObserver.disconnect()
       chart.remove()
       chartRef.current = null
     }
-  }, [data, height])
+  }, [data, height, resolvedTheme])
 
   if (data.strategyCurve.length === 0) {
     return (
@@ -147,20 +159,20 @@ export const SimulationEquityCurve = memo(function SimulationEquityCurve({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <CardTitle className="flex items-center gap-2">
             Equity Curve
-            <Badge variant={alpha >= 0 ? 'default' : 'destructive'}>
+            <Badge variant={alpha >= 0 ? 'success' : 'destructive'}>
               {alpha >= 0 ? '+' : ''}{alpha.toFixed(1)}% alpha
             </Badge>
           </CardTitle>
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-0.5 bg-[#1A73E8] rounded" />
+              <div className="w-3 h-0.5 rounded bg-chart-1" />
               <span className="text-muted-foreground">Strategy ({strategyReturn >= 0 ? '+' : ''}{strategyReturn.toFixed(1)}%)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-0.5 bg-[#F9AB00] rounded" />
+              <div className="w-3 h-0.5 rounded bg-chart-3" />
               <span className="text-muted-foreground">{data.benchmarkSymbol} ({benchmarkReturn >= 0 ? '+' : ''}{benchmarkReturn.toFixed(1)}%)</span>
             </div>
           </div>

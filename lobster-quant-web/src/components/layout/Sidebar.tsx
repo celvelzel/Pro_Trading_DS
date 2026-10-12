@@ -3,146 +3,91 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { TrendingUp } from 'lucide-react'
 import {
-  LayoutDashboard,
-  Search,
-  BarChart3,
-  FlaskConical,
-  Settings,
-  TrendingUp,
-  Target,
-  Play,
-  Bell,
-  List,
-  Briefcase,
-  Bot,
-  Database,
-} from 'lucide-react'
+  navGroups,
+  bottomNavItems,
+  type NavItem,
+} from '@/components/layout/nav-config'
 
-const navItems = [
-  {
-    title: 'Copilot',
-    href: '/copilot',
-    icon: Bot,
-  },
-  {
-    title: 'Knowledge',
-    href: '/knowledge',
-    icon: Database,
-  },
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Watchlist',
-    href: '/watchlist',
-    icon: List,
-  },
-  {
-    title: 'Scanner',
-    href: '/scanner',
-    icon: Search,
-  },
-  {
-    title: 'Analysis',
-    href: '/analysis',
-    icon: BarChart3,
-  },
-  {
-    title: 'Strategy',
-    href: '/strategy',
-    icon: Target,
-  },
-  {
-    title: 'Backtest',
-    href: '/backtest',
-    icon: FlaskConical,
-  },
-  {
-    title: 'Simulation',
-    href: '/simulation',
-    icon: Play,
-  },
-  {
-    title: 'Portfolio',
-    href: '/portfolio',
-    icon: Briefcase,
-  },
-  {
-    title: 'Alerts',
-    href: '/alerts',
-    icon: Bell,
-  },
-]
-
-const bottomNavItems = [
-  {
-    title: 'Settings',
-    href: '/settings',
-    icon: Settings,
-  },
-]
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'group relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] transition-colors',
+        active
+          ? 'bg-accent font-medium text-accent-foreground'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+      )}
+    >
+      {active && (
+        <span
+          aria-hidden
+          className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary"
+        />
+      )}
+      <item.icon
+        className={cn(
+          'size-4 shrink-0 transition-colors',
+          active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+        )}
+      />
+      <span className="truncate">{item.title}</span>
+    </Link>
+  )
+}
 
 export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-bg-surface border-r border-gray-200 dark:border-gray-700 h-screen sticky top-0">
+    <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
-          <TrendingUp className="w-5 h-5 text-primary-foreground" />
+      <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary shadow-sm">
+          <TrendingUp className="size-4 text-primary-foreground" strokeWidth={2.5} />
         </div>
-        <div>
-          <h1 className="text-lg font-semibold text-text-primary">Lobster Quant</h1>
-          <p className="text-xs text-text-tertiary">v2.0 - React Edition</p>
+        <div className="min-w-0 leading-tight">
+          <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">
+            Lobster Quant
+          </h1>
+          <p className="truncate text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+            Trading Terminal
+          </p>
         </div>
       </div>
 
-      {/* Main Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              <span>{item.title}</span>
-            </Link>
-          )
-        })}
+      {/* Main navigation */}
+      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+        {navGroups.map((group) => (
+          <div key={group.label}>
+            <p className="mb-1.5 px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+              {group.label}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  active={pathname.startsWith(item.href)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Bottom Navigation */}
-      <div className="px-3 py-4 border-t border-gray-200 dark:border-gray-700">
-        {bottomNavItems.map((item) => {
-          const isActive = pathname.startsWith(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              <span>{item.title}</span>
-            </Link>
-          )
-        })}
+      {/* Bottom navigation */}
+      <div className="border-t border-sidebar-border px-3 py-3">
+        {bottomNavItems.map((item) => (
+          <NavLink
+            key={item.href}
+            item={item}
+            active={pathname.startsWith(item.href)}
+          />
+        ))}
       </div>
     </aside>
   )

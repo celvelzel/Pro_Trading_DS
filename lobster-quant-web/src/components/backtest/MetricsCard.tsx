@@ -65,8 +65,8 @@ export function MetricsCard({ metrics, strategyName }: MetricsCardProps) {
             <div key={metric.label} className="space-y-1">
               <p className="text-sm text-muted-foreground">{metric.label}</p>
               <p className={`text-lg font-semibold ${
-                metric.highlight ? 'text-green-600' : 
-                metric.negative ? 'text-red-600' : ''
+                metric.highlight ? 'text-success' :
+                metric.negative ? 'text-destructive' : ''
               }`}>
                 {metric.value}
               </p>

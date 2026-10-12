@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Play, TrendingUp, TrendingDown } from 'lucide-react';
+import { Loader2, Play } from 'lucide-react';
 
 const SWEEPABLE_PARAMS = [
   { value: 'holdingDays', label: 'Holding Days', min: 5, max: 100, step: 5, defaultMin: 10, defaultMax: 40 },
@@ -197,13 +197,13 @@ export function ParameterSweep() {
                             <td className="py-2 pr-4 font-medium">
                               {item.paramValue}
                               {isBest && (
-                                <span className="ml-2 text-xs text-green-600 font-semibold">
+                                <span className="ml-2 text-xs text-success font-semibold">
                                   BEST
                                 </span>
                               )}
                             </td>
                             <td className={`text-right py-2 px-3 ${
-                              (m.totalReturn ?? 0) > 0 ? 'text-green-600' : 'text-red-600'
+                              (m.totalReturn ?? 0) > 0 ? 'text-success' : 'text-destructive'
                             }`}>
                               {(m.totalReturn ?? 0).toFixed(2)}%
                             </td>
@@ -213,7 +213,7 @@ export function ParameterSweep() {
                             <td className="text-right py-2 px-3">
                               {(m.winRate ?? 0).toFixed(1)}%
                             </td>
-                            <td className="text-right py-2 px-3 text-red-600">
+                            <td className="text-right py-2 px-3 text-destructive">
                               {(m.maxDrawdown ?? 0).toFixed(2)}%
                             </td>
                             <td className="text-right py-2 px-3">
@@ -295,7 +295,7 @@ function SweepLineChart({
               y1={y}
               x2={width - pad.right}
               y2={y}
-              stroke="#e5e7eb"
+              stroke="var(--border)"
               strokeDasharray="4,4"
             />
             <text
@@ -317,13 +317,13 @@ function SweepLineChart({
           y1={zeroY}
           x2={width - pad.right}
           y2={zeroY}
-          stroke="#9ca3af"
+          stroke="var(--muted-foreground)"
           strokeWidth="1"
         />
       )}
 
       {/* Data line */}
-      <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="2" />
+      <polyline points={points} fill="none" stroke="var(--primary)" strokeWidth="2" />
 
       {/* Data points */}
       {results.map((r, i) => {
@@ -331,7 +331,7 @@ function SweepLineChart({
         const ret = r.metrics.totalReturn ?? 0;
         const y = pad.top + (1 - (ret - minRet) / retRange) * plotH;
         return (
-          <circle key={i} cx={x} cy={y} r="4" fill="#3b82f6" />
+          <circle key={i} cx={x} cy={y} r="4" fill="var(--primary)" />
         );
       })}
 

@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Play, RefreshCw, Loader2 } from 'lucide-react';
 import { ExportButton } from '@/components/ui/export-button';
 import { ErrorState } from '@/components/ui/error-state';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/layout/PageHeader';
 import {
   useSimulationTrades,
   useSimulationPerformance,
@@ -84,50 +86,46 @@ export default function SimulationPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold">Simulation Dashboard</h1>
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
+      <PageHeader
+        title="Simulation Dashboard"
+        description="Track daily simulation results and performance"
+        actions={
+          <>
             <HelpTooltip helpKey="simulation.title" />
-          </div>
-          <p className="text-muted-foreground mt-2">
-            Track daily simulation results and performance
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={runAllSimulations} disabled={isRunning} variant="outline">
-            {isRunning ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Running...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Run All
-              </>
-            )}
-          </Button>
-          <Button onClick={runSimulation} disabled={isRunning || !selectedStrategyId}>
-            {isRunning ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Running...
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Run Selected
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+            <Button onClick={runAllSimulations} disabled={isRunning} variant="outline" size="sm">
+              {isRunning ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Running...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Run All
+                </>
+              )}
+            </Button>
+            <Button onClick={runSimulation} disabled={isRunning || !selectedStrategyId} size="sm">
+              {isRunning ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Running...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Run Selected
+                </>
+              )}
+            </Button>
+          </>
+        }
+      />
 
       {error && (
-        <ErrorState 
-          message={error.message} 
+        <ErrorState
+          message={error.message}
           onRetry={() => {
             runSimulationMutation.reset();
             runAllSimulationsMutation.reset();
@@ -135,61 +133,61 @@ export default function SimulationPage() {
         />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-        <div className="lg:col-span-2">
-          <label className="text-sm font-medium mb-2 block">Strategy</label>
-          <StrategySelector value={selectedStrategyId} onChange={setSelectedStrategyId} />
-        </div>
-        <div>
-          <label className="text-sm font-medium mb-2 block">Market</label>
-          <Select value={market} onValueChange={(value) => setMarket(value || 'US')}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="US">US Market</SelectItem>
-              <SelectItem value="HK">HK Market</SelectItem>
-              <SelectItem value="A">A-Share Market</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+            <div className="lg:col-span-2">
+              <label className="mb-2 block text-[13px] font-medium text-muted-foreground">Strategy</label>
+              <StrategySelector value={selectedStrategyId} onChange={setSelectedStrategyId} />
+            </div>
+            <div>
+              <label className="mb-2 block text-[13px] font-medium text-muted-foreground">Market</label>
+              <Select value={market} onValueChange={(value) => setMarket(value || 'US')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="US">US Market</SelectItem>
+                  <SelectItem value="HK">HK Market</SelectItem>
+                  <SelectItem value="A">A-Share Market</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {selectedStrategyId && (
-        <div className="mb-8">
-          <PerformanceMetricsCards data={performance} />
-        </div>
+        <PerformanceMetricsCards data={performance} />
       )}
 
       {selectedStrategyId && (
-        <div className="mb-8">
-          {chartLoading ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  <span className="ml-3">Loading chart...</span>
-                </div>
-              </CardContent>
-            </Card>
-          ) : chartData ? (
-            <SimulationEquityCurve data={chartData} />
-          ) : null}
-        </div>
+        chartLoading ? (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-3 text-muted-foreground">Loading chart...</span>
+              </div>
+            </CardContent>
+          </Card>
+        ) : chartData ? (
+          <SimulationEquityCurve data={chartData} />
+        ) : null
       )}
 
       {tradesLoading ? (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <span className="ml-3">Loading trades...</span>
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-3 text-muted-foreground">Loading trades...</span>
             </div>
           </CardContent>
         </Card>
       ) : selectedStrategyId ? (
         <Tabs defaultValue="trades">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TabsList>
                 <TabsTrigger value="trades">Trades</TabsTrigger>
@@ -221,14 +219,11 @@ export default function SimulationPage() {
           </TabsContent>
         </Tabs>
       ) : (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <p className="text-lg mb-2">Select a strategy to view trades</p>
-              <p className="text-sm">Choose a strategy from the dropdown above</p>
-            </div>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon="flask"
+          title="Select a strategy to view trades"
+          message="Choose a strategy from the dropdown above"
+        />
       )}
     </div>
   );

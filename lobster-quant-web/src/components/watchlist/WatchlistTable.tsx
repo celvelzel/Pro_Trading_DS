@@ -5,8 +5,18 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +39,6 @@ import {
   RefreshCw,
   AlertCircle,
   MoreHorizontal,
-  FolderPlus,
   Tag,
   Filter,
   FolderOpen,
@@ -45,33 +54,33 @@ interface WatchlistTableProps {
 }
 
 function SignalBadge({ type, score }: { type: string; score: number }) {
-  const config = {
-    bullish: { color: 'text-success bg-success/10', label: 'Bullish' },
-    bearish: { color: 'text-error bg-error/10', label: 'Bearish' },
-    neutral: { color: 'text-warning bg-warning/10', label: 'Neutral' },
-  }
-
-  const { color } = config[type as keyof typeof config] || config.neutral
+  const variant =
+    type === 'bullish' ? 'success' : type === 'bearish' ? 'destructive' : 'warning'
 
   return (
-    <span className={cn('px-2 py-1 rounded-full text-xs font-medium', color)}>
+    <Badge variant={variant} className="font-mono tabular-nums">
       {score}
-    </span>
+    </Badge>
   )
 }
 
 function PriceChange({ change, changePercent }: { change?: number; changePercent?: number }) {
   if (change === undefined || changePercent === undefined) {
-    return <span className="text-text-tertiary text-sm">--</span>
+    return <span className="text-sm text-muted-foreground">--</span>
   }
 
   const isPositive = change >= 0
   const Icon = isPositive ? TrendingUp : TrendingDown
 
   return (
-    <div className={cn('flex items-center gap-1', isPositive ? 'text-success' : 'text-error')}>
-      <Icon className="w-3 h-3" />
-      <span className="text-sm font-medium">
+    <div
+      className={cn(
+        'flex items-center justify-end gap-1 font-mono text-sm font-medium tabular-nums',
+        isPositive ? 'text-success' : 'text-error'
+      )}
+    >
+      <Icon className="size-3.5 shrink-0" />
+      <span>
         {isPositive ? '+' : ''}{change.toFixed(2)} ({isPositive ? '+' : ''}{changePercent.toFixed(2)}%)
       </span>
     </div>
@@ -80,14 +89,29 @@ function PriceChange({ change, changePercent }: { change?: number; changePercent
 
 function StockRowSkeleton() {
   return (
-    <div className="flex items-center gap-4 py-3 animate-pulse">
-      <div className="h-4 w-4 bg-muted rounded" />
-      <div className="h-4 w-16 bg-muted rounded" />
-      <div className="flex-1" />
-      <div className="h-4 w-24 bg-muted rounded" />
-      <div className="h-4 w-20 bg-muted rounded" />
-      <div className="h-6 w-12 bg-muted rounded-full" />
-    </div>
+    <TableRow className="hover:bg-transparent">
+      <TableCell className="w-10">
+        <Skeleton className="size-4" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-4 w-14" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-4 w-24" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="ml-auto h-4 w-16" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="ml-auto h-4 w-28" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-12 rounded-full" />
+      </TableCell>
+      <TableCell className="w-10">
+        <Skeleton className="size-4" />
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -102,12 +126,12 @@ function StockRowActions({ symbol }: { symbol: string }) {
         <DropdownMenuTrigger
           render={
             <button
-              className="p-1 rounded-md hover:bg-muted transition-colors"
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label={`Actions for ${symbol}`}
             />
           }
         >
-          <MoreHorizontal className="w-4 h-4 text-text-tertiary" />
+          <MoreHorizontal className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={4}>
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
@@ -163,7 +187,7 @@ function StockRow({ stock }: { stock: WatchlistStockData }) {
   // Find which groups this stock belongs to
   const stockGroups = useMemo(() => {
     return Object.entries(groups)
-      .filter(([_, symbols]) => symbols.includes(stock.symbol))
+      .filter(([, symbols]) => symbols.includes(stock.symbol))
       .map(([name]) => name)
   }, [groups, stock.symbol])
 
@@ -172,79 +196,85 @@ function StockRow({ stock }: { stock: WatchlistStockData }) {
   }
 
   return (
-    <div className="flex items-center gap-4 py-3 border-b last:border-b-0">
+    <TableRow data-state={isSelected ? 'selected' : undefined}>
       {/* Checkbox */}
-      <input
-        type="checkbox"
-        checked={isSelected}
-        onChange={() => toggleSelect(stock.symbol)}
-        className="h-4 w-4 rounded border-gray-300"
-      />
+      <TableCell className="w-10">
+        <Checkbox
+          checked={isSelected}
+          onChange={() => toggleSelect(stock.symbol)}
+        />
+      </TableCell>
 
       {/* Symbol */}
-      <Link
-        href={`/analysis/${stock.symbol}`}
-        className="font-medium text-text-primary hover:text-primary transition-colors min-w-[60px]"
-      >
-        {stock.symbol}
-      </Link>
+      <TableCell>
+        <Link
+          href={`/analysis/${stock.symbol}`}
+          className="font-mono text-sm font-semibold text-foreground transition-colors hover:text-primary"
+        >
+          {stock.symbol}
+        </Link>
+      </TableCell>
 
       {/* Tags */}
-      <div className="flex items-center gap-1 flex-wrap min-w-[100px]">
-        {stockGroups.map((groupName) => (
-          <Badge
-            key={`group-${groupName}`}
-            variant="outline"
-            className="text-[10px] px-1.5 py-0"
-          >
-            <FolderOpen className="w-2.5 h-2.5 mr-0.5" />
-            {groupName}
-          </Badge>
-        ))}
-        {symbolTags.map((tag) => (
-          <Badge
-            key={`tag-${tag}`}
-            variant="secondary"
-            className="text-[10px] px-1.5 py-0"
-          >
-            {tag}
-          </Badge>
-        ))}
-      </div>
-
-      <div className="flex-1" />
+      <TableCell>
+        <div className="flex max-w-60 flex-wrap items-center gap-1">
+          {stockGroups.map((groupName) => (
+            <Badge
+              key={`group-${groupName}`}
+              variant="outline"
+              className="px-1.5 py-0 text-[10px]"
+            >
+              <FolderOpen className="size-2.5" />
+              {groupName}
+            </Badge>
+          ))}
+          {symbolTags.map((tag) => (
+            <Badge
+              key={`tag-${tag}`}
+              variant="secondary"
+              className="px-1.5 py-0 text-[10px]"
+            >
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      </TableCell>
 
       {/* Price */}
-      <div className="text-right min-w-[80px]">
+      <TableCell className="text-right">
         {stock.price !== undefined ? (
-          <span className="font-mono text-text-primary">${stock.price.toFixed(2)}</span>
+          <span className="font-mono text-sm font-medium tabular-nums text-foreground">
+            ${stock.price.toFixed(2)}
+          </span>
         ) : (
-          <span className="text-text-tertiary">--</span>
+          <span className="text-sm text-muted-foreground">--</span>
         )}
-      </div>
+      </TableCell>
 
       {/* Change */}
-      <div className="min-w-[120px]">
+      <TableCell className="text-right">
         <PriceChange change={stock.change} changePercent={stock.changePercent} />
-      </div>
+      </TableCell>
 
       {/* Signal */}
-      <div className="min-w-[60px]">
+      <TableCell>
         {stock.signal ? (
           <SignalBadge type={stock.signal.type} score={stock.signal.score} />
         ) : stock.error ? (
           <div className="flex items-center gap-1 text-error" title={stock.error}>
-            <AlertCircle className="w-4 h-4" />
+            <AlertCircle className="size-4" />
             <span className="text-xs">Error</span>
           </div>
         ) : (
-          <span className="text-text-tertiary text-sm">--</span>
+          <span className="text-sm text-muted-foreground">--</span>
         )}
-      </div>
+      </TableCell>
 
       {/* Actions */}
-      <StockRowActions symbol={stock.symbol} />
-    </div>
+      <TableCell className="w-10">
+        <StockRowActions symbol={stock.symbol} />
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -277,17 +307,19 @@ export const WatchlistTable = memo(function WatchlistTable({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex w-full items-center justify-between">
             <span>Watchlist</span>
-            <div className="h-8 w-24 bg-muted animate-pulse rounded" />
+            <Skeleton className="h-8 w-24" />
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <StockRowSkeleton key={i} />
-            ))}
-          </div>
+          <Table>
+            <TableBody>
+              {[1, 2, 3].map((i) => (
+                <StockRowSkeleton key={i} />
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     )
@@ -297,22 +329,20 @@ export const WatchlistTable = memo(function WatchlistTable({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Watchlist</span>
-          </CardTitle>
+          <CardTitle>Watchlist</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-              <Plus className="h-8 w-8 text-muted-foreground" />
+          <div className="py-12 text-center">
+            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-muted">
+              <Plus className="size-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">Your watchlist is empty</h3>
-            <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+            <h3 className="mb-2 text-lg font-semibold text-foreground">Your watchlist is empty</h3>
+            <p className="mx-auto mb-6 max-w-sm text-sm text-muted-foreground">
               Add stocks to track their performance, signals, and technical indicators
             </p>
             {onAddClick && (
               <Button onClick={onAddClick} variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus />
                 Add Your First Stock
               </Button>
             )}
@@ -326,32 +356,32 @@ export const WatchlistTable = memo(function WatchlistTable({
     <>
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span>Watchlist</span>
-              <span className="text-sm font-normal text-text-tertiary">
-                ({filteredStocks.length} {filteredStocks.length === 1 ? 'stock' : 'stocks'})
-                {groupFilter && (
-                  <span className="ml-1">
-                    in <span className="font-medium text-text-secondary">{groupFilter}</span>
-                  </span>
-                )}
-              </span>
-              {loading && (
-                <RefreshCw className="w-4 h-4 text-text-tertiary animate-spin" />
+          <CardTitle className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>Watchlist</span>
+            <span className="text-sm font-normal text-muted-foreground">
+              ({filteredStocks.length} {filteredStocks.length === 1 ? 'stock' : 'stocks'})
+              {groupFilter && (
+                <span className="ml-1">
+                  in <span className="font-medium text-foreground">{groupFilter}</span>
+                </span>
               )}
-            </div>
-            <div className="flex items-center gap-2">
+            </span>
+            {loading && (
+              <RefreshCw className="size-4 animate-spin text-muted-foreground" />
+            )}
+          </CardTitle>
+          <CardAction>
+            <div className="flex flex-wrap items-center gap-2">
               {/* Refresh button */}
               {onRefresh && (
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon-sm"
                   onClick={onRefresh}
                   disabled={loading}
                   title="Refresh data"
                 >
-                  <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+                  <RefreshCw className={cn(loading && 'animate-spin')} />
                 </Button>
               )}
 
@@ -362,7 +392,7 @@ export const WatchlistTable = memo(function WatchlistTable({
                   size="sm"
                   onClick={() => onCompareClick(selectedSymbols)}
                 >
-                  <BarChart3 className="w-4 h-4 mr-1" />
+                  <BarChart3 />
                   Compare ({selectedSymbols.length})
                 </Button>
               )}
@@ -375,68 +405,66 @@ export const WatchlistTable = memo(function WatchlistTable({
               {/* Remove selected */}
               {selectedSymbols.length > 0 && (
                 <Button variant="destructive" size="sm" onClick={removeSelected}>
-                  <Trash2 className="w-4 h-4 mr-1" />
+                  <Trash2 />
                   Remove ({selectedSymbols.length})
                 </Button>
               )}
 
               {/* Add button */}
-              <Button variant="outline" size="sm" onClick={onAddClick}>
-                <Plus className="w-4 h-4 mr-1" />
+              <Button size="sm" onClick={onAddClick}>
+                <Plus />
                 Add
               </Button>
             </div>
-          </CardTitle>
+          </CardAction>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className="space-y-4">
           {/* Group Tabs */}
           {groupNames.length > 0 && (
-            <Tabs
-              value={groupFilter || 'all'}
-              onValueChange={(v) => setGroupFilter(v === 'all' ? null : v)}
-              className="mb-4"
-            >
-              <div className="flex items-center justify-between border-b pb-0.5 mb-4">
-                <TabsList className="h-auto bg-transparent p-0 gap-6 rounded-none">
-                  <TabsTrigger
-                    value="all"
-                    className="relative px-1 pb-2 pt-0 rounded-none border-b-2 border-transparent bg-transparent data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none text-sm font-medium"
-                  >
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-1">
+              <Tabs
+                value={groupFilter || 'all'}
+                onValueChange={(v) => setGroupFilter(v === 'all' ? null : v)}
+              >
+                <TabsList variant="line" className="h-auto flex-wrap justify-start">
+                  <TabsTrigger value="all" className="px-1.5 text-sm">
                     All Stocks
-                    <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1 font-normal bg-muted text-[10px]">
+                    <Badge
+                      variant="secondary"
+                      className="ml-1.5 h-5 min-w-5 px-1 font-mono text-[10px] tabular-nums"
+                    >
                       {stocks.length}
                     </Badge>
                   </TabsTrigger>
                   {groupNames.map((name) => (
-                    <TabsTrigger
-                      key={name}
-                      value={name}
-                      className="relative px-1 pb-2 pt-0 rounded-none border-b-2 border-transparent bg-transparent data-[state=active]:bg-transparent data-[state=active]:border-primary data-[state=active]:shadow-none text-sm font-medium"
-                    >
+                    <TabsTrigger key={name} value={name} className="px-1.5 text-sm">
                       {name}
-                      <Badge variant="secondary" className="ml-2 h-5 min-w-5 px-1 font-normal bg-muted text-[10px]">
+                      <Badge
+                        variant="secondary"
+                        className="ml-1.5 h-5 min-w-5 px-1 font-mono text-[10px] tabular-nums"
+                      >
                         {(groups[name] || []).length}
                       </Badge>
                     </TabsTrigger>
                   ))}
                 </TabsList>
-                
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setManageGroupsOpen(true)}
-                  className="text-text-tertiary hover:text-text-secondary h-8 px-2"
-                >
-                  <FolderOpen className="w-4 h-4 mr-1.5" />
-                  Manage Groups
-                </Button>
-              </div>
-            </Tabs>
+              </Tabs>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setManageGroupsOpen(true)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <FolderOpen />
+                Manage Groups
+              </Button>
+            </div>
           )}
 
           {filteredStocks.length === 0 ? (
-            <div className="text-center py-8 text-text-tertiary">
-              <Filter className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <div className="py-10 text-center text-muted-foreground">
+              <Filter className="mx-auto mb-2 size-8 opacity-50" />
               <p className="text-sm">
                 No stocks in &ldquo;{groupFilter}&rdquo; group.
               </p>
@@ -450,11 +478,24 @@ export const WatchlistTable = memo(function WatchlistTable({
               </Button>
             </div>
           ) : (
-            <div className="divide-y">
-              {filteredStocks.map((stock) => (
-                <StockRow key={stock.symbol} stock={stock} />
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10" />
+                  <TableHead className="text-xs text-muted-foreground">Symbol</TableHead>
+                  <TableHead className="text-xs text-muted-foreground">Tags</TableHead>
+                  <TableHead className="text-right text-xs text-muted-foreground">Price</TableHead>
+                  <TableHead className="text-right text-xs text-muted-foreground">Change</TableHead>
+                  <TableHead className="text-xs text-muted-foreground">Signal</TableHead>
+                  <TableHead className="w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStocks.map((stock) => (
+                  <StockRow key={stock.symbol} stock={stock} />
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

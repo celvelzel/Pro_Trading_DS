@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useStrategyStore, Strategy, StrategyParams } from '@/stores/strategyStore';
+import { useStrategyStore, StrategyParams } from '@/stores/strategyStore';
 import { StrategyForm } from '@/components/strategy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api';
 
@@ -168,7 +169,7 @@ export default function StrategyDetailPage() {
   // Loading state
   if (loading && !selectedStrategy) {
     return (
-      <div className="container mx-auto py-8 flex items-center justify-center min-h-[400px]">
+      <div className="mx-auto flex min-h-[400px] w-full max-w-[1600px] items-center justify-center p-4 md:p-6">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -177,10 +178,10 @@ export default function StrategyDetailPage() {
   // Error state
   if (error && !selectedStrategy) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="bg-destructive/10 text-destructive p-4 rounded-lg">
-          {error}
-          <Button variant="ghost" size="sm" onClick={clearError} className="ml-2">
+      <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          <span>{error}</span>
+          <Button variant="ghost" size="sm" onClick={clearError}>
             Dismiss
           </Button>
         </div>
@@ -191,30 +192,32 @@ export default function StrategyDetailPage() {
   // Not found
   if (!selectedStrategy) {
     return (
-      <div className="container mx-auto py-8 text-center text-muted-foreground">
+      <div className="mx-auto w-full max-w-[1600px] p-4 py-12 text-center text-sm text-muted-foreground md:p-6">
         Strategy not found.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="sm" onClick={() => router.push('/strategy')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold">{selectedStrategy.name}</h1>
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => router.push('/strategy')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-lg font-semibold leading-tight tracking-tight text-foreground">
+              {selectedStrategy.name}
+            </h1>
             {selectedStrategy.isPreset && <Badge variant="secondary">Preset</Badge>}
             <Badge variant="outline">{selectedStrategy.logic}</Badge>
           </div>
-          <p className="text-muted-foreground mt-1">
-            {selectedStrategy.description || 'No description'}
-          </p>
         </div>
+        <p className="text-[13px] leading-snug text-muted-foreground">
+          {selectedStrategy.description || 'No description'}
+        </p>
       </div>
 
       {/* Tabs */}
@@ -285,6 +288,33 @@ export default function StrategyDetailPage() {
 // Tab Components
 // ---------------------------------------------------------------------------
 
+function TabLoadingState() {
+  return (
+    <div className="flex items-center justify-center py-12">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+function TabErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="py-12 text-center">
+      <p className="mb-2 text-sm text-destructive">{error}</p>
+      <Button variant="outline" size="sm" onClick={onRetry}>
+        Retry
+      </Button>
+    </div>
+  );
+}
+
+function TabEmptyState({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+      {children}
+    </div>
+  );
+}
+
 function BacktestsTab({
   backtests,
   loading,
@@ -297,62 +327,49 @@ function BacktestsTab({
   onRetry: () => void;
 }) {
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <TabLoadingState />;
   }
 
   if (error) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-destructive mb-2">{error}</p>
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <TabErrorState error={error} onRetry={onRetry} />;
   }
 
   if (backtests.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        No backtest results yet for this strategy.
-      </div>
-    );
+    return <TabEmptyState>No backtest results yet for this strategy.</TabEmptyState>;
   }
 
   return (
     <div className="space-y-4">
       {backtests.map((bt) => (
         <Card key={bt.id}>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="font-semibold">{bt.symbol}</div>
-              <Badge variant={bt.totalReturn >= 0 ? 'default' : 'destructive'}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="font-mono">{bt.symbol}</CardTitle>
+              <Badge variant={bt.totalReturn >= 0 ? 'success' : 'destructive'}>
                 {bt.totalReturn >= 0 ? '+' : ''}{bt.totalReturn}%
               </Badge>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
               <div>
                 <span className="text-muted-foreground">Trades:</span>{' '}
-                <span className="font-medium">{bt.totalTrades}</span>
+                <span className="font-mono font-medium">{bt.totalTrades}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Win Rate:</span>{' '}
-                <span className="font-medium">{bt.winRate}%</span>
+                <span className="font-mono font-medium">{bt.winRate}%</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Max DD:</span>{' '}
-                <span className="font-medium">{bt.maxDrawdown}%</span>
+                <span className="font-mono font-medium text-error">{bt.maxDrawdown}%</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Sharpe:</span>{' '}
-                <span className="font-medium">{bt.sharpeRatio}</span>
+                <span className="font-mono font-medium">{bt.sharpeRatio}</span>
               </div>
             </div>
-            <div className="text-xs text-muted-foreground mt-2">
+            <div className="mt-2 font-mono text-xs text-muted-foreground">
               {bt.startDate} → {bt.endDate}
             </div>
           </CardContent>
@@ -376,30 +393,15 @@ function SimulationsTab({
   onRetry: () => void;
 }) {
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <TabLoadingState />;
   }
 
   if (error) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-destructive mb-2">{error}</p>
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <TabErrorState error={error} onRetry={onRetry} />;
   }
 
   if (trades.length === 0 && snapshots.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        No simulation data yet for this strategy.
-      </div>
-    );
+    return <TabEmptyState>No simulation data yet for this strategy.</TabEmptyState>;
   }
 
   return (
@@ -411,22 +413,22 @@ function SimulationsTab({
             <CardTitle className="text-base">Latest Snapshot</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
               <div>
                 <span className="text-muted-foreground">Portfolio:</span>{' '}
-                <span className="font-medium">{'$'}{snapshots[0].portfolioValue.toLocaleString()}</span>
+                <span className="font-mono font-medium">{'$'}{snapshots[0].portfolioValue.toLocaleString()}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Cash:</span>{' '}
-                <span className="font-medium">{'$'}{snapshots[0].cash.toLocaleString()}</span>
+                <span className="font-mono font-medium">{'$'}{snapshots[0].cash.toLocaleString()}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Open Trades:</span>{' '}
-                <span className="font-medium">{snapshots[0].openTrades}</span>
+                <span className="font-mono font-medium">{snapshots[0].openTrades}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Date:</span>{' '}
-                <span className="font-medium">{snapshots[0].date}</span>
+                <span className="font-mono font-medium">{snapshots[0].date}</span>
               </div>
             </div>
           </CardContent>
@@ -440,12 +442,15 @@ function SimulationsTab({
             <CardTitle className="text-base">Recent Trades</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-1">
               {trades.slice(0, 20).map((trade) => (
-                <div key={trade.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                <div
+                  key={trade.id}
+                  className="flex items-center justify-between rounded-md border-b border-border py-2 transition-colors last:border-0 hover:bg-muted/50"
+                >
                   <div>
-                    <span className="font-medium">{trade.symbol}</span>
-                    <span className="text-muted-foreground ml-2 text-xs">
+                    <span className="font-mono font-medium">{trade.symbol}</span>
+                    <span className="ml-2 font-mono text-xs text-muted-foreground">
                       {trade.entryDate} → {trade.exitDate || 'Open'}
                     </span>
                   </div>
@@ -454,7 +459,12 @@ function SimulationsTab({
                       {trade.status}
                     </Badge>
                     {trade.pnlPercent != null && (
-                      <span className={trade.pnlPercent >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      <span
+                        className={cn(
+                          'font-mono font-medium',
+                          trade.pnlPercent >= 0 ? 'text-success' : 'text-error'
+                        )}
+                      >
                         {trade.pnlPercent >= 0 ? '+' : ''}{trade.pnlPercent.toFixed(2)}%
                       </span>
                     )}
@@ -481,29 +491,18 @@ function LivePerformanceTab({
   onRetry: () => void;
 }) {
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <TabLoadingState />;
   }
 
   if (error) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-destructive mb-2">{error}</p>
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <TabErrorState error={error} onRetry={onRetry} />;
   }
 
   if (!stats || stats.totalSignals === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
+      <TabEmptyState>
         No signal data yet. Signals will be tracked automatically as they are generated.
-      </div>
+      </TabEmptyState>
     );
   }
 
@@ -517,35 +516,35 @@ function LivePerformanceTab({
           <CardTitle className="text-base">Win Rate Overview (Last {stats.lookbackDays} Days)</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <div className="text-2xl font-bold">{stats.totalSignals}</div>
-              <div className="text-sm text-muted-foreground">Total Signals</div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div className="rounded-lg border border-border bg-background p-4 text-center">
+              <div className="font-mono text-2xl font-semibold tracking-tight">{stats.totalSignals}</div>
+              <div className="mt-1 text-sm text-muted-foreground">Total Signals</div>
             </div>
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <div className={`text-2xl font-bold ${stats.winRate5d >= 50 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="rounded-lg border border-border bg-background p-4 text-center">
+              <div className={cn('font-mono text-2xl font-semibold tracking-tight', stats.winRate5d >= 50 ? 'text-success' : 'text-error')}>
                 {stats.winRate5d}%
               </div>
-              <div className="text-sm text-muted-foreground">5-Day Win Rate</div>
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="mt-1 text-sm text-muted-foreground">5-Day Win Rate</div>
+              <div className="mt-1 font-mono text-xs text-muted-foreground">
                 {stats.evaluated5d} evaluated
               </div>
             </div>
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <div className={`text-2xl font-bold ${stats.winRate10d >= 50 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="rounded-lg border border-border bg-background p-4 text-center">
+              <div className={cn('font-mono text-2xl font-semibold tracking-tight', stats.winRate10d >= 50 ? 'text-success' : 'text-error')}>
                 {stats.winRate10d}%
               </div>
-              <div className="text-sm text-muted-foreground">10-Day Win Rate</div>
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="mt-1 text-sm text-muted-foreground">10-Day Win Rate</div>
+              <div className="mt-1 font-mono text-xs text-muted-foreground">
                 {stats.evaluated10d} evaluated
               </div>
             </div>
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <div className={`text-2xl font-bold ${stats.winRate20d >= 50 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="rounded-lg border border-border bg-background p-4 text-center">
+              <div className={cn('font-mono text-2xl font-semibold tracking-tight', stats.winRate20d >= 50 ? 'text-success' : 'text-error')}>
                 {stats.winRate20d}%
               </div>
-              <div className="text-sm text-muted-foreground">20-Day Win Rate</div>
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="mt-1 text-sm text-muted-foreground">20-Day Win Rate</div>
+              <div className="mt-1 font-mono text-xs text-muted-foreground">
                 {stats.evaluated20d} evaluated
               </div>
             </div>
@@ -560,23 +559,23 @@ function LivePerformanceTab({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <div className={`text-xl font-bold ${stats.avgReturn5d >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="rounded-lg border border-border bg-background p-4 text-center">
+              <div className={cn('font-mono text-xl font-semibold tracking-tight', stats.avgReturn5d >= 0 ? 'text-success' : 'text-error')}>
                 {stats.avgReturn5d >= 0 ? '+' : ''}{stats.avgReturn5d}%
               </div>
-              <div className="text-sm text-muted-foreground">5-Day Avg Return</div>
+              <div className="mt-1 text-sm text-muted-foreground">5-Day Avg Return</div>
             </div>
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <div className={`text-xl font-bold ${stats.avgReturn10d >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="rounded-lg border border-border bg-background p-4 text-center">
+              <div className={cn('font-mono text-xl font-semibold tracking-tight', stats.avgReturn10d >= 0 ? 'text-success' : 'text-error')}>
                 {stats.avgReturn10d >= 0 ? '+' : ''}{stats.avgReturn10d}%
               </div>
-              <div className="text-sm text-muted-foreground">10-Day Avg Return</div>
+              <div className="mt-1 text-sm text-muted-foreground">10-Day Avg Return</div>
             </div>
-            <div className="text-center p-4 bg-muted rounded-lg">
-              <div className={`text-xl font-bold ${stats.avgReturn20d >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="rounded-lg border border-border bg-background p-4 text-center">
+              <div className={cn('font-mono text-xl font-semibold tracking-tight', stats.avgReturn20d >= 0 ? 'text-success' : 'text-error')}>
                 {stats.avgReturn20d >= 0 ? '+' : ''}{stats.avgReturn20d}%
               </div>
-              <div className="text-sm text-muted-foreground">20-Day Avg Return</div>
+              <div className="mt-1 text-sm text-muted-foreground">20-Day Avg Return</div>
             </div>
           </div>
         </CardContent>
@@ -593,8 +592,8 @@ function LivePerformanceTab({
               {signalTypes.map((type) => {
                 const typeStats = stats.bySignalType[type];
                 return (
-                  <div key={type} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
+                  <div key={type} className="rounded-lg border border-border bg-background p-4">
+                    <div className="mb-3 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Badge variant={type === '强烈推荐' ? 'default' : type === '推荐' ? 'secondary' : 'outline'}>
                           {type}
@@ -607,39 +606,39 @@ function LivePerformanceTab({
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">5d WR:</span>{' '}
-                        <span className={`font-medium ${typeStats.winRate5d >= 50 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className={cn('font-mono font-medium', typeStats.winRate5d >= 50 ? 'text-success' : 'text-error')}>
                           {typeStats.winRate5d}%
                         </span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">10d WR:</span>{' '}
-                        <span className={`font-medium ${typeStats.winRate10d >= 50 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className={cn('font-mono font-medium', typeStats.winRate10d >= 50 ? 'text-success' : 'text-error')}>
                           {typeStats.winRate10d}%
                         </span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">20d WR:</span>{' '}
-                        <span className={`font-medium ${typeStats.winRate20d >= 50 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className={cn('font-mono font-medium', typeStats.winRate20d >= 50 ? 'text-success' : 'text-error')}>
                           {typeStats.winRate20d}%
                         </span>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4 text-sm mt-2">
+                    <div className="mt-2 grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">5d Ret:</span>{' '}
-                        <span className={`font-medium ${typeStats.avgReturn5d >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className={cn('font-mono font-medium', typeStats.avgReturn5d >= 0 ? 'text-success' : 'text-error')}>
                           {typeStats.avgReturn5d >= 0 ? '+' : ''}{typeStats.avgReturn5d}%
                         </span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">10d Ret:</span>{' '}
-                        <span className={`font-medium ${typeStats.avgReturn10d >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className={cn('font-mono font-medium', typeStats.avgReturn10d >= 0 ? 'text-success' : 'text-error')}>
                           {typeStats.avgReturn10d >= 0 ? '+' : ''}{typeStats.avgReturn10d}%
                         </span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">20d Ret:</span>{' '}
-                        <span className={`font-medium ${typeStats.avgReturn20d >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className={cn('font-mono font-medium', typeStats.avgReturn20d >= 0 ? 'text-success' : 'text-error')}>
                           {typeStats.avgReturn20d >= 0 ? '+' : ''}{typeStats.avgReturn20d}%
                         </span>
                       </div>
@@ -667,45 +666,30 @@ function SignalsTab({
   onRetry: () => void;
 }) {
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <TabLoadingState />;
   }
 
   if (error) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-destructive mb-2">{error}</p>
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <TabErrorState error={error} onRetry={onRetry} />;
   }
 
   if (signals.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        No signals triggered yet for this strategy.
-      </div>
-    );
+    return <TabEmptyState>No signals triggered yet for this strategy.</TabEmptyState>;
   }
 
   return (
     <div className="space-y-3">
       {signals.map((signal) => (
         <Card key={signal.id}>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="font-semibold">{signal.symbol}</div>
+          <CardContent className="pt-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="font-mono font-semibold">{signal.symbol}</div>
               <Badge variant={signal.read ? 'outline' : 'default'}>
                 {signal.read ? 'Read' : 'New'}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground mb-2">{signal.message}</p>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <p className="mb-2 text-sm text-muted-foreground">{signal.message}</p>
+            <div className="flex flex-wrap items-center gap-4 font-mono text-xs text-muted-foreground">
               <span>Condition: {signal.condition}</span>
               <span>Threshold: {signal.threshold}</span>
               <span>Current: {signal.currentValue}</span>

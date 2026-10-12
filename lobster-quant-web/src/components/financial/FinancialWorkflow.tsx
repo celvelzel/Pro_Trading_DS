@@ -7,18 +7,12 @@ import type { FinancialCreation, FinancialRun, WorkflowType, FinancialRequest, L
 import type { PortfolioArtifact } from '@/types/financial-artifacts'
 import { MarketResult } from './MarketResult'
 import { PortfolioResult } from './PortfolioResult'
+import { FinancialObservatory } from './FinancialObservatory'
+import { eventSafeSummary } from '@/lib/financial-observatory'
 import { Button } from '@/components/ui/button'
 import { ConstraintsForm, constraintErrors } from './ConstraintsForm'
 const terminal = (status?: string) => ['completed', 'failed', 'cancelled', 'expired'].includes(status ?? '')
-const safeFields = ['relation_id', 'relation_type', 'message_type', 'role', 'kind', 'action', 'status', 'evidence_ids', 'artifact_id', 'message_id', 'causation_id', 'sender_run_id', 'receiver_run_id', 'source_run_id', 'target_run_id']
-export function eventSummary(payload: Record<string, unknown>) {
-  return safeFields.flatMap(key => {
-    const value = payload[key]
-    if (typeof value === 'string') return [`${key}: ${value}`]
-    if (Array.isArray(value) && value.every(v => typeof v === 'string')) return [`${key}: ${value.join(', ')}`]
-    return []
-  }).join(' · ')
-}
+export const eventSummary = eventSafeSummary
 export function PortfolioProvenance({ artifact, source = 'demo' }: { artifact: PortfolioArtifact; source?: 'demo' | 'user' }) {
   const title = source === 'demo' ? 'Portfolio 合成来源与计算记录' : 'Portfolio 用户快照与计算记录'
   return <section aria-label={title} className="space-y-2 rounded border p-3">
@@ -33,7 +27,7 @@ export function PortfolioProvenance({ artifact, source = 'demo' }: { artifact: P
     <p>Combined Market 引用在独立 Market 结果中展示，不作为此板的 Portfolio 来源。</p>
   </section>
 }
-function FinancialRunPanel({ id, conversation, correlation, marketReady, onSnapshot }: { id: string; conversation: string; correlation: string; marketReady: boolean; onSnapshot: (run: FinancialRun) => void }) {
+export function FinancialRunPanel({ id, conversation, correlation, marketReady = true, onSnapshot }: { id: string; conversation?: string; correlation?: string; marketReady?: boolean; onSnapshot: (run: FinancialRun) => void }) {
   const [run, setRun] = useState<FinancialRun | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -69,7 +63,7 @@ function FinancialRunPanel({ id, conversation, correlation, marketReady, onSnaps
     {run && !terminal(run.status) && <Button variant="outline" disabled={busy} onClick={() => void action('cancel')}>取消此 run</Button>}
     {run?.error_code && <p role="alert">{run.error_code}</p>}
     {run?.limitations.map((text, i) => <p key={i}>{text === 'SYSTEM_UNAVAILABLE' ? 'SYSTEM_UNAVAILABLE：API 已确认持久化的跨 MAS 不可用消息；Portfolio 未收到可用的 Market 证据。' : text === 'market_evidence_unavailable' ? 'Market 证据未传递到 Portfolio；组合结论受此限制。' : text}</p>)}
-    <section aria-label="角色与证据轨迹"><h3 className="font-medium">角色与证据轨迹</h3>{!events.length && <p>等待运行事件。</p>}<ol className="space-y-2">{events.map(event => <li key={event.event_id} className="break-all text-xs"><span>{event.seq} · {typeof event.payload.role === 'string' ? event.payload.role : 'stage/system'} · {event.event_type}</span><p>{eventSummary(event.payload)}</p></li>)}</ol></section>
+    {run ? <FinancialObservatory run={run} events={events} terminal={terminal(run.status)} /> : <section aria-label="角色与证据轨迹"><h3 className="font-medium">角色与证据轨迹</h3>{!events.length && <p>等待运行事件。</p>}<ol className="space-y-2">{events.map(event => <li key={event.event_id} className="break-all text-xs"><span>{event.seq} · {typeof event.payload.role === 'string' ? event.payload.role : 'stage/system'} · {event.event_type}</span><p>{eventSummary(event.payload)}</p></li>)}</ol></section>}
     {run?.mas_kind === 'portfolio_rebalance' && run.artifact && <PortfolioProvenance artifact={run.artifact} source={run.data_source ?? 'demo'} />}
     {run?.mas_kind === 'market_investigation' ? <MarketResult artifact={run.artifact} sourceProfile={run.data_source ?? 'demo'} loading={!terminal(run.status)} /> : <PortfolioResult artifact={run?.artifact} sourceProfile={run?.data_source ?? 'demo'} loading={!run || !terminal(run.status)}  />}
   </article>

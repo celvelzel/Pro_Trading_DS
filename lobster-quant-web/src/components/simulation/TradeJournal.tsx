@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown, Clock } from 'lucide-react';
 import type { TradeJournalEntry } from '@/hooks/useSimulation';
 
@@ -17,28 +16,28 @@ function TradeJournalItem({ entry }: { entry: TradeJournalEntry }) {
   const isProfit = (entry.pnl ?? 0) >= 0;
 
   return (
-    <div className="border rounded-lg mb-2 overflow-hidden">
+    <div className="mb-2 overflow-hidden rounded-lg border border-border">
       {/* Summary row - always visible */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
       >
         <div className="flex-shrink-0 text-muted-foreground">
           {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </div>
 
         {/* Symbol + direction icon */}
-        <div className="flex items-center gap-2 min-w-[80px]">
+        <div className="flex min-w-[80px] items-center gap-2">
           {isProfit ? (
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-4 w-4 text-success" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-red-600" />
+            <TrendingDown className="h-4 w-4 text-error" />
           )}
-          <span className="font-semibold">{entry.symbol}</span>
+          <span className="font-mono font-semibold">{entry.symbol}</span>
         </div>
 
         {/* Entry date */}
-        <span className="text-sm text-muted-foreground min-w-[100px]">
+        <span className="min-w-[100px] font-mono text-sm text-muted-foreground tabular-nums">
           {entry.entryDate}
         </span>
 
@@ -50,7 +49,7 @@ function TradeJournalItem({ entry }: { entry: TradeJournalEntry }) {
         {/* P&L */}
         <div className="flex-1 text-right">
           {isClosed ? (
-            <span className={`font-medium ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={`font-mono font-medium tabular-nums ${isProfit ? 'text-success' : 'text-error'}`}>
               {isProfit ? '+' : ''}{entry.pnl?.toFixed(2)} ({entry.pnlPercent?.toFixed(1)}%)
             </span>
           ) : (
@@ -60,7 +59,7 @@ function TradeJournalItem({ entry }: { entry: TradeJournalEntry }) {
 
         {/* Holding days */}
         {entry.holdingDays !== null && entry.holdingDays !== undefined && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-[60px] justify-end">
+          <div className="flex min-w-[60px] items-center justify-end gap-1 font-mono text-xs text-muted-foreground tabular-nums">
             <Clock className="h-3 w-3" />
             {entry.holdingDays}d
           </div>
@@ -69,22 +68,22 @@ function TradeJournalItem({ entry }: { entry: TradeJournalEntry }) {
 
       {/* Expanded details */}
       {expanded && (
-        <div className="px-4 pb-4 pt-1 border-t bg-muted/20">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div className="border-t border-border bg-muted/30 px-4 pb-4 pt-3">
+          <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
             {/* Entry details */}
             <div>
-              <p className="text-muted-foreground text-xs mb-1">Entry</p>
-              <p className="font-medium">${entry.entryPrice.toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">{entry.shares} shares</p>
+              <p className="mb-1 text-xs text-muted-foreground">Entry</p>
+              <p className="font-mono font-medium tabular-nums">${entry.entryPrice.toFixed(2)}</p>
+              <p className="font-mono text-xs text-muted-foreground tabular-nums">{entry.shares} shares</p>
             </div>
 
             {/* Exit details */}
             <div>
-              <p className="text-muted-foreground text-xs mb-1">Exit</p>
+              <p className="mb-1 text-xs text-muted-foreground">Exit</p>
               {entry.exitPrice ? (
                 <>
-                  <p className="font-medium">${entry.exitPrice.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">{entry.exitDate}</p>
+                  <p className="font-mono font-medium tabular-nums">${entry.exitPrice.toFixed(2)}</p>
+                  <p className="font-mono text-xs text-muted-foreground tabular-nums">{entry.exitDate}</p>
                 </>
               ) : (
                 <p className="text-muted-foreground">—</p>
@@ -93,10 +92,10 @@ function TradeJournalItem({ entry }: { entry: TradeJournalEntry }) {
 
             {/* Entry signal */}
             <div>
-              <p className="text-muted-foreground text-xs mb-1">Entry Signal</p>
+              <p className="mb-1 text-xs text-muted-foreground">Entry Signal</p>
               {entry.entryScore !== null && entry.entryScore !== undefined ? (
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{entry.entryScore.toFixed(0)}</span>
+                  <span className="font-mono font-medium tabular-nums">{entry.entryScore.toFixed(0)}</span>
                   {entry.entrySignalType && (
                     <Badge variant="outline" className="text-xs">
                       {entry.entrySignalType}
@@ -110,7 +109,7 @@ function TradeJournalItem({ entry }: { entry: TradeJournalEntry }) {
 
             {/* Exit reason */}
             <div>
-              <p className="text-muted-foreground text-xs mb-1">Exit Reason</p>
+              <p className="mb-1 text-xs text-muted-foreground">Exit Reason</p>
               <p className="font-medium">{entry.exitReason ?? '—'}</p>
             </div>
           </div>
@@ -118,7 +117,7 @@ function TradeJournalItem({ entry }: { entry: TradeJournalEntry }) {
           {/* Entry reasons */}
           {entry.entryReasons && entry.entryReasons.length > 0 && (
             <div className="mt-3">
-              <p className="text-muted-foreground text-xs mb-1">Entry Reasons</p>
+              <p className="mb-1 text-xs text-muted-foreground">Entry Reasons</p>
               <div className="flex flex-wrap gap-1">
                 {entry.entryReasons.map((reason, i) => (
                   <Badge key={i} variant="secondary" className="text-xs">
@@ -162,7 +161,7 @@ export function TradeJournal({ entries }: TradeJournalProps) {
       <CardContent>
         {openEntries.length > 0 && (
           <div className="mb-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
               Open Positions ({openEntries.length})
             </h3>
             {openEntries.map(entry => (
@@ -173,7 +172,7 @@ export function TradeJournal({ entries }: TradeJournalProps) {
 
         {closedEntries.length > 0 && (
           <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
               Closed Trades ({closedEntries.length})
             </h3>
             {closedEntries.map(entry => (

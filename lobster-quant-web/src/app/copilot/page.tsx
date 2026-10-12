@@ -2,13 +2,15 @@
 
 import { useSearchParams } from 'next/navigation'
 import { FinancialWorkflow } from '@/components/financial/FinancialWorkflow'
+import { FinancialRunHistory } from '@/components/financial/FinancialRunHistory'
 import type { WorkflowType } from '@/types/financial-api'
 import { FormEvent, Suspense, useCallback, useState } from 'react'
-import { Ban, Bot, Pause, Play, RefreshCw, RotateCcw, Send, Square, Sparkles } from 'lucide-react'
+import { Ban, Bot, Pause, Play, RefreshCw, RotateCcw, Send, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { PlanPanel } from '@/components/copilot/PlanPanel'
 import { MemoryPanel } from '@/components/copilot/MemoryPanel'
 import { SourcesPanel } from '@/components/copilot/SourcesPanel'
@@ -62,16 +64,9 @@ function GeneralCopilot() {
 
   const displayError = actionError ?? error?.message
   return (
-    <div className="min-h-full bg-background px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header className="flex flex-col gap-4 border-b border-border/60 pb-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-emerald-600"><Sparkles className="size-3.5" />Research Copilot</p>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">把研究问题变成可审计的执行轨迹</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">计划、工具摘要、异步回测和引用都会保留在 run 中。默认先审阅计划，再批准执行。</p>
-          </div>
-          <div className="rounded-full border border-border/60 bg-card px-3 py-1.5 text-xs text-muted-foreground">GET SSE · REST snapshot</div>
-        </header>
+    <div className="min-h-full bg-background p-4 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <PageHeader title="Research Copilot" description="把研究问题变成可审计的执行轨迹。默认先审阅计划，再批准执行。" />
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <Card className="overflow-visible">
@@ -92,17 +87,17 @@ function GeneralCopilot() {
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-950 text-slate-50 ring-slate-800">
-            <CardHeader><CardTitle className="flex items-center justify-between text-sm"><span>Run 状态</span>{loading && <RefreshCw className="size-4 animate-spin text-slate-400" />}</CardTitle></CardHeader>
+          <Card className="bg-card text-card-foreground">
+            <CardHeader><CardTitle className="flex items-center justify-between text-sm"><span>Run 状态</span>{loading && <RefreshCw className="size-4 animate-spin text-muted-foreground" />}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3"><span className="size-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,.7)]" /><span className="font-mono text-sm">{run?.status ?? 'idle'}</span></div>
-              {run && <p className="font-mono text-xs text-slate-400">{run.id.slice(0, 8)} · v{run.version} · {events.length} events</p>}
-              {run?.status === 'waiting_user' && <div className="space-y-3"><div className="flex gap-2"><Button disabled={actionBusy} onClick={() => void action('approve')} className="min-h-10 flex-1 gap-2 bg-emerald-500 text-slate-950 hover:bg-emerald-400"><Play className="size-4" />批准计划</Button><Button disabled={actionBusy} variant="outline" onClick={() => void action('reject', rejectReason)} className="min-h-10 gap-2 border-slate-700 bg-transparent text-slate-100 hover:bg-slate-800"><Ban className="size-4" />重新规划</Button></div><label htmlFor="reject-reason" className="text-xs text-slate-400">给规划的反馈（可选）</label><Input id="reject-reason" value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} placeholder="例如：缩小数据范围，先完成风险分析" className="min-h-10 border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500" /><label htmlFor="clarification" className="text-xs text-slate-400">补充信息</label><Textarea id="clarification" value={clarification} onChange={(event) => setClarification(event.target.value)} placeholder="提供 Agent 继续规划所需的上下文" className="border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500" /><Button disabled={actionBusy || !clarification.trim()} variant="outline" onClick={() => void action('clarify', clarification.trim())} className="min-h-10 w-full border-slate-700 bg-transparent text-slate-100 hover:bg-slate-800">提交补充信息</Button></div>}
-              {run && ['executing', 'waiting_tool', 'waiting_job'].includes(run.status) && <div className="flex gap-2"><Button disabled={actionBusy} variant="outline" onClick={() => void action('pause')} className="min-h-10 flex-1 border-slate-700 bg-transparent text-slate-100 hover:bg-slate-800"><Pause className="size-4" />暂停</Button><Button disabled={actionBusy} variant="destructive" onClick={() => void action('cancel')} className="min-h-10 flex-1"><Square className="size-4" />取消</Button></div>}
+              <div className="flex items-center gap-3"><span className="size-2.5 rounded-full bg-success" /><span className="font-mono text-sm">{run?.status ?? 'idle'}</span></div>
+              {run && <p className="font-mono text-xs text-muted-foreground">{run.id.slice(0, 8)} · v{run.version} · {events.length} events</p>}
+              {run?.status === 'waiting_user' && <div className="space-y-3"><div className="flex gap-2"><Button disabled={actionBusy} onClick={() => void action('approve')} className="min-h-10 flex-1 gap-2 bg-success text-white hover:bg-success/90"><Play className="size-4" />批准计划</Button><Button disabled={actionBusy} variant="outline" onClick={() => void action('reject', rejectReason)} className="min-h-10 gap-2 border-border bg-transparent text-foreground hover:bg-muted"><Ban className="size-4" />重新规划</Button></div><label htmlFor="reject-reason" className="text-xs text-muted-foreground">给规划的反馈（可选）</label><Input id="reject-reason" value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} placeholder="例如：缩小数据范围，先完成风险分析" className="min-h-10 border-border bg-background text-foreground placeholder:text-muted-foreground" /><label htmlFor="clarification" className="text-xs text-muted-foreground">补充信息</label><Textarea id="clarification" value={clarification} onChange={(event) => setClarification(event.target.value)} placeholder="提供 Agent 继续规划所需的上下文" className="border-border bg-background text-foreground placeholder:text-muted-foreground" /><Button disabled={actionBusy || !clarification.trim()} variant="outline" onClick={() => void action('clarify', clarification.trim())} className="min-h-10 w-full border-border bg-transparent text-foreground hover:bg-muted">提交补充信息</Button></div>}
+              {run && ['executing', 'waiting_tool', 'waiting_job'].includes(run.status) && <div className="flex gap-2"><Button disabled={actionBusy} variant="outline" onClick={() => void action('pause')} className="min-h-10 flex-1 border-border bg-transparent text-foreground hover:bg-muted"><Pause className="size-4" />暂停</Button><Button disabled={actionBusy} variant="destructive" onClick={() => void action('cancel')} className="min-h-10 flex-1"><Square className="size-4" />取消</Button></div>}
               {run?.status === 'paused' && <Button disabled={actionBusy} onClick={() => void action('resume')} className="min-h-10 w-full gap-2"><Play className="size-4" />恢复执行</Button>}
               {run?.status === 'failed' && <Button disabled={actionBusy} onClick={() => void action('retry')} className="min-h-10 w-full gap-2"><RotateCcw className="size-4" />创建重试任务</Button>}
-              {run?.status === 'pause_requested' && <p className="text-xs text-amber-300">暂停会在当前原子步骤结束后生效。</p>}
-              {displayError && <p role="alert" className="rounded-lg border border-red-400/30 bg-red-950/50 p-3 text-xs text-red-200">{displayError}</p>}
+              {run?.status === 'pause_requested' && <p className="text-xs text-warning">暂停会在当前原子步骤结束后生效。</p>}
+              {displayError && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">{displayError}</p>}
             </CardContent>
           </Card>
         </section>
@@ -124,11 +119,11 @@ function WorkflowCopilot() {
   const requested = params.get('workflow')
   const [workflowType, setWorkflowType] = useState<WorkflowType>(['market', 'portfolio', 'combined'].includes(requested ?? '') ? requested as WorkflowType : 'general')
   const [mode, setMode] = useState<'review' | 'auto'>('review')
-  return <><nav className="flex flex-wrap items-center gap-3 border-b p-4" aria-label="研究工作流">
+  return <><nav className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 border-b border-border p-4 text-sm md:px-6" aria-label="研究工作流">
     <label>Workflow <select aria-label="Workflow" value={workflowType} onChange={e => setWorkflowType(e.target.value as WorkflowType)} className="ml-2 rounded border bg-background p-2">
       <option value="general">General</option><option value="market">Market</option><option value="portfolio">Portfolio</option><option value="combined">Combined</option>
     </select></label>
     {workflowType !== 'general' && <label>执行模式 <select aria-label="金融执行模式" value={mode} onChange={e => setMode(e.target.value as 'review' | 'auto')} className="ml-2 rounded border bg-background p-2"><option value="review">Review</option><option value="auto">Auto</option></select></label>}
-  </nav>{workflowType === 'general' ? <GeneralCopilot /> : <main className="mx-auto max-w-6xl space-y-4 p-6"><h1 className="text-2xl font-semibold">Financial Research Copilot</h1><FinancialWorkflow key={workflowType} workflow={workflowType} mode={mode} symbol={params.get('symbol') ?? 'MU'} /></main>}</>
+  </nav>{workflowType === 'general' ? <GeneralCopilot /> : <section className="mx-auto max-w-7xl space-y-6 p-4 md:p-6"><PageHeader title="Financial Research Copilot" description="审阅研究证据、组合约束与运行轨迹" /><FinancialWorkflow key={workflowType} workflow={workflowType} mode={mode} symbol={params.get('symbol') ?? 'MU'} /><FinancialRunHistory /></section>}</>
 }
 export default function CopilotPage() { return <Suspense fallback={<p role="status">正在加载工作流…</p>}><WorkflowCopilot /></Suspense> }

@@ -83,34 +83,34 @@ export function ManageGroupsDialog({
               disabled={!newGroupName.trim()}
               size="sm"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              <Plus />
               Create
             </Button>
           </div>
 
           {/* Group list */}
           {groupNames.length === 0 ? (
-            <div className="text-center py-6 text-text-tertiary">
-              <FolderOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <div className="py-6 text-center text-muted-foreground">
+              <FolderOpen className="mx-auto mb-2 size-8 opacity-50" />
               <p className="text-sm">No groups yet. Create one above.</p>
             </div>
           ) : (
             <div className="flex gap-4">
               {/* Left: group names */}
-              <div className="w-1/3 space-y-1 border-r pr-3">
+              <div className="w-1/3 space-y-1 border-r border-border pr-3">
                 {groupNames.map((name) => (
                   <div
                     key={name}
-                    className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
+                    className={`flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 transition-colors ${
                       selectedGroup === name
                         ? 'bg-accent text-accent-foreground'
                         : 'hover:bg-muted'
                     }`}
                     onClick={() => setSelectedGroup(name)}
                   >
-                    <span className="text-sm truncate flex-1">
+                    <span className="flex-1 truncate text-sm">
                       {name}
-                      <span className="ml-1 text-xs text-text-tertiary">
+                      <span className="ml-1 font-mono text-xs tabular-nums text-muted-foreground">
                         ({(groups[name] || []).length})
                       </span>
                     </span>
@@ -119,10 +119,10 @@ export function ManageGroupsDialog({
                         e.stopPropagation()
                         handleDeleteGroup(name)
                       }}
-                      className="ml-1 p-0.5 rounded hover:bg-destructive/10 text-text-tertiary hover:text-destructive"
+                      className="ml-1 rounded p-0.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error"
                       title="Delete group"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="size-3" />
                     </button>
                   </div>
                 ))}
@@ -133,11 +133,11 @@ export function ManageGroupsDialog({
                 {selectedGroup ? (
                   <>
                     <div>
-                      <h4 className="text-sm font-medium mb-2">
+                      <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Symbols in &ldquo;{selectedGroup}&rdquo;
                       </h4>
                       {currentGroupSymbols.length === 0 ? (
-                        <p className="text-xs text-text-tertiary">
+                        <p className="text-xs text-muted-foreground">
                           No symbols in this group yet.
                         </p>
                       ) : (
@@ -146,14 +146,14 @@ export function ManageGroupsDialog({
                             <Badge
                               key={symbol}
                               variant="secondary"
-                              className="flex items-center gap-1 text-xs"
+                              className="flex items-center gap-1 font-mono text-xs"
                             >
                               {symbol}
                               <button
                                 onClick={() => handleRemoveFromGroup(symbol)}
-                                className="ml-0.5 rounded-full hover:bg-muted p-0.5"
+                                className="ml-0.5 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-error"
                               >
-                                <X className="w-2.5 h-2.5" />
+                                <X className="size-2.5" />
                               </button>
                             </Badge>
                           ))}
@@ -163,7 +163,7 @@ export function ManageGroupsDialog({
 
                     {availableSymbols.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-medium mb-2">
+                        <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Add symbols
                         </h4>
                         <div className="flex flex-wrap gap-1">
@@ -171,10 +171,10 @@ export function ManageGroupsDialog({
                             <Badge
                               key={symbol}
                               variant="outline"
-                              className="cursor-pointer hover:bg-accent text-xs"
+                              className="cursor-pointer font-mono text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
                               onClick={() => handleAddToGroup(symbol)}
                             >
-                              <Plus className="w-2.5 h-2.5 mr-0.5" />
+                              <Plus className="size-2.5" />
                               {symbol}
                             </Badge>
                           ))}
@@ -183,7 +183,7 @@ export function ManageGroupsDialog({
                     )}
                   </>
                 ) : (
-                  <div className="text-center py-6 text-text-tertiary">
+                  <div className="py-6 text-center text-muted-foreground">
                     <p className="text-sm">Select a group to manage its symbols.</p>
                   </div>
                 )}

@@ -22,12 +22,12 @@ export default function ScoringPage() {
       {/* Scoring Weights */}
       <Card>
         <CardHeader>
-          <CardTitle>Scoring Weights</CardTitle>
+          <CardTitle className="text-sm font-semibold">Scoring Weights</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
+              <label className="mb-2 block text-sm font-medium text-foreground">
                 Trend Weight: {trendWeight.toFixed(2)}
               </label>
               <Slider
@@ -35,10 +35,10 @@ export default function ScoringPage() {
                 onValueChange={(v) => setScoringWeights({ trend: sliderVal(v) })}
                 min={0} max={1} step={0.05} className="mt-2"
               />
-              <p className="text-xs text-text-tertiary mt-1">Weight for trend indicators (MA, MACD)</p>
+              <p className="text-xs text-muted-foreground mt-1">Weight for trend indicators (MA, MACD)</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
+              <label className="mb-2 block text-sm font-medium text-foreground">
                 Momentum Weight: {momentumWeight.toFixed(2)}
               </label>
               <Slider
@@ -46,10 +46,10 @@ export default function ScoringPage() {
                 onValueChange={(v) => setScoringWeights({ momentum: sliderVal(v) })}
                 min={0} max={1} step={0.05} className="mt-2"
               />
-              <p className="text-xs text-text-tertiary mt-1">Weight for momentum indicators (RSI, Stochastic)</p>
+              <p className="text-xs text-muted-foreground mt-1">Weight for momentum indicators (RSI, Stochastic)</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
+              <label className="mb-2 block text-sm font-medium text-foreground">
                 Volume Weight: {volumeWeight.toFixed(2)}
               </label>
               <Slider
@@ -57,10 +57,10 @@ export default function ScoringPage() {
                 onValueChange={(v) => setScoringWeights({ volume: sliderVal(v) })}
                 min={0} max={1} step={0.05} className="mt-2"
               />
-              <p className="text-xs text-text-tertiary mt-1">Weight for volume indicators</p>
+              <p className="text-xs text-muted-foreground mt-1">Weight for volume indicators</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
+              <label className="mb-2 block text-sm font-medium text-foreground">
                 Pattern Weight: {patternWeight.toFixed(2)}
               </label>
               <Slider
@@ -68,11 +68,11 @@ export default function ScoringPage() {
                 onValueChange={(v) => setScoringWeights({ pattern: sliderVal(v) })}
                 min={0} max={1} step={0.05} className="mt-2"
               />
-              <p className="text-xs text-text-tertiary mt-1">Weight for pattern recognition</p>
+              <p className="text-xs text-muted-foreground mt-1">Weight for pattern recognition</p>
             </div>
           </div>
           <div className="mt-4 p-3 bg-muted rounded-md">
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-muted-foreground">
               Total: {(trendWeight + momentumWeight + volumeWeight + patternWeight).toFixed(2)} / 1.00
             </p>
             <FieldError message={scoringErrors.scoringTotal} />
@@ -105,7 +105,7 @@ function IndicatorsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Technical Indicator Parameters</CardTitle>
+        <CardTitle className="text-sm font-semibold">Technical Indicator Parameters</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -134,7 +134,7 @@ function SliderField({ label, value, onChange, min, max, step = 1, error }: {
 }) {
   return (
     <div>
-      <label className="text-sm font-medium text-text-secondary mb-2 block">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-foreground">{label}</label>
       <Slider value={[value]} onValueChange={(v) => onChange(sliderVal(v))} min={min} max={max} step={step} className="mt-2" />
       <FieldError message={error} />
     </div>

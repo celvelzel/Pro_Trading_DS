@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   useAlertRules,
@@ -27,13 +27,14 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ErrorState } from '@/components/ui/error-state'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { cn } from '@/lib/utils'
 import {
   Bell,
   BellRing,
   Plus,
   Trash2,
   Loader2,
-  AlertTriangle,
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -144,10 +145,10 @@ function AlertRuleForm({ onSuccess }: { onSuccess?: () => void }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {/* Symbol */}
             <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
+              <label className="mb-2 block text-[13px] font-medium text-muted-foreground">
                 Stock Symbol
               </label>
               <Input
@@ -160,7 +161,7 @@ function AlertRuleForm({ onSuccess }: { onSuccess?: () => void }) {
 
             {/* Condition */}
             <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
+              <label className="mb-2 block text-[13px] font-medium text-muted-foreground">
                 Condition
               </label>
               <Select value={condition} onValueChange={(v) => setCondition(v as AlertCondition)}>
@@ -179,7 +180,7 @@ function AlertRuleForm({ onSuccess }: { onSuccess?: () => void }) {
 
             {/* Threshold */}
             <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
+              <label className="mb-2 block text-[13px] font-medium text-muted-foreground">
                 Threshold
               </label>
               <Input
@@ -237,29 +238,35 @@ function AlertRuleItem({
   const [showSettings, setShowSettings] = useState(false)
 
   return (
-    <div className="border rounded-lg hover:bg-muted/50 transition-colors">
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${rule.enabled ? 'bg-primary/10' : 'bg-muted'}`}>
-            <Icon className={`h-4 w-4 ${rule.enabled ? 'text-primary' : 'text-muted-foreground'}`} />
+    <div className="rounded-lg border border-border transition-colors hover:bg-muted/50">
+      <div className="flex items-center justify-between gap-3 p-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className={cn(
+            'shrink-0 rounded-lg p-2',
+            rule.enabled ? 'bg-primary/10' : 'bg-muted'
+          )}>
+            <Icon className={cn('h-4 w-4', rule.enabled ? 'text-primary' : 'text-muted-foreground')} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{rule.symbol}</span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono font-medium">{rule.symbol}</span>
+              <Badge variant={rule.enabled ? 'success' : 'secondary'} className="text-xs">
+                {rule.enabled ? 'Active' : 'Disabled'}
+              </Badge>
               <Badge variant="outline" className="text-xs">
                 {CONDITION_LABELS[rule.condition]}
               </Badge>
-              <span className="text-sm text-muted-foreground">
+              <span className="font-mono text-sm text-muted-foreground tabular-nums">
                 {formatThreshold(rule.condition, rule.threshold)}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-1 text-xs text-muted-foreground">
               Created {new Date(rule.createdAt).toLocaleDateString()}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           {/* Sound toggle */}
           <Button
             variant="ghost"
@@ -298,7 +305,7 @@ function AlertRuleItem({
               onDelete(rule.id)
             }}
             disabled={deleteMutation.isPending}
-            className="text-destructive hover:text-destructive"
+            className="text-error hover:text-error"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -307,9 +314,9 @@ function AlertRuleItem({
 
       {/* Expandable cooldown settings */}
       {showSettings && (
-        <div className="px-4 pb-4 pt-0 border-t">
-          <div className="flex items-center gap-4 pt-3">
-            <label className="text-sm text-muted-foreground flex items-center gap-2">
+        <div className="border-t border-border px-4 pb-4 pt-0">
+          <div className="flex flex-wrap items-center gap-4 pt-3">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="h-3.5 w-3.5" />
               Cooldown period
             </label>
@@ -355,26 +362,27 @@ function TriggeredAlertItem({
 
   return (
     <div
-      className={`flex items-start gap-3 p-4 border rounded-lg transition-colors ${
-        alert.read ? 'bg-background' : 'bg-primary/5 border-primary/20'
-      }`}
+      className={cn(
+        'flex items-start gap-3 rounded-lg border p-4 transition-colors',
+        alert.read ? 'border-border bg-card' : 'border-warning/30 bg-warning/5'
+      )}
     >
-      <div className={`p-2 rounded-lg ${alert.read ? 'bg-muted' : 'bg-warning/10'}`}>
+      <div className={cn('shrink-0 rounded-lg p-2', alert.read ? 'bg-muted' : 'bg-warning/10')}>
         {alert.read ? (
           <Icon className="h-4 w-4 text-muted-foreground" />
         ) : (
           <BellRing className="h-4 w-4 text-warning" />
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{alert.symbol}</span>
-          <Badge variant={alert.read ? 'outline' : 'default'} className="text-xs">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono font-medium">{alert.symbol}</span>
+          <Badge variant={alert.read ? 'outline' : 'warning'} className="text-xs">
             {CONDITION_LABELS[alert.condition]}
           </Badge>
         </div>
-        <p className="text-sm text-text-secondary mt-1">{alert.message}</p>
-        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">{alert.message}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-3 font-mono text-xs text-muted-foreground tabular-nums">
           <span>
             Current: {formatCurrentValue(alert.condition, alert.currentValue)}
           </span>
@@ -410,7 +418,6 @@ export default function AlertsPage() {
   const markReadMutation = useMarkAlertsRead()
   const addFromAlertMutation = useAddFromAlert()
   const {
-    settingsMap,
     getRuleSettings,
     updateRuleSettings,
     isInCooldown,
@@ -418,7 +425,7 @@ export default function AlertsPage() {
   } = useAlertSettings()
 
   const rules = rulesData?.rules ?? []
-  const triggeredAlerts = triggeredData?.alerts ?? []
+  const triggeredAlerts = useMemo(() => triggeredData?.alerts ?? [], [triggeredData])
   const unreadCount = triggeredData?.unreadCount ?? 0
 
   // Track previous unread count for browser notifications
@@ -498,7 +505,7 @@ export default function AlertsPage() {
 
   if (rulesError) {
     return (
-      <div className="p-6">
+      <div className="mx-auto w-full max-w-[1600px] p-4 md:p-6">
         <ErrorState
           title="Failed to load alerts"
           message={rulesError.message}
@@ -508,45 +515,42 @@ export default function AlertsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold text-text-primary">Alerts</h1>
+      <PageHeader
+        title="Alerts"
+        description="Set up alerts for stock prices, scores, and signal changes"
+        actions={
+          <>
             {unreadCount > 0 && (
               <Badge variant="destructive" className="text-xs">
                 {unreadCount} unread
               </Badge>
             )}
-          </div>
-          <p className="text-text-secondary mt-1">
-            Set up alerts for stock prices, scores, and signal changes
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Global sound toggle */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setGlobalSoundEnabled(!globalSoundEnabled)}
-            title={globalSoundEnabled ? 'Alert sounds on' : 'Alert sounds muted'}
-          >
-            {globalSoundEnabled ? (
-              <Volume2 className="h-4 w-4" />
-            ) : (
-              <VolumeX className="h-4 w-4 text-muted-foreground" />
-            )}
-          </Button>
 
-          {unreadCount > 0 && (
-            <Button variant="outline" onClick={handleMarkAllRead} disabled={markReadMutation.isPending}>
-              <Bell className="h-4 w-4 mr-2" />
-              Mark All Read
+            {/* Global sound toggle */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setGlobalSoundEnabled(!globalSoundEnabled)}
+              title={globalSoundEnabled ? 'Alert sounds on' : 'Alert sounds muted'}
+            >
+              {globalSoundEnabled ? (
+                <Volume2 className="h-4 w-4" />
+              ) : (
+                <VolumeX className="h-4 w-4 text-muted-foreground" />
+              )}
             </Button>
-          )}
-        </div>
-      </div>
+
+            {unreadCount > 0 && (
+              <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={markReadMutation.isPending}>
+                <Bell className="h-4 w-4 mr-2" />
+                Mark All Read
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* Create Alert Form */}
       <AlertRuleForm />
@@ -603,7 +607,7 @@ export default function AlertsPage() {
             <div className="flex items-center gap-2">
               <CardTitle>Alert History</CardTitle>
               <RefreshCw
-                className={`h-4 w-4 text-muted-foreground ${triggeredLoading ? 'animate-spin' : ''}`}
+                className={cn('h-4 w-4 text-muted-foreground', triggeredLoading && 'animate-spin')}
               />
             </div>
             <Badge variant="outline">{triggeredAlerts.length} alerts</Badge>

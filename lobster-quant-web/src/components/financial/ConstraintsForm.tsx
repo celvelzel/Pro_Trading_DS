@@ -69,9 +69,9 @@ export function ConstraintsForm({ value, symbols, sectors, disabled, onChange, o
       </div>}
     </div>
     <div className="grid gap-4 sm:grid-cols-3">
-      <label className="space-y-2 text-sm">现金最低比例 (%)<Input type="number" min="0" max="100" step="0.1" value={Number.isFinite(value.min_cash_weight) ? value.min_cash_weight * 100 : ''} onChange={e => change({ ...value, min_cash_weight: e.target.value === '' ? NaN : Number(e.target.value) / 100 })} /></label>
-      <label className="space-y-2 text-sm">现金最高比例 (%)<Input type="number" min="0" max="100" step="0.1" value={Number.isFinite(value.max_weight_by_symbol.CASH ?? 1) ? (value.max_weight_by_symbol.CASH ?? 1) * 100 : ''} onChange={e => change({ ...value, max_weight_by_symbol: { ...value.max_weight_by_symbol, CASH: e.target.value === '' ? NaN : Number(e.target.value) / 100 } })} /></label>
-      <label className="space-y-2 text-sm">股票总仓位上限 (%)<Input type="number" min="0" max="100" step="0.1" value={Number.isFinite(value.max_equity_weight) ? value.max_equity_weight * 100 : ''} onChange={e => change({ ...value, max_equity_weight: e.target.value === '' ? NaN : Number(e.target.value) / 100 })} /></label>
+      <label className="space-y-2 text-sm">现金最低比例 (%)<Input type="number" min="0" max="100" step="0.1" value={Number.isFinite(value.min_cash_weight) ? value.min_cash_weight * 100 : ''} onChange={e => change({ ...value, min_cash_weight: e.target.value === '' ? 0 : Number(e.target.value) / 100 })} /></label>
+      <label className="space-y-2 text-sm">现金最高比例 (%)<Input type="number" min="0" max="100" step="0.1" value={Number.isFinite(value.max_weight_by_symbol.CASH ?? 1) ? (value.max_weight_by_symbol.CASH ?? 1) * 100 : ''} onChange={e => change({ ...value, max_weight_by_symbol: { ...value.max_weight_by_symbol, CASH: e.target.value === '' ? 1 : Number(e.target.value) / 100 } })} /></label>
+      <label className="space-y-2 text-sm">股票总仓位上限 (%)<Input type="number" min="0" max="100" step="0.1" value={Number.isFinite(value.max_equity_weight) ? value.max_equity_weight * 100 : ''} onChange={e => change({ ...value, max_equity_weight: e.target.value === '' ? 1 : Number(e.target.value) / 100 })} /></label>
     </div>
     <section className="space-y-3" aria-label="单资产上限">
       <h3 className="text-sm font-medium">单资产上限</h3>

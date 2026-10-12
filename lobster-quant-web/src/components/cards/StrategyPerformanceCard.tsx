@@ -2,22 +2,9 @@
 
 import { memo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useStrategyStore } from '@/stores/strategyStore'
-import { cn } from '@/lib/utils'
-import { TrendingUp, TrendingDown, Minus, AlertCircle, BarChart3 } from 'lucide-react'
-
-function getSharpeColor(sharpe: number): string {
-  if (sharpe >= 1.5) return 'text-success'
-  if (sharpe >= 0.5) return 'text-primary'
-  if (sharpe >= 0) return 'text-text-secondary'
-  return 'text-error'
-}
-
-function getSharpeIcon(sharpe: number) {
-  if (sharpe >= 0.5) return TrendingUp
-  if (sharpe >= 0) return Minus
-  return TrendingDown
-}
+import { BarChart3 } from 'lucide-react'
 
 export const StrategyPerformanceCard = memo(function StrategyPerformanceCard() {
   const { strategies, loading, error, fetchStrategies } = useStrategyStore()
@@ -30,7 +17,7 @@ export const StrategyPerformanceCard = memo(function StrategyPerformanceCard() {
 
   if (loading) {
     return (
-      <Card className="animate-pulse">
+      <Card>
         <CardHeader>
           <CardTitle>Strategy Performance</CardTitle>
         </CardHeader>
@@ -38,8 +25,11 @@ export const StrategyPerformanceCard = memo(function StrategyPerformanceCard() {
           <div className="space-y-3">
             {[1, 2].map((i) => (
               <div key={i} className="flex items-center justify-between py-2">
-                <div className="h-4 bg-gray-200 rounded w-24" />
-                <div className="h-4 bg-gray-200 rounded w-16" />
+                <div className="flex items-center gap-2.5">
+                  <Skeleton className="size-7 rounded-md" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <Skeleton className="h-4 w-16" />
               </div>
             ))}
           </div>
@@ -50,15 +40,15 @@ export const StrategyPerformanceCard = memo(function StrategyPerformanceCard() {
 
   if (error || strategies.length === 0) {
     return (
-      <Card>
+      <Card className="transition-colors hover:border-primary/30">
         <CardHeader>
           <CardTitle>Strategy Performance</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-6 text-text-secondary">
-            <BarChart3 className="w-8 h-8 mb-2 opacity-50" />
+          <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+            <BarChart3 className="mb-2 size-8 opacity-50" />
             <p className="text-sm">{error || 'No strategies configured'}</p>
-            <p className="text-xs mt-1">Create a strategy to see performance metrics</p>
+            <p className="mt-1 text-xs">Create a strategy to see performance metrics</p>
           </div>
         </CardContent>
       </Card>
@@ -66,7 +56,7 @@ export const StrategyPerformanceCard = memo(function StrategyPerformanceCard() {
   }
 
   return (
-    <Card>
+    <Card className="transition-colors hover:border-primary/30">
       <CardHeader>
         <CardTitle>Strategy Performance</CardTitle>
       </CardHeader>
@@ -79,18 +69,21 @@ export const StrategyPerformanceCard = memo(function StrategyPerformanceCard() {
             return (
               <div
                 key={strategy.id}
-                className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
+                className="flex items-center justify-between gap-3 border-b border-border/50 py-2 last:border-0"
               >
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{strategy.name}</p>
-                    <p className="text-xs text-text-secondary">{strategy.description || 'No description'}</p>
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-accent">
+                    <BarChart3 className="size-3.5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{strategy.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{strategy.description || 'No description'}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-text-secondary">
-                    {strategy.params.holdingDays}d hold · min {strategy.params.minScore}pts
+                <div className="shrink-0 text-right">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-mono tabular-nums">{strategy.params.holdingDays}d</span> hold · min{' '}
+                    <span className="font-mono tabular-nums">{strategy.params.minScore}pts</span>
                   </p>
                 </div>
               </div>

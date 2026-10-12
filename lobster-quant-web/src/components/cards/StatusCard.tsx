@@ -22,29 +22,36 @@ export const StatusCard = memo(function StatusCard({
 }: StatusCardProps) {
   if (loading) {
     return (
-      <Card className={cn('animate-pulse', className)}>
-        <CardContent className="p-4">
-          <div className="h-6 bg-gray-200 rounded w-32 mb-2" />
-          <div className="h-5 bg-gray-200 rounded w-20 mb-1" />
-          <div className="h-3 bg-gray-200 rounded w-40" />
+      <Card className={className}>
+        <CardContent className="animate-pulse p-4">
+          <div className="mb-2 h-4 w-32 rounded bg-muted" />
+          <div className="mb-1.5 h-6 w-20 rounded bg-muted" />
+          <div className="h-3.5 w-40 rounded bg-muted" />
         </CardContent>
       </Card>
     )
   }
 
   const StatusIcon = isGood ? CheckCircle : XCircle
-  const iconColor = isGood ? 'text-success' : 'text-error'
 
   return (
-    <Card className={cn('', className)}>
+    <Card className={cn('transition-colors hover:border-primary/30', className)}>
       <CardContent className="p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <StatusIcon className={cn('w-5 h-5', iconColor)} />
-          <h3 className="font-semibold text-text-primary">{title}</h3>
+        <div className="mb-1.5 flex items-center gap-2 text-[13px] font-medium text-muted-foreground">
+          {title}
         </div>
-        <p className="text-lg font-medium text-text-primary">{status}</p>
+        <div className="flex items-center gap-2">
+          <StatusIcon
+            className={cn('size-5 shrink-0', isGood ? 'text-success' : 'text-error')}
+          />
+          <p className="truncate text-xl font-semibold tracking-tight text-foreground">
+            {status}
+          </p>
+        </div>
         {details && (
-          <p className="text-sm text-text-secondary mt-1">{details}</p>
+          <p className="mt-1.5 line-clamp-2 text-[13px] leading-snug text-muted-foreground">
+            {details}
+          </p>
         )}
       </CardContent>
     </Card>

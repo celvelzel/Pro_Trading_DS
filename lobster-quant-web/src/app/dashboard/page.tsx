@@ -11,11 +11,12 @@ import { STOCK_LISTS } from '@/lib/constants'
 import { WatchlistTable } from '@/components/watchlist/WatchlistTable'
 import { WatchlistAddDialog } from '@/components/watchlist/WatchlistAddDialog'
 import { StockCompareView } from '@/components/watchlist/StockCompareView'
-import { useSyncWatchlist } from '@/stores/watchlistStore'
 import { formatDistanceToNow } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton'
 import { ErrorDisplay } from '@/components/ui/error-display'
+import type { Timeframe } from '@/components/charts/TimeframeSelector'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 // Lazy load heavy widgets
 const MarketOverviewCard = lazy(() => import('@/components/cards/MarketOverviewCard').then(m => ({ default: m.MarketOverviewCard })))
@@ -50,7 +51,7 @@ function WidgetSkeleton() {
  */
 function LoadingProgressBar({ progress }: { progress: number }) {
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-muted">
+    <div className="fixed left-0 right-0 top-0 z-50 h-0.5 bg-muted">
       <div
         className="h-full bg-primary transition-all duration-500 ease-out"
         style={{ width: `${progress}%` }}
@@ -61,7 +62,7 @@ function LoadingProgressBar({ progress }: { progress: number }) {
 
 export default function DashboardPage() {
   // Timeframe state
-  const [timeframe, setTimeframe] = useState<any>('1y')
+  const [timeframe, setTimeframe] = useState<Timeframe>('1y')
 
   // Centralized data fetching with parallel queries
   const {
@@ -81,7 +82,6 @@ export default function DashboardPage() {
   } = useDashboardData(timeframe)
 
   // Watchlist state
-  const { addSymbol } = useSyncWatchlist()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [compareSymbols, setCompareSymbols] = useState<string[]>([])
 
@@ -99,16 +99,11 @@ export default function DashboardPage() {
   const allFailed = hasError && !benchmark && !candles && !risk
   if (allFailed) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-text-primary">Dashboard</h1>
-            <p className="text-text-secondary mt-1">
-              Market overview and quick analysis
-            </p>
-          </div>
-        </div>
-
+      <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
+        <PageHeader
+          title="Dashboard"
+          description="Market overview and quick analysis"
+        />
         <ErrorDisplay
           error={errors.benchmark || errors.candles || errors.risk}
           onRetry={() => window.location.reload()}
@@ -124,31 +119,28 @@ export default function DashboardPage() {
       {/* Show progress bar while any query is still loading */}
       {isLoading && <LoadingProgressBar progress={loadingProgress} />}
 
-      <div className="p-4 md:p-6 space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Dashboard</h1>
+      <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
+        {/* Page header */}
+        <PageHeader
+          title="Dashboard"
+          description="Market overview and quick analysis"
+          actions={
+            <>
               <HelpTooltip helpKey="dashboard.title" />
-            </div>
-            <p className="text-text-secondary mt-1">
-              Market overview and quick analysis
-            </p>
-          </div>
+              {lastUpdated && (
+                <span className="rounded-full border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground">
+                  Updated{' '}
+                  {formatDistanceToNow(new Date(lastUpdated), {
+                    addSuffix: true,
+                  })}
+                </span>
+              )}
+            </>
+          }
+        />
 
-          {/* Data Freshness Indicator */}
-          {lastUpdated && (
-            <div className="sm:text-right">
-              <p className="text-xs text-muted-foreground">
-                Last updated: {formatDistanceToNow(new Date(lastUpdated), { addSuffix: true })}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Status Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Key market status */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatusCard
             title={
               <div className="flex items-center gap-2">
@@ -208,9 +200,7 @@ export default function DashboardPage() {
                   ? 'Error'
                   : 'Loading...'
             }
-            delta={
-              errors.risk ? errors.risk.message : undefined
-            }
+            delta={errors.risk ? errors.risk.message : undefined}
             deltaType={errors.risk ? 'down' : 'neutral'}
             loading={loadingStates.risk}
           />
@@ -225,8 +215,8 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* Information Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Information widgets */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Suspense fallback={<WidgetSkeleton />}>
             <MarketOverviewCard />
           </Suspense>
@@ -247,12 +237,12 @@ export default function DashboardPage() {
           </Suspense>
         </div>
 
-        {/* Price Chart */}
+        {/* Price chart */}
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-lg md:text-xl">SPY Price Chart</CardTitle>
+                <CardTitle>SPY Price Chart</CardTitle>
                 <HelpTooltip helpKey="analysis.charts" />
               </div>
               <Suspense fallback={<Skeleton className="h-8 w-48" />}>
@@ -263,8 +253,8 @@ export default function DashboardPage() {
               </Suspense>
             </div>
           </CardHeader>
-          <CardContent className="px-2 sm:px-6">
-            <Suspense fallback={<Skeleton className="h-[300px] sm:h-[400px] w-full" />}>
+          <CardContent className="px-2 sm:px-4">
+            <Suspense fallback={<Skeleton className="h-[300px] w-full sm:h-[400px]" />}>
               {candles ? (
                 <div className="h-[300px] sm:h-[400px]">
                   <CandlestickChart
@@ -275,7 +265,7 @@ export default function DashboardPage() {
                   />
                 </div>
               ) : (
-                <div className="h-[400px] flex items-center justify-center text-text-secondary">
+                <div className="flex h-[400px] items-center justify-center text-sm text-muted-foreground">
                   {loadingStates.candles
                     ? 'Loading chart data...'
                     : errors.candles
@@ -287,7 +277,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Stock Comparison (conditional) */}
+        {/* Stock comparison (conditional) */}
         {compareSymbols.length > 1 && (
           <StockCompareView
             symbols={compareSymbols}
@@ -296,40 +286,42 @@ export default function DashboardPage() {
         )}
 
         {/* Watchlist */}
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-lg font-semibold">Watchlist</h2>
-          <HelpTooltip helpKey="dashboard.watchlist" />
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold tracking-tight">Watchlist</h2>
+            <HelpTooltip helpKey="dashboard.watchlist" />
+          </div>
+          <WatchlistTable
+            stocks={watchlistStocks}
+            loading={loadingStates.watchlist}
+            onAddClick={() => setAddDialogOpen(true)}
+            onCompareClick={(syms) => setCompareSymbols(syms)}
+            onRefresh={refetchWatchlist}
+          />
         </div>
-        <WatchlistTable
-          stocks={watchlistStocks}
-          loading={loadingStates.watchlist}
-          onAddClick={() => setAddDialogOpen(true)}
-          onCompareClick={(syms) => setCompareSymbols(syms)}
-          onRefresh={refetchWatchlist}
-        />
 
-        {/* Quick Access - Popular Stocks */}
+        {/* Quick access — popular symbols */}
         <Card>
           <CardHeader>
             <CardTitle>Quick Access</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
               {STOCK_LISTS.US.slice(0, 10).map((symbol) => (
                 <PrefetchLink
                   key={symbol}
                   symbol={symbol}
                   href={`/analysis/${symbol}`}
-                  className="flex items-center justify-center p-3 rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors"
+                  className="flex items-center justify-center rounded-md border border-border bg-background p-3 font-mono text-sm font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
                 >
-                  <span className="font-medium text-text-primary">{symbol}</span>
+                  {symbol}
                 </PrefetchLink>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Add to Watchlist Dialog */}
+        {/* Add to watchlist dialog */}
         <WatchlistAddDialog
           open={addDialogOpen}
           onOpenChange={setAddDialogOpen}

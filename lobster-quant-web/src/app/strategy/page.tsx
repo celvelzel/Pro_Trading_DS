@@ -7,6 +7,7 @@ import { StrategyCard, StrategyForm } from '@/components/strategy';
 import { VersionHistoryModal } from '@/components/strategy/VersionHistoryModal';
 import { Button } from '@/components/ui/button';
 import { HelpTooltip } from '@/components/ui/help-tooltip';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Plus } from 'lucide-react';
 import {
   AlertDialog,
@@ -21,17 +22,17 @@ import {
 
 export default function StrategyPage() {
   const router = useRouter();
-  const { 
-    strategies, 
-    loading, 
-    error, 
-    fetchStrategies, 
-    createStrategy, 
-    updateStrategy, 
+  const {
+    strategies,
+    loading,
+    error,
+    fetchStrategies,
+    createStrategy,
+    updateStrategy,
     deleteStrategy,
-    clearError 
+    clearError
   } = useStrategyStore();
-  
+
   const [showForm, setShowForm] = useState(false);
   const [editingStrategy, setEditingStrategy] = useState<Strategy | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -87,53 +88,49 @@ export default function StrategyPage() {
   const customStrategies = strategies.filter(s => !s.isPreset);
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold">Strategy Management</h1>
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
+      <PageHeader
+        title="Strategy Management"
+        description="Create and manage your trading strategies"
+        actions={
+          <>
             <HelpTooltip helpKey="strategy.title" />
-          </div>
-          <p className="text-muted-foreground mt-2">
-            Create and manage your trading strategies
-          </p>
-        </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Strategy
-        </Button>
-      </div>
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Strategy
+            </Button>
+          </>
+        }
+      />
 
       {error && (
-        <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6">
-          {error}
-          <Button variant="ghost" size="sm" onClick={clearError} className="ml-2">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          <span>{error}</span>
+          <Button variant="ghost" size="sm" onClick={clearError}>
             Dismiss
           </Button>
         </div>
       )}
 
       {showForm && (
-        <div className="mb-8">
-          <StrategyForm
-            strategy={editingStrategy}
-            onSubmit={editingStrategy ? handleUpdate : handleCreate}
-            onCancel={handleCancel}
-          />
-        </div>
+        <StrategyForm
+          strategy={editingStrategy}
+          onSubmit={editingStrategy ? handleUpdate : handleCreate}
+          onCancel={handleCancel}
+        />
       )}
 
       {loading && strategies.length === 0 ? (
-        <div className="text-center py-12">Loading strategies...</div>
+        <div className="py-12 text-center text-sm text-muted-foreground">Loading strategies...</div>
       ) : (
         <>
           {/* Preset Strategies */}
-          <section className="mb-10">
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-xl font-semibold">Preset Strategies</h2>
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold tracking-tight text-foreground">Preset Strategies</h2>
               <HelpTooltip helpKey="strategy.selector" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {presetStrategies.map(strategy => (
                 <StrategyCard
                   key={strategy.id}
@@ -145,17 +142,17 @@ export default function StrategyPage() {
           </section>
 
           {/* Custom Strategies */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-xl font-semibold">Custom Strategies</h2>
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold tracking-tight text-foreground">Custom Strategies</h2>
               <HelpTooltip helpKey="strategy.config" />
             </div>
             {customStrategies.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
+              <div className="rounded-lg border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
                 No custom strategies yet. Create one to get started.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {customStrategies.map(strategy => (
                   <StrategyCard
                     key={strategy.id}

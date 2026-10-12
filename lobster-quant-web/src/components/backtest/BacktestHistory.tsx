@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useBacktestHistory, useDeleteBacktestHistory, type BacktestHistoryEntry } from '@/hooks/useBacktest';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, GitCompare, RefreshCw } from 'lucide-react';
@@ -91,7 +91,7 @@ export function BacktestHistory({ onCompare }: BacktestHistoryProps) {
     <div className="space-y-4">
       {/* Compare button */}
       {selectedIds.size >= 2 && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button onClick={handleCompare} size="sm">
             <GitCompare className="h-4 w-4 mr-2" />
             Compare {selectedIds.size} backtests
@@ -139,7 +139,7 @@ export function BacktestHistory({ onCompare }: BacktestHistoryProps) {
                       {metrics.totalReturn !== undefined && (
                         <div>
                           <span className="text-muted-foreground">Return: </span>
-                          <span className={metrics.totalReturn > 0 ? 'text-green-600' : 'text-red-600'}>
+                          <span className={metrics.totalReturn > 0 ? 'text-success' : 'text-destructive'}>
                             {metrics.totalReturn.toFixed(2)}%
                           </span>
                         </div>
@@ -159,7 +159,7 @@ export function BacktestHistory({ onCompare }: BacktestHistoryProps) {
                       {metrics.maxDrawdown !== undefined && (
                         <div>
                           <span className="text-muted-foreground">Max DD: </span>
-                          <span className="text-red-600">{metrics.maxDrawdown.toFixed(2)}%</span>
+                          <span className="text-destructive">{metrics.maxDrawdown.toFixed(2)}%</span>
                         </div>
                       )}
                     </div>

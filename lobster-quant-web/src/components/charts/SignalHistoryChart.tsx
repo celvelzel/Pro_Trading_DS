@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef, memo, useMemo } from 'react'
+import { useEffect, useRef, memo } from 'react'
 import { useTheme } from 'next-themes'
-import { createChart, IChartApi, LineSeries, type UTCTimestamp } from 'lightweight-charts'
+import { createChart, IChartApi, LineSeries, createSeriesMarkers, type UTCTimestamp } from 'lightweight-charts'
+import { chartTheme } from '@/lib/chart-theme'
 import type { SignalHistoryEntry } from '@/lib/types'
 
 interface SignalHistoryChartProps {
@@ -25,26 +26,12 @@ export const SignalHistoryChart = memo(function SignalHistoryChart({
 }: SignalHistoryChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
-
-  // Theme-aware colors
-  const chartColors = useMemo(
-    () => ({
-      background: isDark ? '#0a0a0a' : '#FFFFFF',
-      text: isDark ? '#e0e0e0' : '#202124',
-      grid: isDark ? '#1a1a1a' : '#F0F0F0',
-      border: isDark ? '#333333' : '#F0F0F0',
-      bullish: '#34A853',
-      bearish: '#EA4335',
-      neutral: '#9AA0A6',
-    }),
-    [isDark]
-  )
+  const { resolvedTheme } = useTheme()
 
   useEffect(() => {
     if (!chartContainerRef.current || data.length === 0) return
 
+    const chartColors = chartTheme()
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
       height,
@@ -67,11 +54,11 @@ export const SignalHistoryChart = memo(function SignalHistoryChart({
         },
       },
       rightPriceScale: {
-        borderColor: chartColors.border,
+        borderColor: chartColors.grid,
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
       timeScale: {
-        borderColor: chartColors.border,
+        borderColor: chartColors.grid,
         timeVisible: false,
         secondsVisible: false,
       },
@@ -123,8 +110,7 @@ export const SignalHistoryChart = memo(function SignalHistoryChart({
       }))
 
     if (markers.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (lineSeries as any).setMarkers(markers)
+      createSeriesMarkers(lineSeries, markers)
     }
 
     chart.timeScale().fitContent()
@@ -144,12 +130,12 @@ export const SignalHistoryChart = memo(function SignalHistoryChart({
       chart.remove()
       chartRef.current = null
     }
-  }, [data, height, chartColors])
+  }, [data, height, resolvedTheme])
 
   if (data.length === 0) {
     return (
       <div
-        className={`flex items-center justify-center text-text-secondary ${className ?? ''}`}
+        className={`flex items-center justify-center text-muted-foreground ${className ?? ''}`}
         style={{ height }}
       >
         No signal history available

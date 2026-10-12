@@ -2,7 +2,7 @@
 
 import { memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MetricCard } from './MetricCard'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useStockData } from '@/hooks/useStock'
 import { cn } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
@@ -18,20 +18,20 @@ function MarketRow({ symbol }: MarketRowProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-between py-2 animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-12" />
-        <div className="h-4 bg-gray-200 rounded w-16" />
-        <div className="h-4 bg-gray-200 rounded w-20" />
+      <div className="flex items-center justify-between py-2">
+        <Skeleton className="h-4 w-12" />
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-24" />
       </div>
     )
   }
 
   if (error || !data) {
     return (
-      <div className="flex items-center justify-between py-2 text-text-secondary">
-        <span className="font-medium">{symbol}</span>
-        <span className="text-sm">--</span>
-        <span className="text-sm">--</span>
+      <div className="flex items-center justify-between py-2">
+        <span className="font-mono text-sm font-semibold text-foreground">{symbol}</span>
+        <span className="font-mono text-sm text-muted-foreground">--</span>
+        <span className="font-mono text-sm text-muted-foreground">--</span>
       </div>
     )
   }
@@ -40,11 +40,16 @@ function MarketRow({ symbol }: MarketRowProps) {
   const DeltaIcon = isUp ? TrendingUp : data.change < 0 ? TrendingDown : Minus
 
   return (
-    <div className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-      <span className="font-semibold text-text-primary">{symbol}</span>
-      <span className="text-text-primary">${data.price.toFixed(2)}</span>
-      <div className={cn('flex items-center gap-1 text-sm font-medium', isUp ? 'text-success' : 'text-error')}>
-        <DeltaIcon className="w-3 h-3" />
+    <div className="flex items-center justify-between gap-3 border-b border-border/50 py-2 last:border-0">
+      <span className="font-mono text-sm font-semibold text-foreground">{symbol}</span>
+      <span className="font-mono text-sm tabular-nums text-foreground">${data.price.toFixed(2)}</span>
+      <div
+        className={cn(
+          'flex items-center gap-1 font-mono text-[13px] font-medium tabular-nums',
+          isUp ? 'text-success' : 'text-error'
+        )}
+      >
+        <DeltaIcon className="size-3.5" />
         <span>{isUp ? '+' : ''}{data.change.toFixed(2)} ({data.changePercent?.toFixed(2)}%)</span>
       </div>
     </div>
@@ -53,7 +58,7 @@ function MarketRow({ symbol }: MarketRowProps) {
 
 export const MarketOverviewCard = memo(function MarketOverviewCard() {
   return (
-    <Card>
+    <Card className="transition-colors hover:border-primary/30">
       <CardHeader>
         <CardTitle>Market Overview</CardTitle>
       </CardHeader>

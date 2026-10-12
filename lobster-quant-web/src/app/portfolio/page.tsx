@@ -21,6 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { cn } from '@/lib/utils'
 import { useSyncPortfolio } from '@/stores/portfolioStore'
 import { usePortfolioPnl } from '@/hooks/usePortfolio'
 import {
@@ -57,12 +59,15 @@ function formatPercent(value: number): string {
 function PnlCell({ value, percent }: { value: number; percent: number }) {
   const isPositive = value >= 0
   return (
-    <span className={isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+    <span className={cn('font-mono tabular-nums', isPositive ? 'text-success' : 'text-error')}>
       {isPositive ? '+' : ''}{formatCurrency(value)}
-      <span className="text-xs ml-1">({formatPercent(percent)})</span>
+      <span className="ml-1 text-xs">({formatPercent(percent)})</span>
     </span>
   )
 }
+
+const headCellClass = 'text-xs font-medium uppercase tracking-wide text-muted-foreground'
+const numCellClass = 'font-mono tabular-nums'
 
 // ============================================================================
 // Page Component
@@ -129,7 +134,7 @@ export default function PortfolioPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center p-6">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     )
@@ -137,10 +142,10 @@ export default function PortfolioPage() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card className="border-destructive">
+      <div className="mx-auto w-full max-w-[1600px] p-4 md:p-6">
+        <Card className="border-error/50">
           <CardContent className="pt-6">
-            <p className="text-destructive">Failed to load portfolio: {(error as Error).message}</p>
+            <p className="text-error">Failed to load portfolio: {(error as Error).message}</p>
             <Button variant="outline" onClick={() => refetch()} className="mt-4">
               <RefreshCw className="w-4 h-4 mr-2" />
               Retry
@@ -151,106 +156,122 @@ export default function PortfolioPage() {
     )
   }
 
+  const positionAllocation = totalEquity > 0 ? (totalMarketValue / totalEquity) * 100 : 0
+  const cashAllocation = totalEquity > 0 ? (cash / totalEquity) * 100 : 0
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-text-primary">Portfolio</h1><nav className="flex gap-4 text-sm" aria-label="只读合成金融演示"><Link href="/copilot?workflow=portfolio">Portfolio 合成只读演示</Link><Link href="/copilot?workflow=combined">Combined 合成只读演示</Link></nav>
-          <p className="text-text-secondary mt-1">
-            Track your positions and monitor P&L in real-time
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="w-4 h-4 mr-1" />
-            Refresh
-          </Button>
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogTrigger
-              render={
-                <Button size="sm">
-                <Plus className="w-4 h-4 mr-1" />
-                Add Position
-                </Button>
-              }
-            />
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Position</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddPosition} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="symbol">Symbol</Label>
-                  <Input
-                    id="symbol"
-                    placeholder="AAPL"
-                    value={formSymbol}
-                    onChange={(e) => setFormSymbol(e.target.value.toUpperCase())}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+      <PageHeader
+        title="Portfolio"
+        description="Track your positions and monitor P&L in real-time"
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Refresh
+            </Button>
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger
+                render={
+                  <Button size="sm">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Position
+                  </Button>
+                }
+              />
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Position</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleAddPosition} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="shares">Shares</Label>
+                    <Label htmlFor="symbol">Symbol</Label>
                     <Input
-                      id="shares"
-                      type="number"
-                      min="1"
-                      placeholder="100"
-                      value={formShares}
-                      onChange={(e) => setFormShares(e.target.value)}
+                      id="symbol"
+                      placeholder="AAPL"
+                      value={formSymbol}
+                      onChange={(e) => setFormSymbol(e.target.value.toUpperCase())}
                       required
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="shares">Shares</Label>
+                      <Input
+                        id="shares"
+                        type="number"
+                        min="1"
+                        placeholder="100"
+                        value={formShares}
+                        onChange={(e) => setFormShares(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="costBasis">Cost Basis ($)</Label>
+                      <Input
+                        id="costBasis"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="150.00"
+                        value={formCostBasis}
+                        onChange={(e) => setFormCostBasis(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label htmlFor="costBasis">Cost Basis ($)</Label>
+                    <Label htmlFor="strategyId">Strategy ID (optional)</Label>
                     <Input
-                      id="costBasis"
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      placeholder="150.00"
-                      value={formCostBasis}
-                      onChange={(e) => setFormCostBasis(e.target.value)}
-                      required
+                      id="strategyId"
+                      placeholder="momentum-v1"
+                      value={formStrategyId}
+                      onChange={(e) => setFormStrategyId(e.target.value)}
                     />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="strategyId">Strategy ID (optional)</Label>
-                  <Input
-                    id="strategyId"
-                    placeholder="momentum-v1"
-                    value={formStrategyId}
-                    onChange={(e) => setFormStrategyId(e.target.value)}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isAdding}>
-                  {isAdding ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4 mr-2" />
-                  )}
-                  Add Position
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+                  <Button type="submit" className="w-full" disabled={isAdding}>
+                    {isAdding ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4 mr-2" />
+                    )}
+                    Add Position
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </>
+        }
+      />
+
+      <nav className="flex gap-4 text-sm" aria-label="只读合成金融演示">
+        <Link
+          href="/copilot?workflow=portfolio"
+          className="text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Portfolio 合成只读演示
+        </Link>
+        <Link
+          href="/copilot?workflow=combined"
+          className="text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Combined 合成只读演示
+        </Link>
+      </nav>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Total Equity */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-text-secondary">Total Equity</CardTitle>
-            <PieChart className="h-4 w-4 text-text-tertiary" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
+            <CardTitle className="text-[13px] font-medium text-muted-foreground">Total Equity</CardTitle>
+            <PieChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalEquity)}</div>
-            <p className="text-xs text-text-tertiary mt-1">
+            <div className="font-mono text-2xl font-semibold tracking-tight tabular-nums">{formatCurrency(totalEquity)}</div>
+            <p className="mt-1 text-xs text-muted-foreground">
               {positionCount} position{positionCount !== 1 ? 's' : ''} + cash
             </p>
           </CardContent>
@@ -258,19 +279,25 @@ export default function PortfolioPage() {
 
         {/* Total P&L */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-text-secondary">Total P&L</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
+            <CardTitle className="text-[13px] font-medium text-muted-foreground">Total P&L</CardTitle>
             {totalPnl >= 0 ? (
-              <TrendingUp className="h-4 w-4 text-green-500" />
+              <TrendingUp className="h-4 w-4 text-success" />
             ) : (
-              <TrendingDown className="h-4 w-4 text-red-500" />
+              <TrendingDown className="h-4 w-4 text-error" />
             )}
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <div className={cn(
+              'font-mono text-2xl font-semibold tracking-tight tabular-nums',
+              totalPnl >= 0 ? 'text-success' : 'text-error'
+            )}>
               {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl)}
             </div>
-            <p className={`text-xs mt-1 ${totalPnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <p className={cn(
+              'mt-1 font-mono text-xs tabular-nums',
+              totalPnl >= 0 ? 'text-success' : 'text-error'
+            )}>
               {formatPercent(totalPnlPercent)}
             </p>
           </CardContent>
@@ -278,23 +305,23 @@ export default function PortfolioPage() {
 
         {/* Market Value */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-text-secondary">Market Value</CardTitle>
-            <BarChart3 className="h-4 w-4 text-text-tertiary" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
+            <CardTitle className="text-[13px] font-medium text-muted-foreground">Market Value</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalMarketValue)}</div>
-            <p className="text-xs text-text-tertiary mt-1">
-              Cost: {formatCurrency(totalCost)}
+            <div className="font-mono text-2xl font-semibold tracking-tight tabular-nums">{formatCurrency(totalMarketValue)}</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Cost: <span className="font-mono tabular-nums">{formatCurrency(totalCost)}</span>
             </p>
           </CardContent>
         </Card>
 
         {/* Cash Balance */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-text-secondary">Cash Balance</CardTitle>
-            <Wallet className="h-4 w-4 text-text-tertiary" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
+            <CardTitle className="text-[13px] font-medium text-muted-foreground">Cash Balance</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {editingCash ? (
@@ -323,13 +350,13 @@ export default function PortfolioPage() {
               </div>
             ) : (
               <>
-                <div className="text-2xl font-bold">{formatCurrency(cash)}</div>
+                <div className="font-mono text-2xl font-semibold tracking-tight tabular-nums">{formatCurrency(cash)}</div>
                 <button
                   onClick={() => {
                     setCashInput(cash.toString())
                     setEditingCash(true)
                   }}
-                  className="text-xs text-primary hover:underline mt-1"
+                  className="mt-1 text-xs text-primary hover:underline"
                 >
                   Edit cash balance
                 </button>
@@ -338,6 +365,36 @@ export default function PortfolioPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Asset Allocation */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PieChart className="h-4 w-4 text-muted-foreground" />
+            Asset Allocation
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-chart-1" style={{ width: `${positionAllocation}%` }} />
+            <div className="h-full bg-chart-3" style={{ width: `${cashAllocation}%` }} />
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-chart-1" />
+              <span className="text-muted-foreground">Positions</span>
+              <span className="font-mono font-medium tabular-nums">{formatCurrency(totalMarketValue)}</span>
+              <span className="font-mono text-xs text-muted-foreground tabular-nums">{positionAllocation.toFixed(1)}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-chart-3" />
+              <span className="text-muted-foreground">Cash</span>
+              <span className="font-mono font-medium tabular-nums">{formatCurrency(cash)}</span>
+              <span className="font-mono text-xs text-muted-foreground tabular-nums">{cashAllocation.toFixed(1)}%</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Positions Table */}
       <Card>
@@ -349,38 +406,38 @@ export default function PortfolioPage() {
         </CardHeader>
         <CardContent>
           {positions.length === 0 ? (
-            <div className="text-center py-12 text-text-tertiary">
+            <div className="py-12 text-center text-muted-foreground">
               <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">No positions yet</p>
-              <p className="text-sm mt-1">Click &quot;Add Position&quot; to start tracking your portfolio</p>
+              <p className="mt-1 text-sm">Click &quot;Add Position&quot; to start tracking your portfolio</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Symbol</TableHead>
-                    <TableHead className="text-right">Shares</TableHead>
-                    <TableHead className="text-right">Cost Basis</TableHead>
-                    <TableHead className="text-right">Current Price</TableHead>
-                    <TableHead className="text-right">Market Value</TableHead>
-                    <TableHead className="text-right">P&L</TableHead>
-                    <TableHead>Strategy</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className={headCellClass}>Symbol</TableHead>
+                    <TableHead className={cn(headCellClass, 'text-right')}>Shares</TableHead>
+                    <TableHead className={cn(headCellClass, 'text-right')}>Cost Basis</TableHead>
+                    <TableHead className={cn(headCellClass, 'text-right')}>Current Price</TableHead>
+                    <TableHead className={cn(headCellClass, 'text-right')}>Market Value</TableHead>
+                    <TableHead className={cn(headCellClass, 'text-right')}>P&L</TableHead>
+                    <TableHead className={headCellClass}>Strategy</TableHead>
+                    <TableHead className={cn(headCellClass, 'text-right')}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {positions.map((pos) => (
                     <TableRow key={pos.id}>
-                      <TableCell className="font-medium">{pos.symbol}</TableCell>
-                      <TableCell className="text-right">{pos.shares.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(pos.cost_basis)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(pos.current_price)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(pos.market_value)}</TableCell>
+                      <TableCell className="font-mono font-medium">{pos.symbol}</TableCell>
+                      <TableCell className={cn(numCellClass, 'text-right')}>{pos.shares.toLocaleString()}</TableCell>
+                      <TableCell className={cn(numCellClass, 'text-right')}>{formatCurrency(pos.cost_basis)}</TableCell>
+                      <TableCell className={cn(numCellClass, 'text-right')}>{formatCurrency(pos.current_price)}</TableCell>
+                      <TableCell className={cn(numCellClass, 'text-right')}>{formatCurrency(pos.market_value)}</TableCell>
                       <TableCell className="text-right">
                         <PnlCell value={pos.pnl} percent={pos.pnl_percent} />
                       </TableCell>
-                      <TableCell className="text-text-tertiary text-sm">
+                      <TableCell className="text-muted-foreground text-sm">
                         {pos.strategy_id || '—'}
                       </TableCell>
                       <TableCell className="text-right">
@@ -388,7 +445,7 @@ export default function PortfolioPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => deletePosition(pos.id)}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          className="h-8 w-8 p-0 text-error hover:text-error"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -415,21 +472,21 @@ export default function PortfolioPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Strategy</TableHead>
-                    <TableHead className="text-right">Positions</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">Market Value</TableHead>
-                    <TableHead className="text-right">P&L</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className={headCellClass}>Strategy</TableHead>
+                    <TableHead className={cn(headCellClass, 'text-right')}>Positions</TableHead>
+                    <TableHead className={cn(headCellClass, 'text-right')}>Cost</TableHead>
+                    <TableHead className={cn(headCellClass, 'text-right')}>Market Value</TableHead>
+                    <TableHead className={cn(headCellClass, 'text-right')}>P&L</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pnlData.strategies.map((strategy) => (
                     <TableRow key={strategy.strategy_id}>
-                      <TableCell className="font-medium">{strategy.strategy_id}</TableCell>
-                      <TableCell className="text-right">{strategy.position_count}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(strategy.total_cost)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(strategy.total_market_value)}</TableCell>
+                      <TableCell className="font-mono font-medium">{strategy.strategy_id}</TableCell>
+                      <TableCell className={cn(numCellClass, 'text-right')}>{strategy.position_count}</TableCell>
+                      <TableCell className={cn(numCellClass, 'text-right')}>{formatCurrency(strategy.total_cost)}</TableCell>
+                      <TableCell className={cn(numCellClass, 'text-right')}>{formatCurrency(strategy.total_market_value)}</TableCell>
                       <TableCell className="text-right">
                         <PnlCell value={strategy.pnl} percent={strategy.pnl_percent} />
                       </TableCell>

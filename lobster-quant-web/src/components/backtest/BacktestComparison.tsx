@@ -11,7 +11,7 @@ interface BacktestComparisonProps {
   onBack: () => void;
 }
 
-const CHART_COLORS = ['#3b82f6', '#ef4444', '#22c55e'];
+const CHART_COLORS = ['var(--chart-1)', 'var(--chart-5)', 'var(--chart-2)'];
 
 const METRIC_LABELS: Record<string, string> = {
   totalReturn: 'Total Return',
@@ -96,7 +96,7 @@ export function BacktestComparison({ entries, onBack }: BacktestComparisonProps)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="outline" size="sm" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to History
@@ -115,7 +115,7 @@ export function BacktestComparison({ entries, onBack }: BacktestComparisonProps)
           {equityCurves.length > 0 ? (
             <div>
               {/* Legend */}
-              <div className="flex gap-4 mb-4">
+              <div className="flex flex-wrap gap-4 mb-4">
                 {equityCurves.map((curve) => curve && (
                   <div key={curve.id} className="flex items-center gap-2 text-sm">
                     <span
@@ -142,7 +142,7 @@ export function BacktestComparison({ entries, onBack }: BacktestComparisonProps)
                         y1={y}
                         x2={chartWidth - padding.right}
                         y2={y}
-                        stroke="#e5e7eb"
+                        stroke="var(--border)"
                         strokeDasharray="4,4"
                       />
                       <text
@@ -242,15 +242,15 @@ export function BacktestComparison({ entries, onBack }: BacktestComparisonProps)
                             className={`text-right py-2 px-3 ${
                               isBest
                                 ? isNegative
-                                  ? 'text-green-600 font-semibold'
-                                  : 'text-green-600 font-semibold'
+                                  ? 'text-success font-semibold'
+                                  : 'text-success font-semibold'
                                 : ''
                             }`}
                           >
                             {val !== undefined ? (
                               <span className="inline-flex items-center gap-1">
                                 {isBest && (
-                                  <span className="text-green-600">
+                                  <span className="text-success">
                                     {isNegative ? (
                                       <TrendingDown className="h-3 w-3" />
                                     ) : (
