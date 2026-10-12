@@ -2,8 +2,10 @@
 from datetime import datetime, timezone
 import logging
 import os
+from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
+from sqlalchemy import select
 
 from agent.financial import build_financial_dispatcher
 from agent.financial_demo import DEMO_SNAPSHOT_ID, demo_snapshot_loader
@@ -11,14 +13,16 @@ from agent.integration import CrossMASRequest, CrossMASRouter
 from agent.shared import ArtifactRef, ArtifactStore, FinancialConflict, MarketInvestigationArtifact
 from agent.shared.dispatch import aware
 from api.models.financial import (FinancialCreateResponse, FinancialRunAction,
+    FinancialRunListItem, FinancialRunListResponse,
     FinancialRunResponse, MarketRunResult, PortfolioRunResult, FinancialWorkflowRequest,
     FinancialLivePrepare, FinancialConstraintInput, FinancialConnectionCheck)
-from db.models import Conversation, FinancialArtifact
+from db.models import AgentRun, Conversation, FinancialArtifact, FinancialRun
 from db.session import sync_session_factory
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 TERMINAL = {'completed', 'failed', 'cancelled', 'expired'}
+OUTCOMES = {'verified', 'partial', 'insufficient_evidence', 'feasible', 'infeasible', 'insufficient_data'}
 
 
 @router.get('/connection')
@@ -304,10 +308,57 @@ def create_combined(payload: FinancialWorkflowRequest, background: BackgroundTas
     return _create(payload, 'combined', background)
 
 
+@router.get('/runs', response_model=FinancialRunListResponse)
+def list_runs(conversation_id: str | None = None,
+    mas_kind: Literal['market_investigation', 'portfolio_rebalance'] | None = None,
+    status: Literal['queued', 'executing', 'waiting_user', 'paused', 'completed', 'failed', 'cancelled', 'expired'] | None = None):
+    """Read-only history over persisted financial runs; never mutates run state.
+
+    mas_kind/status are read from the same persisted columns that
+    GET /runs/{run_id} resolves through the dispatcher snapshot, newest first.
+    """
+    with sync_session_factory() as session:
+        query = (select(AgentRun, FinancialRun)
+            .join(FinancialRun, FinancialRun.run_id == AgentRun.id)
+            .order_by(AgentRun.created_at.desc(), AgentRun.id.desc()))
+        if conversation_id is not None:
+            query = query.where(FinancialRun.conversation_id == conversation_id)
+        if mas_kind is not None:
+            query = query.where(FinancialRun.mas_kind == mas_kind)
+        if status is not None:
+            query = query.where(AgentRun.status == status)
+        rows = session.execute(query).all()
+        outcomes = {row.run_id: row.payload.get('status') for row in session.scalars(
+            select(FinancialArtifact).where(FinancialArtifact.artifact_key == 'final'))}
+    runs = []
+    for run, meta in rows:
+        try:
+            as_of = aware(datetime.fromisoformat(meta.request['as_of']))
+        except (KeyError, TypeError, ValueError):
+            as_of = None
+        outcome = outcomes.get(run.id)
+        runs.append(FinancialRunListItem(run_id=run.id, mas_kind=meta.mas_kind,
+            status=run.status, version=run.version, conversation_id=run.conversation_id,
+            correlation_id=meta.correlation_id, error_code=run.error_code,
+            validation_outcome=outcome if outcome in OUTCOMES else 'pending',
+            as_of=as_of, created_at=aware(run.created_at), updated_at=aware(run.updated_at)))
+    return FinancialRunListResponse(runs=runs)
+
+
 @router.get('/runs/{run_id}', response_model=FinancialRunResponse)
 def get_result(run_id: str):
     dispatcher, _ = _assembly(())
     return _result(dispatcher, run_id)
+
+
+@router.get('/runs/{run_id}/relations')
+def get_relations(run_id: str):
+    """Read-only relation audit for cross-MAS message visualization."""
+    dispatcher, _ = _assembly(())
+    try:
+        return {'relations': dispatcher.relations(run_id)}
+    except KeyError:
+        raise HTTPException(404, 'Financial run not found')
 
 
 def _cancellation_peers(dispatcher, run_id, relations):

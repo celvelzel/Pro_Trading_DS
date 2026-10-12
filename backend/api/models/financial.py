@@ -1,4 +1,5 @@
 """Additive financial API DTOs; domain contracts remain the authority."""
+from datetime import datetime
 from typing import Annotated, Literal
 from pydantic import Field, model_validator
 from agent.integration import CrossMASRequest
@@ -20,6 +21,23 @@ class FinancialCreateResponse(FinancialModel):
     market_run_id: str | None = None
     portfolio_run_id: str | None = None
     runs: list[FinancialRunSummary]
+
+
+class FinancialRunListItem(FinancialRunSummary):
+    """Read-only history summary of one persisted financial run."""
+    schema_version: Literal[1] = 1
+    conversation_id: str
+    correlation_id: str
+    error_code: str | None = None
+    validation_outcome: Literal['verified', 'partial', 'insufficient_evidence', 'feasible', 'infeasible', 'insufficient_data', 'pending'] = 'pending'
+    as_of: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class FinancialRunListResponse(FinancialModel):
+    schema_version: Literal[1] = 1
+    runs: list[FinancialRunListItem]
 
 
 class FinancialRunResult(FinancialRunSummary):

@@ -343,6 +343,102 @@ def test_unknown_run_and_invalid_action_body(api):
         json={'expected_version': 0}).status_code == 422
 
 
+def test_relations_endpoint_is_readonly_audit_with_exact_pairing(api):
+    client, _ = api
+    assert client.get('/api/financial/runs/missing/relations').status_code == 404
+    pair = create(client, 'combined', mode='auto')
+    response = client.get('/api/financial/runs/' + pair['market_run_id'] + '/relations')
+    assert response.status_code == 200, response.text
+    relations = response.json()['relations']
+    assert all(set(relation) >= {'relation_id', 'conversation_id', 'source_run_id', 'target_run_id',
+        'correlation_id', 'relation_type', 'idempotency_key', 'envelope'} for relation in relations)
+    assert any(relation['relation_type'] == 'combined'
+        and relation['source_run_id'] == pair['market_run_id']
+        and relation['target_run_id'] == pair['portfolio_run_id'] for relation in relations)
+
+
+def test_runs_history_lists_summaries_and_remains_readonly(api):
+    from datetime import datetime
+    client, sessions = api
+    empty = client.get('/api/financial/runs')
+    assert empty.status_code == 200 and empty.json() == {'schema_version': 1, 'runs': []}
+    market = create(client, 'market')['market_run_id']
+    pair = create(client, 'combined', key='pair')
+    expected = {market, pair['market_run_id'], pair['portfolio_run_id']}
+    before = {run_id: result(client, run_id) for run_id in expected}
+    response = client.get('/api/financial/runs')
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body['schema_version'] == 1
+    rows = body['runs']
+    assert len(rows) == 3 and {row['run_id'] for row in rows} == expected
+    for row in rows:
+        assert set(row) == {'run_id', 'schema_version', 'mas_kind', 'status', 'version',
+            'conversation_id', 'correlation_id', 'error_code', 'validation_outcome',
+            'as_of', 'created_at', 'updated_at'}
+        assert row['schema_version'] == 1
+        detail = before[row['run_id']]
+        assert (row['mas_kind'], row['status'], row['version'], row['conversation_id'],
+            row['correlation_id'], row['error_code']) == (detail['mas_kind'], detail['status'],
+            detail['version'], detail['conversation_id'], detail['correlation_id'], detail['error_code'])
+        assert row['validation_outcome'] == detail['validation_outcome'] != 'pending'
+        assert datetime.fromisoformat(row['as_of']) == DEMO_AS_OF
+        assert row['created_at'] and row['updated_at']
+    paired = [row for row in rows if row['correlation_id'] == pair['correlation_id']]
+    assert {row['run_id'] for row in paired} == {pair['market_run_id'], pair['portfolio_run_id']}
+    # Optional conversation filter and read-only guarantee.
+    assert client.get('/api/financial/runs?conversation_id=c').json() == body
+    assert client.get('/api/financial/runs?conversation_id=other').json() == {'schema_version': 1, 'runs': []}
+    assert {run_id: result(client, run_id) for run_id in expected} == before
+
+
+def test_runs_history_reports_pending_outcome_for_unfinished_review_run(api):
+    client, _ = api
+    run_id = create(client, 'market', mode='review', key='review-only')['market_run_id']
+    row = next(r for r in client.get('/api/financial/runs').json()['runs'] if r['run_id'] == run_id)
+    assert row['status'] == 'waiting_user' and row['validation_outcome'] == 'pending'
+    assert row['error_code'] is None
+
+
+def test_runs_history_mas_kind_and_status_match_run_detail_for_paired_runs(api):
+    # Regression: the portfolio member of a combined pair must never be listed
+    # as market_investigation; the list reads the same columns as the detail.
+    client, _ = api
+    pair = create(client, 'combined', key='pair-kinds')
+    rows = {row['run_id']: row for row in client.get('/api/financial/runs').json()['runs']}
+    assert rows[pair['market_run_id']]['mas_kind'] == 'market_investigation'
+    assert rows[pair['portfolio_run_id']]['mas_kind'] == 'portfolio_rebalance'
+    for run_id in (pair['market_run_id'], pair['portfolio_run_id']):
+        detail = result(client, run_id)
+        assert (rows[run_id]['mas_kind'], rows[run_id]['status'], rows[run_id]['version']) == (
+            detail['mas_kind'], detail['status'], detail['version'])
+
+
+def test_runs_history_filters_by_kind_status_conversation_and_orders_newest_first(api):
+    from datetime import datetime
+    client, _ = api
+    review = create(client, 'market', mode='review', key='review-m')['market_run_id']
+    pair = create(client, 'combined', key='pair-f')
+    all_rows = client.get('/api/financial/runs').json()['runs']
+    times = [datetime.fromisoformat(row['created_at']) for row in all_rows]
+    assert times == sorted(times, reverse=True)  # newest first by default
+
+    def ids(query):
+        response = client.get('/api/financial/runs' + query)
+        assert response.status_code == 200, response.text
+        return {row['run_id'] for row in response.json()['runs']}
+
+    assert ids('?mas_kind=market_investigation') == {review, pair['market_run_id']}
+    assert ids('?mas_kind=portfolio_rebalance') == {pair['portfolio_run_id']}
+    assert ids('?status=waiting_user') == {review}
+    assert ids('?status=completed') == {pair['market_run_id'], pair['portfolio_run_id']}
+    assert ids('?mas_kind=portfolio_rebalance&status=completed') == {pair['portfolio_run_id']}
+    assert ids('?conversation_id=c&mas_kind=market_investigation&status=waiting_user') == {review}
+    assert ids('?conversation_id=other') == set()
+    assert client.get('/api/financial/runs?mas_kind=general').status_code == 422
+    assert client.get('/api/financial/runs?status=unknown').status_code == 422
+
+
 def test_api_cannot_approve_an_unconfigured_execution_profile(api):
     client, sessions = api
     pair = create(client, 'market', mode='review')
