@@ -92,3 +92,7 @@ poetry.lock
 
 # Type stubs
 *.pyi
+
+# Next.js settings route is source code, not runtime data.
+!lobster-quant-web/src/app/settings/data/
+!lobster-quant-web/src/app/settings/data/page.tsx
